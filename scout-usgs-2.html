@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Texas Rockhound Scout — USGS Live</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Barlow:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --stone:#1a1612; --granite:#2a2420; --quartz:#e8d5a3; --copper:#c4622d; --turquoise:#3d9e8c; --feldspar:#8b6f4e; --cream:#f2e8d0; --glow:#5bbfa8; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--stone); color:var(--cream); font-family:'Barlow',sans-serif; font-weight:300; min-height:100vh; overflow-x:hidden; }
+  body::before { content:''; position:fixed; inset:0; background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(196,98,45,0.04) 39px,rgba(196,98,45,0.04) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(196,98,45,0.03) 39px,rgba(196,98,45,0.03) 40px); pointer-events:none; z-index:0; }
+  .header { position:relative; z-index:10; padding:14px 16px; border-bottom:1px solid rgba(196,98,45,0.3); display:flex; align-items:center; gap:12px; background:rgba(26,22,18,0.98); }
+  .logo { width:38px; height:38px; flex-shrink:0; }
+  .title h1 { font-family:'Bebas Neue',sans-serif; font-size:1.7rem; letter-spacing:0.08em; color:var(--quartz); line-height:1; }
+  .title .sub { font-family:'Share Tech Mono',monospace; font-size:0.55rem; color:var(--turquoise); letter-spacing:0.15em; margin-top:2px; }
+  .status { margin-left:auto; font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); background:rgba(42,36,32,0.8); border:1px solid rgba(139,111,78,0.25); padding:4px 8px; border-radius:2px; white-space:nowrap; display:flex; align-items:center; gap:5px; }
+  .dot { width:6px; height:6px; border-radius:50%; background:var(--glow); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .usgs-badge { background:rgba(61,158,140,0.12); border:1px solid rgba(61,158,140,0.35); border-radius:2px; padding:8px 14px; font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--glow); letter-spacing:0.08em; text-align:center; line-height:1.6; }
+  .content { position:relative; z-index:5; padding:16px; display:flex; flex-direction:column; gap:14px; max-width:680px; margin:0 auto; }
+  .slabel { font-family:'Share Tech Mono',monospace; font-size:0.58rem; letter-spacing:0.22em; color:var(--copper); text-transform:uppercase; margin-bottom:8px; }
+  .rgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .rbtn { background:rgba(42,36,32,0.8); border:1px solid rgba(139,111,78,0.3); color:var(--cream); font-family:'Barlow',sans-serif; font-size:0.8rem; font-weight:600; padding:12px 10px; cursor:pointer; transition:all 0.2s; text-align:left; border-radius:3px; line-height:1.3; }
+  .rbtn .icon { font-size:1.1rem; display:block; margin-bottom:3px; }
+  .rbtn .hint { font-weight:300; font-size:0.65rem; color:var(--feldspar); display:block; margin-top:2px; }
+  .rbtn:hover { background:rgba(196,98,45,0.15); border-color:rgba(196,98,45,0.5); }
+  .rbtn.active { background:rgba(196,98,45,0.25); border-color:var(--copper); color:var(--quartz); }
+  .rbtn.active .hint { color:var(--quartz); opacity:0.7; }
+  .notes { background:rgba(42,36,32,0.5); border:1px dashed rgba(139,111,78,0.3); border-radius:3px; padding:10px 12px; font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--feldspar); width:100%; min-height:52px; resize:none; outline:none; line-height:1.6; }
+  .notes:focus { border-color:var(--copper); color:var(--cream); }
+  .notes::placeholder { color:rgba(139,111,78,0.4); }
+  hr { border:none; border-top:1px solid rgba(139,111,78,0.2); }
+  .scoutbtn { width:100%; background:linear-gradient(135deg,var(--copper),#9e3e18); border:none; color:var(--cream); font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.15em; padding:16px; cursor:pointer; transition:all 0.2s; border-radius:3px; }
+  .scoutbtn:hover:not(:disabled) { filter:brightness(1.12); transform:translateY(-1px); }
+  .scoutbtn:disabled { background:var(--granite); color:var(--feldspar); cursor:not-allowed; transform:none; }
+  .loading { display:none; flex-direction:column; align-items:center; gap:10px; padding:24px 16px; }
+  .loading.show { display:flex; }
+  .drill { font-size:2.2rem; animation:rock 0.5s steps(2) infinite; }
+  @keyframes rock { 0%{transform:rotate(-10deg)} 100%{transform:rotate(10deg)} }
+  .lmsg { font-family:'Share Tech Mono',monospace; font-size:0.68rem; color:var(--turquoise); letter-spacing:0.12em; animation:blink 1s infinite; text-align:center; }
+  .lprog { font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); text-align:center; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .errbox { display:none; background:rgba(224,92,42,0.1); border:1px solid rgba(224,92,42,0.4); border-radius:3px; padding:12px 14px; font-family:'Share Tech Mono',monospace; font-size:0.68rem; color:#e08a6a; line-height:1.6; }
+  .errbox.show { display:block; }
+  .results { display:flex; flex-direction:column; gap:14px; }
+  .hcard { background:rgba(42,36,32,0.75); border:1px solid rgba(139,111,78,0.3); border-radius:3px; overflow:hidden; animation:slideIn 0.35s ease forwards; opacity:0; }
+  @keyframes slideIn { to{opacity:1;transform:translateY(0)} from{opacity:0;transform:translateY(10px)} }
+  .htop { padding:10px 14px; background:rgba(30,24,20,0.65); border-bottom:1px solid rgba(139,111,78,0.2); display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap; }
+  .score-hot { font-family:'Share Tech Mono',monospace; font-size:0.6rem; padding:3px 8px; border-radius:2px; background:rgba(196,98,45,0.4); color:#f4b87a; border:1px solid rgba(196,98,45,0.6); }
+  .score-warm { font-family:'Share Tech Mono',monospace; font-size:0.6rem; padding:3px 8px; border-radius:2px; background:rgba(61,158,140,0.3); color:#7ec49a; border:1px solid rgba(61,158,140,0.5); }
+  .hname { font-weight:600; font-size:0.9rem; color:var(--quartz); flex:1; min-width:0; line-height:1.3; }
+  .hbody { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .field { display:flex; flex-direction:column; gap:3px; }
+  .field label { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.2em; color:var(--copper); text-transform:uppercase; }
+  .field p { font-size:0.8rem; line-height:1.55; color:var(--cream); }
+  .contact-strip { background:rgba(91,50,20,0.3); border:1px solid rgba(212,149,106,0.3); border-left:3px solid rgba(212,149,106,0.7); border-radius:2px; padding:8px 12px; }
+  .contact-strip .clabel { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.18em; color:rgba(212,149,106,0.8); display:block; margin-bottom:4px; text-transform:uppercase; }
+  .contact-strip .cval { font-size:0.8rem; color:var(--quartz); line-height:1.4; }
+  .drain-strip { background:rgba(15,45,58,0.5); border:1px solid rgba(107,191,212,0.2); border-left:3px solid rgba(107,191,212,0.5); border-radius:2px; padding:8px 12px; }
+  .drain-strip .dlabel { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.18em; color:rgba(107,191,212,0.7); display:block; margin-bottom:4px; text-transform:uppercase; }
+  .drain-strip .dval { font-family:'Share Tech Mono',monospace; font-size:0.72rem; color:#6bbfd4; line-height:1.5; }
+  .dir-strip { background:rgba(196,98,45,0.1); border:1px solid rgba(196,98,45,0.25); border-left:3px solid var(--copper); border-radius:2px; padding:10px 12px; }
+  .dir-strip .dirlabel { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.18em; color:var(--copper); display:block; margin-bottom:5px; text-transform:uppercase; }
+  .dir-strip .dirval { font-size:0.82rem; color:var(--quartz); line-height:1.6; }
+  .minerals { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+  .mtag { font-family:'Share Tech Mono',monospace; font-size:0.58rem; padding:2px 7px; background:rgba(61,158,140,0.12); border:1px solid rgba(61,158,140,0.3); color:var(--glow); border-radius:2px; }
+  .waze-box { background:rgba(20,40,25,0.55); border:1px solid rgba(126,196,154,0.2); border-radius:3px; padding:10px 12px; }
+  .waze-box .wlabel { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.2em; color:rgba(126,196,154,0.8); display:block; margin-bottom:6px; text-transform:uppercase; }
+  .waze-box input { width:100%; font-family:'Share Tech Mono',monospace; font-size:0.78rem; color:#7ec49a; background:rgba(0,0,0,0.4); border:1px solid rgba(126,196,154,0.3); border-radius:2px; padding:8px 10px; outline:none; cursor:text; }
+  .waze-box .winst { font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); margin-top:6px; line-height:1.5; display:block; }
+  .why { font-size:0.68rem; color:var(--feldspar); font-style:italic; line-height:1.5; padding-top:6px; border-top:1px solid rgba(139,111,78,0.15); }
+  .src { font-family:'Share Tech Mono',monospace; font-size:0.52rem; color:rgba(61,158,140,0.5); padding-top:2px; }
+</style>
+</head>
+<body>
+<header class="header">
+  <svg class="logo" viewBox="0 0 48 48" fill="none">
+    <polygon points="24,4 44,36 4,36" fill="none" stroke="#c4622d" stroke-width="1.5"/>
+    <circle cx="24" cy="26" r="6" fill="rgba(61,158,140,0.2)" stroke="#3d9e8c" stroke-width="1.2"/>
+    <circle cx="24" cy="26" r="2" fill="#3d9e8c"/>
+  </svg>
+  <div class="title">
+    <h1>Rockhound Scout</h1>
+    <div class="sub">▸ LIVE USGS GEOLOGIC DATA</div>
+  </div>
+  <div class="status"><span class="dot"></span><span id="statusTxt">READY</span></div>
+</header>
+<div class="content">
+  <div class="usgs-badge">
+    ⛏ QUERIES REAL USGS TEXAS GEOLOGIC DATABASE<br>
+    Finds formation contacts + drainage crossings on public roads
+  </div>
+  <div>
+    <div class="slabel">▸ Pick your region</div>
+    <div class="rgrid">
+      <button class="rbtn active" data-region="llano" onclick="pick(this)"><span class="icon">⬡</span>Llano Uplift<span class="hint">Blue quartz · llanite · topaz</span></button>
+      <button class="rbtn" data-region="threerivers" onclick="pick(this)"><span class="icon">🪨</span>Three Rivers<span class="hint">Petrified palm wood</span></button>
+      <button class="rbtn" data-region="edwards" onclick="pick(this)"><span class="icon">▲</span>Edwards Plateau<span class="hint">Flint · chert · fossils</span></button>
+      <button class="rbtn" data-region="bigbend" onclick="pick(this)"><span class="icon">★</span>Big Bend<span class="hint">Agate · jasper · cinnabar</span></button>
+      <button class="rbtn" data-region="cretaceous" onclick="pick(this)"><span class="icon">🦕</span>Cretaceous Shelf<span class="hint">Ammonites · shark teeth</span></button>
+      <button class="rbtn" data-region="custom" onclick="pick(this)"><span class="icon">📍</span>Custom<span class="hint">Describe your area below</span></button>
+    </div>
+  </div>
+  <div>
+    <div class="slabel">▸ Anything specific? <span style="color:var(--feldspar);font-size:0.55rem;letter-spacing:0;text-transform:none;font-family:'Barlow',sans-serif;">(optional)</span></div>
+    <textarea class="notes" id="notes" placeholder='e.g. "near Mason" or "fine with rough roads" — or leave blank'></textarea>
+  </div>
+  <hr>
+  <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
+  <div class="loading" id="loading">
+    <div class="drill">⛏</div>
+    <div class="lmsg" id="lmsg">QUERYING USGS GEOLOGIC DATABASE...</div>
+    <div class="lprog" id="lprog">Reading real formation data — takes 20-30 seconds</div>
+  </div>
+  <div class="errbox" id="errbox"></div>
+  <div class="results" id="results"></div>
+</div>
+
+<script>
+let region = 'llano';
+
+const regionData = {
+  llano: {
+    label: 'Llano Uplift',
+    wazeTowns: { 'TX-16': 'Llano, TX', 'FM 783': 'Mason, TX', 'US-87': 'Mason, TX', 'FM 2768': 'Llano, TX' },
+    roads: [
+      { road: 'TX-16', pts: [[30.750,-98.670],[30.770,-98.665],[30.790,-98.660],[30.810,-98.658],[30.830,-98.655],[30.850,-98.652],[30.870,-98.648]] },
+      { road: 'FM 783', pts: [[30.748,-99.318],[30.720,-99.280],[30.695,-99.245],[30.668,-99.210]] },
+      { road: 'US-87', pts: [[30.750,-99.230],[30.790,-99.190],[30.830,-99.150],[30.870,-99.110]] },
+      { road: 'FM 2768', pts: [[30.780,-98.720],[30.800,-98.700],[30.820,-98.680],[30.840,-98.660]] }
+    ]
+  },
+  threerivers: {
+    label: 'Three Rivers',
+    wazeTowns: { 'FM 799': 'Three Rivers, TX', 'US-281': 'Three Rivers, TX', 'FM 534': 'Tilden, TX' },
+    roads: [
+      { road: 'FM 799', pts: [[28.460,-98.180],[28.420,-98.200],[28.380,-98.220],[28.340,-98.240]] },
+      { road: 'US-281', pts: [[28.460,-98.180],[28.380,-98.180],[28.300,-98.180]] },
+      { road: 'FM 534', pts: [[28.310,-98.340],[28.270,-98.360],[28.230,-98.380]] }
+    ]
+  },
+  edwards: {
+    label: 'Edwards Plateau',
+    wazeTowns: { 'FM 337': 'Leakey, TX', 'US-290': 'Johnson City, TX', 'US-83': 'Rocksprings, TX' },
+    roads: [
+      { road: 'FM 337', pts: [[29.735,-99.795],[29.720,-99.830],[29.705,-99.865],[29.690,-99.900]] },
+      { road: 'US-290', pts: [[30.280,-98.410],[30.275,-98.480],[30.270,-98.550],[30.265,-98.620]] },
+      { road: 'US-83', pts: [[29.890,-100.020],[29.820,-100.020],[29.750,-100.020]] }
+    ]
+  },
+  bigbend: {
+    label: 'Big Bend',
+    wazeTowns: { 'FM 170': 'Presidio, TX', 'TX-118': 'Alpine, TX', 'US-385': 'Marathon, TX' },
+    roads: [
+      { road: 'FM 170', pts: [[29.560,-104.370],[29.530,-104.290],[29.500,-104.210],[29.470,-104.130]] },
+      { road: 'TX-118', pts: [[30.158,-103.660],[30.080,-103.630],[30.000,-103.600]] },
+      { road: 'US-385', pts: [[30.210,-103.240],[30.150,-103.240],[30.090,-103.240]] }
+    ]
+  },
+  cretaceous: {
+    label: 'Cretaceous Shelf',
+    wazeTowns: { 'US-77': 'Cameron, TX', 'US-183': 'Lockhart, TX', 'FM 107': 'Corsicana, TX' },
+    roads: [
+      { road: 'US-77', pts: [[30.850,-97.020],[30.950,-97.020],[31.050,-97.020]] },
+      { road: 'US-183', pts: [[29.880,-97.670],[29.950,-97.680],[30.020,-97.690]] },
+      { road: 'FM 107', pts: [[32.080,-96.470],[32.060,-96.510],[32.040,-96.550]] }
+    ]
+  },
+  custom: { label: 'Custom', wazeTowns: {}, roads: [] }
+};
+
+function pick(btn) {
+  document.querySelectorAll('.rbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  region = btn.dataset.region;
+}
+function setStatus(t) { document.getElementById('statusTxt').textContent = t; }
+function showLoading(msg, prog) {
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('lmsg').textContent = msg;
+  document.getElementById('lprog').textContent = prog || '';
+  document.getElementById('errbox').classList.remove('show');
+  document.getElementById('results').innerHTML = '';
+}
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+function showError(msg) { const b = document.getElementById('errbox'); b.textContent = '⚠ ' + msg; b.classList.add('show'); }
+function setProgress(p) { document.getElementById('lprog').textContent = p; }
+
+async function runScout() {
+  const notes = document.getElementById('notes').value.trim();
+  const rd = regionData[region];
+  const btn = document.getElementById('scoutBtn');
+  btn.disabled = true;
+  setStatus('SCANNING...');
+  showLoading('QUERYING USGS GEOLOGIC DATABASE...', 'Reading real Texas formation data — 20-30 seconds');
+
+  // Build the full prompt that asks the AI to:
+  // 1. Query the real USGS API for each road point
+  // 2. Find formation contacts
+  // 3. Cross-reference with OSM drainages
+  // 4. Return hotspots
+
+  const roadsJson = JSON.stringify(rd.roads.map(r => ({
+    road: r.road,
+    town: rd.wazeTowns[r.road] || rd.label,
+    sample_points: r.pts.map(p => ({ lat: p[0], lng: p[1] }))
+  })));
+
+  const prompt = `You are a Texas field geologist with access to real geologic data APIs. Your task is to find rockhounding hotspots by querying real data sources.
+
+REGION: ${rd.label}
+${notes ? 'USER NOTE: ' + notes : ''}
+
+STEP 1 — Query the Texas Geologic Database (USGS) for each road corridor.
+Use this API endpoint for each sample point:
+https://txgeo.usgs.gov/arcgis/rest/services/GDT/GeologicDatabaseOfTexas250K/MapServer/identify?geometry=LNG,LAT&geometryType=esriGeometryPoint&sr=4326&layers=all&tolerance=10&mapExtent=MINLNG,MINLAT,MAXLNG,MAXLAT&imageDisplay=500,500,96&returnGeometry=false&f=json
+
+Replace LNG,LAT with each sample point, and MINLNG,MINLAT,MAXLNG,MAXLAT with a small bounding box around it (+-0.05 degrees).
+
+ROAD CORRIDORS TO SAMPLE:
+${roadsJson}
+
+STEP 2 — For each road, identify where the formation (ROCKUNIT_CD or unit name) CHANGES between consecutive sample points. That change is a formation contact zone — geologically the most interesting spot.
+
+STEP 3 — For each contact zone found, query OpenStreetMap Overpass API for named waterways within 0.03 degrees:
+https://overpass-api.de/api/interpreter?data=[out:json];(way["waterway"~"river|stream|creek"](SOUTH,WEST,NORTH,EAST););out tags;
+
+STEP 4 — Score each contact zone:
+- Formation contact WITH named drainage crossing = HOTSPOT (fire emoji)  
+- Formation contact only, no drainage = WARM
+
+Format your response as plain text records separated by ---RECORD--- with each field on its own line using FIELDNAME: value format. No JSON, no quotes, no special characters.
+
+---RECORD---
+NAME: descriptive spot name
+ROAD: road name
+TOWN: nearest town for Waze
+SCORE: hot or warm
+FROM: formation name from USGS
+TO: next formation name
+WHERE: where on road the contact occurs
+DRAINAGES: creek name 1, creek name 2
+MINERALS: mineral 1, mineral 2, mineral 3
+DIRECTIONS: plain english directions from town
+TRUCK: what to watch for from truck window
+WHY: one sentence why productive
+---RECORD---`;
+
+  try {
+    setProgress('AI querying USGS API for each road point...');
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': 'sk-ant-api03-F6_w6_5FTn3rVIVJdmEc39fikmlT_wqHye_PicjMmByOh3sWFvbOpr3BA9iklnX_FulXJP5QOTbQUfbNvEy6xw-tUbdpAAA', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 3000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!resp.ok) throw new Error('API error ' + resp.status);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+
+    setProgress('Processing geologic data...');
+
+    const raw = data.content.map(b => b.text || '').join('').trim();
+    if (!raw) throw new Error('No response from AI');
+
+    // Parse pipe-delimited records instead of JSON
+    const records = raw.split('---RECORD---').filter(r => r.trim().length > 20);
+    const hotspots = [];
+    for (const rec of records) {
+      const lines = rec.trim().split('\n');
+      const obj = {};
+      for (const line of lines) {
+        const colon = line.indexOf(':');
+        if (colon === -1) continue;
+        const key = line.slice(0, colon).trim().toUpperCase();
+        const val = line.slice(colon + 1).trim();
+        obj[key] = val;
+      }
+      if (!obj.NAME || !obj.ROAD) continue;
+      hotspots.push({
+        name: obj.NAME || '',
+        road: obj.ROAD || '',
+        town: obj.TOWN || '',
+        score: (obj.SCORE || 'warm').toLowerCase().includes('hot') ? 'hot' : 'warm',
+        from_formation: obj.FROM || '',
+        to_formation: obj.TO || '',
+        contact_location: obj.WHERE || '',
+        drainages: obj.DRAINAGES ? obj.DRAINAGES.split(',').map(d => d.trim()).filter(Boolean) : [],
+        minerals: obj.MINERALS ? obj.MINERALS.split(',').map(m => m.trim()).filter(Boolean) : [],
+        directions: obj.DIRECTIONS || '',
+        from_the_truck: obj.TRUCK || '',
+        why: obj.WHY || ''
+      });
+    }
+    const result = { hotspots };
+    hideLoading();
+
+    if (!result.hotspots || result.hotspots.length === 0) {
+      showError('No formation contacts found. Try a different region or use the original Scout app.');
+      setStatus('NO DATA');
+    } else {
+      renderHotspots(result.hotspots);
+      setStatus(result.hotspots.length + ' HOTSPOTS');
+      try { sessionStorage.setItem('lastHotspots', JSON.stringify(result.hotspots)); } catch(ex) {}
+    }
+  } catch(err) {
+    hideLoading();
+    showError(err.message + ' — tap to try again.');
+    setStatus('ERROR');
+  }
+  btn.disabled = false;
+}
+
+window.addEventListener('pageshow', () => {
+  try {
+    const saved = sessionStorage.getItem('lastHotspots');
+    if (saved && !document.getElementById('results').children.length) { renderHotspots(JSON.parse(saved)); setStatus('RESTORED'); }
+  } catch(e) {}
+});
+
+function renderHotspots(spots) {
+  const c = document.getElementById('results');
+  c.innerHTML = '';
+  spots.forEach((h, i) => {
+    const isHot = h.score === 'hot';
+    const drains = h.drainages || [];
+    const card = document.createElement('div');
+    card.className = 'hcard';
+    card.style.animationDelay = (i*0.1)+'s';
+    card.innerHTML =
+      '<div class="htop">' +
+        '<span class="'+(isHot?'score-hot':'score-warm')+'">'+(isHot?'🔥 HOTSPOT':'◉ WARM')+'</span>' +
+        '<span class="hname">'+h.name+'</span>' +
+      '</div>' +
+      '<div class="hbody">' +
+        '<div class="contact-strip">' +
+          '<span class="clabel">Formation Contact — USGS Texas Geologic Database</span>' +
+          '<span class="cval">'+h.from_formation+' ▸ '+h.to_formation+'</span>' +
+          (h.contact_location ? '<span style="font-size:0.72rem;color:var(--feldspar);display:block;margin-top:3px;">'+h.contact_location+'</span>' : '') +
+        '</div>' +
+        (drains.length > 0 ?
+          '<div class="drain-strip">' +
+            '<span class="dlabel">Named Drainages at This Crossing</span>' +
+            '<span class="dval">〰 '+drains.join('  〰 ')+'</span>' +
+          '</div>' : '') +
+        '<div class="dir-strip">' +
+          '<span class="dirlabel">Field Directions from '+h.town+'</span>' +
+          '<span class="dirval">'+h.directions+'</span>' +
+        '</div>' +
+        '<div class="field"><label>Watch for from the truck</label><p>'+h.from_the_truck+'</p></div>' +
+        '<div class="field"><label>You may find</label>' +
+          '<div class="minerals">'+(h.minerals||[]).map(m=>'<span class="mtag">'+m+'</span>').join('')+'</div>' +
+        '</div>' +
+        '<div class="waze-box">' +
+          '<span class="wlabel">Waze Destination</span>' +
+          '<input type="text" readonly value="'+(h.town||'')+'" onclick="this.select()">' +
+          '<span class="winst">Tap to select — long press to copy — paste into Waze search</span>' +
+        '</div>' +
+        '<div class="why">'+h.why+'</div>' +
+        '<div class="src">▸ USGS Texas Geologic Database queried for real formation data</div>' +
+      '</div>';
+    c.appendChild(card);
+  });
+}
+</script>
+</body>
+</html>
