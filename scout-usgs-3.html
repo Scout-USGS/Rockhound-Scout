@@ -251,7 +251,7 @@ WHY: one sentence why productive
     setProgress('AI querying USGS API for each road point...');
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'edU6NRMa1V9iQ6Ej0W76Xg9JLC7I7c6cTiyGLQLwfo3WtfV3Aikx_1HVCLpJLIloEaNN36WyUAJW7tezMH3iTw': 'application/json', 'x-api-key': 'sk-ant-api03-F6_w6_5FTn3rVIVJdmEc39fikmlT_wqHye_PicjMmByOh3sWFvbOpr3BA9iklnX_FulXJP5QOTbQUfbNvEy6xw-tUbdpAAA', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': 'edU6NRMa1V9iQ6Ej0W76Xg9JLC7I7c6cTiyGLQLwfo3WtfV3Aikx_1HVCLpJLIloEaNN36WyUAJW7tezMH3iTw-9q3b3QAA', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 3000,
