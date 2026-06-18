@@ -249,7 +249,7 @@ WHY: one sentence why productive
 
   try {
     setProgress('AI querying USGS API for each road point...');
-    const resp = await fetch('hidden-mud-13fc.tightloop2.workers.dev', {
+    const resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
