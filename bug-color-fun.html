@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bug Paint by Number</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FFF8E7;
+    --ink:#2B2B2B;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--cream);
+    font-family:'Baloo 2', 'Trebuchet MS', sans-serif;
+    color:var(--ink);
+    touch-action: manipulation;
+    overflow-x:hidden;
+  }
+  .app{
+    display:flex; flex-direction:column; align-items:center;
+    min-height:100vh; padding:14px 10px 24px;
+  }
+  h1{
+    font-size:clamp(22px,6vw,32px);
+    font-weight:800;
+    margin:4px 0 2px;
+    text-align:center;
+    color:#E63946;
+    text-shadow: 2px 2px 0 #fff, 3px 3px 0 rgba(0,0,0,0.08);
+  }
+  .subtitle{
+    font-size:15px; font-weight:700; color:#555; margin-bottom:10px; text-align:center;
+  }
+  .bug-tabs{
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center;
+    margin-bottom:10px;
+  }
+  .bug-tab{
+    font-family:inherit; font-weight:700; font-size:15px;
+    border:3px solid var(--ink); border-radius:20px;
+    background:#fff; padding:8px 14px;
+    cursor:pointer; display:flex; align-items:center; gap:6px;
+    transition: transform .12s ease, background .12s ease;
+  }
+  .bug-tab .emoji{font-size:20px;}
+  .bug-tab.active{ background:#FFD23F; transform:translateY(-2px) scale(1.05); }
+  .bug-tab:active{ transform:scale(0.95); }
+
+  .canvas-wrap{
+    position:relative;
+    width:min(92vw, 420px);
+    aspect-ratio:1/1;
+    background:#fff;
+    border-radius:28px;
+    border:5px solid var(--ink);
+    box-shadow: 0 8px 0 rgba(0,0,0,0.12);
+    margin-bottom:14px;
+    overflow:hidden;
+  }
+  svg{ width:100%; height:100%; display:block; }
+  .region{
+    cursor:pointer;
+    transition: fill .15s ease;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .region.pop{ animation: pop .35s ease; }
+  @keyframes pop{
+    0%{ transform:scale(1); }
+    40%{ transform:scale(1.08); }
+    100%{ transform:scale(1); }
+  }
+  .region.shake{ animation: shake .4s ease; }
+  @keyframes shake{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-6px); }
+    40%{ transform:translateX(6px); }
+    60%{ transform:translateX(-4px); }
+    80%{ transform:translateX(4px); }
+  }
+  .fixed{ pointer-events:none; }
+  .region-number{
+    pointer-events:none;
+    font-family:'Baloo 2','Trebuchet MS',sans-serif;
+    font-weight:800;
+    fill:#777;
+    user-select:none;
+    transition: opacity .2s ease;
+  }
+
+  .celebration{
+    position:absolute; inset:0;
+    display:none;
+    align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.55);
+    font-size:clamp(22px,7vw,34px);
+    font-weight:800;
+    color:#E63946;
+    text-align:center;
+    z-index:5;
+    pointer-events:none;
+  }
+  .celebration.show{ display:flex; animation: fadeIn .3s ease; }
+  @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+  .confetti{
+    position:absolute; top:-20px; width:10px; height:10px; border-radius:3px;
+    animation: fall linear forwards;
+  }
+  @keyframes fall{
+    to{ transform: translateY(460px) rotate(360deg); opacity:0.2; }
+  }
+
+  .palette{
+    display:grid; grid-template-columns: repeat(5, 1fr);
+    gap:12px 10px;
+    width:min(92vw,420px);
+    margin-bottom:14px;
+  }
+  .swatch{
+    width:100%; aspect-ratio:1/1; border-radius:50%;
+    border:4px solid var(--ink);
+    cursor:pointer;
+    position:relative;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+    transition: transform .12s ease;
+  }
+  .swatch:active{ transform:scale(0.9); }
+  .swatch.selected{
+    outline: 4px solid #E63946;
+    outline-offset:3px;
+    transform:scale(1.1);
+  }
+  .badge{
+    position:absolute; top:-8px; left:-8px;
+    background:#fff; color:var(--ink);
+    border:2px solid var(--ink); border-radius:50%;
+    width:24px; height:24px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800;
+    font-family:'Baloo 2','Trebuchet MS',sans-serif;
+  }
+  .swatch.eraser{
+    background:
+      linear-gradient(135deg, transparent 47%, #E63946 48%, #E63946 52%, transparent 53%),
+      #fff;
+  }
+
+  .controls{ display:flex; gap:12px; }
+  #resetBtn{
+    font-family:inherit; font-weight:700; font-size:16px;
+    background:#4EA8DE; color:#fff;
+    border:3px solid var(--ink); border-radius:18px;
+    padding:10px 20px; cursor:pointer;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+  }
+  #resetBtn:active{ transform:translateY(2px); box-shadow:none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>🐞 Bug Paint by Number 🕷️</h1>
+  <div class="subtitle">Pick a number color, then tap the matching spot!</div>
+  <div class="bug-tabs" id="bugTabs"></div>
+  <div class="canvas-wrap">
+    <svg id="bugSvg" viewBox="0 0 400 400"></svg>
+    <div class="celebration" id="celebration">🎉 Great job! 🎉</div>
+  </div>
+  <div class="palette" id="palette"></div>
+  <div class="controls">
+    <button id="resetBtn">🧹 Clear Bug</button>
+  </div>
+</div>
+
+<script>
+const SVGNS = 'http://www.w3.org/2000/svg';
+
+// ---------- Number/color legend (same everywhere, like a real paint-by-number key) ----------
+const COLORS = [
+  {num:1, name:'red', hex:'#E63946'},
+  {num:2, name:'orange', hex:'#FF8C42'},
+  {num:3, name:'yellow', hex:'#FFD23F'},
+  {num:4, name:'green', hex:'#6BBF59'},
+  {num:5, name:'blue', hex:'#4EA8DE'},
+  {num:6, name:'purple', hex:'#9B5DE5'},
+  {num:7, name:'pink', hex:'#FF6FA5'},
+  {num:8, name:'brown', hex:'#8B5E3C'},
+  {num:9, name:'black', hex:'#2B2B2B'},
+];
+let currentColor = COLORS[0].hex;
+let currentNum = COLORS[0].num;
+
+// ---------- Bug definitions ----------
+const BUGS = {
+  ladybug: {
+    name: 'Ladybug', emoji: '🐞',
+    svg: `
+      <path id="rightWing" class="region" d="M200,100 A118,138 0 0 1 200,360 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <path id="leftWing" class="region" d="M200,100 A118,138 0 0 0 200,360 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <line class="fixed" x1="200" y1="105" x2="200" y2="358" stroke="#2B2B2B" stroke-width="6"/>
+      <circle id="head" class="region" cx="200" cy="78" r="42" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <circle id="spot1" class="region" cx="150" cy="160" r="16" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <circle id="spot2" class="region" cx="250" cy="160" r="16" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <circle id="spot3" class="region" cx="135" cy="235" r="18" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <circle id="spot4" class="region" cx="265" cy="235" r="18" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <circle id="spot5" class="region" cx="155" cy="310" r="16" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <circle id="spot6" class="region" cx="245" cy="310" r="16" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <path class="fixed" d="M175,45 Q160,15 145,20" stroke="#2B2B2B" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path class="fixed" d="M225,45 Q240,15 255,20" stroke="#2B2B2B" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <circle class="fixed" cx="145" cy="20" r="6" fill="#2B2B2B"/>
+      <circle class="fixed" cx="255" cy="20" r="6" fill="#2B2B2B"/>
+      <circle class="fixed" cx="182" cy="80" r="10" fill="#fff" stroke="#2B2B2B" stroke-width="3"/>
+      <circle class="fixed" cx="218" cy="80" r="10" fill="#fff" stroke="#2B2B2B" stroke-width="3"/>
+      <circle class="fixed" cx="184" cy="82" r="4" fill="#2B2B2B"/>
+      <circle class="fixed" cx="216" cy="82" r="4" fill="#2B2B2B"/>
+      <g class="fixed" stroke="#2B2B2B" stroke-width="6" stroke-linecap="round">
+        <path d="M95,190 L55,175"/> <path d="M90,235 L48,235"/> <path d="M95,280 L55,300"/>
+        <path d="M305,190 L345,175"/> <path d="M310,235 L352,235"/> <path d="M305,280 L345,300"/>
+      </g>
+    `,
+    numbers: {
+      head:      {num:9, x:200, y:104, size:22},
+      leftWing:  {num:1, x:110, y:235, size:30},
+      rightWing: {num:1, x:290, y:235, size:30},
+      spot1: {num:9, x:150, y:160, size:16},
+      spot2: {num:2, x:250, y:160, size:16},
+      spot3: {num:9, x:135, y:235, size:16},
+      spot4: {num:2, x:265, y:235, size:16},
+      spot5: {num:9, x:155, y:310, size:16},
+      spot6: {num:2, x:245, y:310, size:16}
+    }
+  },
+  spider: {
+    name: 'Jumping Spider', emoji: '🕷️',
+    svg: `
+      <g class="fixed" stroke="#2B2B2B" stroke-width="9" stroke-linecap="round" fill="none">
+        <path d="M140,180 L60,140"/> <path d="M60,140 L30,120"/>
+        <path d="M135,210 L45,205"/> <path d="M45,205 L15,205"/>
+        <path d="M140,250 L55,275"/> <path d="M55,275 L25,295"/>
+        <path d="M155,290 L100,335"/> <path d="M100,335 L80,365"/>
+        <path d="M260,180 L340,140"/> <path d="M340,140 L370,120"/>
+        <path d="M265,210 L355,205"/> <path d="M355,205 L385,205"/>
+        <path d="M260,250 L345,275"/> <path d="M345,275 L375,295"/>
+        <path d="M245,290 L300,335"/> <path d="M300,335 L320,365"/>
+      </g>
+      <ellipse id="abdomen" class="region" cx="200" cy="270" rx="92" ry="102" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <ellipse id="pattern1" class="region" cx="200" cy="230" rx="38" ry="22" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <ellipse id="pattern2" class="region" cx="200" cy="300" rx="46" ry="26" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <ellipse id="head" class="region" cx="200" cy="140" rx="72" ry="62" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <circle id="cheek1" class="region" cx="130" cy="150" r="20" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <circle id="cheek2" class="region" cx="270" cy="150" r="20" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <circle class="fixed" cx="170" cy="125" r="26" fill="#2B2B2B"/>
+      <circle class="fixed" cx="230" cy="125" r="26" fill="#2B2B2B"/>
+      <circle class="fixed" cx="178" cy="115" r="8" fill="#fff"/>
+      <circle class="fixed" cx="238" cy="115" r="8" fill="#fff"/>
+      <circle class="fixed" cx="150" cy="165" r="9" fill="#2B2B2B"/>
+      <circle class="fixed" cx="250" cy="165" r="9" fill="#2B2B2B"/>
+      <circle class="fixed" cx="185" cy="170" r="6" fill="#2B2B2B"/>
+      <circle class="fixed" cx="215" cy="170" r="6" fill="#2B2B2B"/>
+    `,
+    numbers: {
+      abdomen:  {num:8, x:130, y:270, size:26},
+      pattern1: {num:3, x:200, y:230, size:16},
+      pattern2: {num:7, x:200, y:300, size:18},
+      head:     {num:8, x:200, y:192, size:20},
+      cheek1:   {num:6, x:130, y:150, size:16},
+      cheek2:   {num:6, x:270, y:150, size:16}
+    }
+  },
+  butterfly: {
+    name: 'Butterfly', emoji: '🦋',
+    svg: `
+      <path id="wingTL" class="region" d="M197,180 C150,90 60,70 40,130 C25,175 70,215 197,205 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <path id="wingTR" class="region" d="M203,180 C250,90 340,70 360,130 C375,175 330,215 203,205 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <path id="wingBL" class="region" d="M197,215 C165,260 90,300 60,275 C35,255 55,210 197,205 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <path id="wingBR" class="region" d="M203,215 C235,260 310,300 340,275 C365,255 345,210 203,205 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <ellipse id="body" class="region" cx="200" cy="205" rx="16" ry="105" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <circle class="fixed" cx="200" cy="105" r="18" fill="#2B2B2B"/>
+      <path class="fixed" d="M190,95 Q170,55 150,50" stroke="#2B2B2B" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path class="fixed" d="M210,95 Q230,55 250,50" stroke="#2B2B2B" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <circle class="fixed" cx="150" cy="50" r="7" fill="#2B2B2B"/>
+      <circle class="fixed" cx="250" cy="50" r="7" fill="#2B2B2B"/>
+    `,
+    numbers: {
+      body:    {num:9, x:200, y:205, size:16},
+      wingTL:  {num:1, x:110, y:150, size:30},
+      wingTR:  {num:5, x:290, y:150, size:30},
+      wingBL:  {num:3, x:110, y:250, size:30},
+      wingBR:  {num:6, x:290, y:250, size:30}
+    }
+  },
+  bee: {
+    name: 'Bee', emoji: '🐝',
+    svg: `
+      <defs>
+        <clipPath id="beeClip">
+          <ellipse cx="200" cy="235" rx="88" ry="105"/>
+        </clipPath>
+      </defs>
+      <ellipse id="wingL" class="region" cx="150" cy="190" rx="55" ry="35" fill="#FFFFFF" fill-opacity="0.85" stroke="#2B2B2B" stroke-width="5" transform="rotate(-20 150 190)"/>
+      <ellipse id="wingR" class="region" cx="250" cy="190" rx="55" ry="35" fill="#FFFFFF" fill-opacity="0.85" stroke="#2B2B2B" stroke-width="5" transform="rotate(20 250 190)"/>
+      <ellipse id="bodyBase" class="region" cx="200" cy="235" rx="88" ry="105" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <g clip-path="url(#beeClip)">
+        <rect id="stripe1" class="region" x="112" y="185" width="176" height="45" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+        <rect id="stripe2" class="region" x="112" y="255" width="176" height="45" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      </g>
+      <ellipse class="fixed" cx="200" cy="235" rx="88" ry="105" fill="none" stroke="#2B2B2B" stroke-width="6"/>
+      <circle id="head" class="region" cx="200" cy="110" r="48" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <path class="fixed" d="M200,335 L200,360" stroke="#2B2B2B" stroke-width="7" stroke-linecap="round"/>
+      <path class="fixed" d="M185,95 Q170,60 155,55" stroke="#2B2B2B" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path class="fixed" d="M215,95 Q230,60 245,55" stroke="#2B2B2B" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <circle class="fixed" cx="155" cy="55" r="6" fill="#2B2B2B"/>
+      <circle class="fixed" cx="245" cy="55" r="6" fill="#2B2B2B"/>
+      <circle class="fixed" cx="185" cy="112" r="9" fill="#2B2B2B"/>
+      <circle class="fixed" cx="215" cy="112" r="9" fill="#2B2B2B"/>
+    `,
+    numbers: {
+      head:     {num:9, x:200, y:110, size:22},
+      bodyBase: {num:3, x:200, y:320, size:20},
+      stripe1:  {num:9, x:200, y:207, size:24},
+      stripe2:  {num:9, x:200, y:277, size:24},
+      wingL:    {num:4, x:150, y:190, size:20},
+      wingR:    {num:4, x:250, y:190, size:20}
+    }
+  },
+  elephant: {
+    name: 'Elephant', emoji: '🐘',
+    svg: `
+      <path id="earL" class="region" d="M140,140 C60,130 40,190 55,240 C70,280 120,270 145,255 C120,220 120,170 140,140 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <path id="earR" class="region" d="M260,140 C340,130 360,190 345,240 C330,280 280,270 255,255 C280,220 280,170 260,140 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <ellipse id="body" class="region" cx="200" cy="230" rx="110" ry="115" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <path id="trunk" class="region" d="M175,290 C165,330 160,360 180,385 C195,400 215,395 220,378 C210,375 205,360 208,335 C210,315 205,295 225,290 C210,282 185,282 175,290 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <rect id="footL" class="region" x="140" y="330" width="45" height="35" rx="12" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="5"/>
+      <rect id="footR" class="region" x="215" y="330" width="45" height="35" rx="12" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="5"/>
+      <path class="fixed" d="M158,278 Q150,300 160,312" stroke="#2B2B2B" stroke-width="3" fill="#fff" stroke-linecap="round"/>
+      <path class="fixed" d="M242,278 Q250,300 240,312" stroke="#2B2B2B" stroke-width="3" fill="#fff" stroke-linecap="round"/>
+      <circle class="fixed" cx="170" cy="195" r="14" fill="#fff" stroke="#2B2B2B" stroke-width="3"/>
+      <circle class="fixed" cx="230" cy="195" r="14" fill="#fff" stroke="#2B2B2B" stroke-width="3"/>
+      <circle class="fixed" cx="173" cy="197" r="6" fill="#2B2B2B"/>
+      <circle class="fixed" cx="227" cy="197" r="6" fill="#2B2B2B"/>
+    `,
+    numbers: {
+      earL:  {num:7, x:90,  y:195, size:22},
+      earR:  {num:7, x:310, y:195, size:22},
+      body:  {num:6, x:200, y:235, size:30},
+      trunk: {num:5, x:195, y:340, size:18},
+      footL: {num:9, x:162, y:347, size:16},
+      footR: {num:9, x:237, y:347, size:16}
+    }
+  },
+  giraffe: {
+    name: 'Giraffe', emoji: '🦒',
+    svg: `
+      <path class="fixed" d="M185,60 L185,42" stroke="#2B2B2B" stroke-width="6" stroke-linecap="round"/>
+      <path class="fixed" d="M215,60 L215,42" stroke="#2B2B2B" stroke-width="6" stroke-linecap="round"/>
+      <circle class="fixed" cx="185" cy="38" r="8" fill="#8B5E3C" stroke="#2B2B2B" stroke-width="3"/>
+      <circle class="fixed" cx="215" cy="38" r="8" fill="#8B5E3C" stroke="#2B2B2B" stroke-width="3"/>
+      <ellipse class="fixed" cx="155" cy="90" rx="16" ry="10" fill="#fff" stroke="#2B2B2B" stroke-width="4" transform="rotate(-20 155 90)"/>
+      <ellipse class="fixed" cx="245" cy="90" rx="16" ry="10" fill="#fff" stroke="#2B2B2B" stroke-width="4" transform="rotate(20 245 90)"/>
+      <path id="neck" class="region" d="M175,125 C170,180 168,230 175,270 L225,270 C232,230 230,180 225,125 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <ellipse id="head" class="region" cx="200" cy="95" rx="42" ry="36" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <ellipse id="body" class="region" cx="200" cy="310" rx="85" ry="55" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <rect id="legL" class="region" x="150" y="350" width="28" height="45" rx="10" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="5"/>
+      <rect id="legR" class="region" x="222" y="350" width="28" height="45" rx="10" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="5"/>
+      <circle id="spot1" class="region" cx="185" cy="160" r="16" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <circle id="spot2" class="region" cx="215" cy="210" r="18" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <circle id="spot3" class="region" cx="165" cy="300" r="20" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <circle id="spot4" class="region" cx="235" cy="310" r="18" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      <circle class="fixed" cx="185" cy="90" r="6" fill="#2B2B2B"/>
+      <circle class="fixed" cx="215" cy="90" r="6" fill="#2B2B2B"/>
+      <path class="fixed" d="M190,110 Q200,116 210,110" stroke="#2B2B2B" stroke-width="4" fill="none" stroke-linecap="round"/>
+    `,
+    numbers: {
+      head:  {num:3, x:200, y:112, size:20},
+      neck:  {num:3, x:200, y:133, size:16},
+      body:  {num:3, x:200, y:340, size:26},
+      legL:  {num:8, x:164, y:372, size:16},
+      legR:  {num:8, x:236, y:372, size:16},
+      spot1: {num:1, x:185, y:160, size:14},
+      spot2: {num:6, x:215, y:210, size:14},
+      spot3: {num:5, x:165, y:300, size:16},
+      spot4: {num:7, x:235, y:310, size:16}
+    }
+  },
+  zebra: {
+    name: 'Zebra', emoji: '🦓',
+    svg: `
+      <defs>
+        <clipPath id="zebraClip">
+          <ellipse cx="200" cy="280" rx="100" ry="85"/>
+        </clipPath>
+      </defs>
+      <path class="fixed" d="M165,100 L155,72 L180,90 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="5"/>
+      <path class="fixed" d="M235,100 L245,72 L220,90 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="5"/>
+      <path id="mane" class="region" d="M165,90 L177,55 L189,90 L201,55 L213,90 L225,55 L237,90 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="5"/>
+      <circle id="head" class="region" cx="200" cy="140" r="55" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <ellipse id="bodyBase" class="region" cx="200" cy="280" rx="100" ry="85" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="6"/>
+      <g clip-path="url(#zebraClip)">
+        <rect id="stripe1" class="region" x="90" y="210" width="220" height="30" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+        <rect id="stripe2" class="region" x="90" y="250" width="220" height="30" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+        <rect id="stripe3" class="region" x="90" y="290" width="220" height="30" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"/>
+      </g>
+      <ellipse class="fixed" cx="200" cy="280" rx="100" ry="85" fill="none" stroke="#2B2B2B" stroke-width="6"/>
+      <rect id="legL" class="region" x="155" y="350" width="30" height="45" rx="10" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="5"/>
+      <rect id="legR" class="region" x="215" y="350" width="30" height="45" rx="10" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="5"/>
+      <circle class="fixed" cx="180" cy="140" r="6" fill="#2B2B2B"/>
+      <circle class="fixed" cx="220" cy="140" r="6" fill="#2B2B2B"/>
+      <path class="fixed" d="M188,170 Q200,178 212,170" stroke="#2B2B2B" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path class="fixed" d="M298,270 Q325,275 320,300" stroke="#2B2B2B" stroke-width="5" fill="none" stroke-linecap="round"/>
+    `,
+    numbers: {
+      mane:     {num:7, x:200, y:75,  size:16},
+      head:     {num:5, x:200, y:162, size:22},
+      bodyBase: {num:5, x:200, y:200, size:18},
+      stripe1:  {num:9, x:200, y:225, size:20},
+      stripe2:  {num:6, x:200, y:265, size:20},
+      stripe3:  {num:9, x:200, y:305, size:20},
+      legL:     {num:9, x:170, y:372, size:16},
+      legR:     {num:9, x:230, y:372, size:16}
+    }
+  }
+};
+
+const state = {}; // bugId -> {regionId: true} for solved regions
+let currentBug = 'ladybug';
+Object.keys(BUGS).forEach(id => state[id] = {});
+
+// ---------- Build tabs ----------
+const tabsEl = document.getElementById('bugTabs');
+Object.entries(BUGS).forEach(([id, bug]) => {
+  const btn = document.createElement('button');
+  btn.className = 'bug-tab' + (id === currentBug ? ' active' : '');
+  btn.dataset.id = id;
+  btn.innerHTML = `<span class="emoji">${bug.emoji}</span> ${bug.name}`;
+  btn.onclick = () => selectBug(id);
+  tabsEl.appendChild(btn);
+});
+
+// ---------- Build palette ----------
+const paletteEl = document.getElementById('palette');
+COLORS.forEach((c, i) => {
+  const sw = document.createElement('div');
+  sw.className = 'swatch' + (i === 0 ? ' selected' : '');
+  sw.style.background = c.hex;
+  sw.dataset.hex = c.hex;
+  sw.dataset.num = c.num;
+  const badge = document.createElement('div');
+  badge.className = 'badge';
+  badge.textContent = c.num;
+  sw.appendChild(badge);
+  sw.onclick = () => selectColor(c.hex, c.num, sw);
+  paletteEl.appendChild(sw);
+});
+const eraser = document.createElement('div');
+eraser.className = 'swatch eraser';
+eraser.dataset.hex = '#FFFFFF';
+eraser.dataset.num = 0;
+eraser.onclick = () => selectColor('#FFFFFF', 0, eraser);
+paletteEl.appendChild(eraser);
+
+function selectColor(hex, num, el){
+  currentColor = hex;
+  currentNum = num;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectBug(id){
+  currentBug = id;
+  document.querySelectorAll('.bug-tab').forEach(t => t.classList.toggle('active', t.dataset.id === id));
+  renderBug();
+}
+
+function renderBug(){
+  const bug = BUGS[currentBug];
+  const svg = document.getElementById('bugSvg');
+  svg.innerHTML = bug.svg;
+
+  // add number labels on top of everything
+  Object.entries(bug.numbers).forEach(([regionId, info]) => {
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', info.x);
+    t.setAttribute('y', info.y);
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('class', 'region-number');
+    t.setAttribute('data-region', regionId);
+    t.setAttribute('font-size', info.size);
+    t.textContent = info.num;
+    svg.appendChild(t);
+  });
+
+  // reapply solved colors from saved state
+  const saved = state[currentBug];
+  Object.entries(saved).forEach(([regionId]) => {
+    const el = svg.querySelector('#' + regionId);
+    const numInfo = bug.numbers[regionId];
+    if (el && numInfo) {
+      const colorObj = COLORS.find(c => c.num === numInfo.num);
+      if (colorObj) el.setAttribute('fill', colorObj.hex);
+      const label = svg.querySelector('text[data-region="' + regionId + '"]');
+      if (label) label.style.opacity = 0;
+    }
+  });
+
+  // attach click handlers to fillable regions
+  svg.querySelectorAll('.region').forEach(el => {
+    el.addEventListener('click', () => {
+      const info = bug.numbers[el.id];
+      if (!info) return;
+
+      if (currentNum === 0) {
+        // eraser: always allowed
+        el.setAttribute('fill', '#FFFFFF');
+        delete state[currentBug][el.id];
+        const label = svg.querySelector('text[data-region="' + el.id + '"]');
+        if (label) label.style.opacity = 1;
+        return;
+      }
+
+      if (currentNum === info.num) {
+        el.setAttribute('fill', currentColor);
+        state[currentBug][el.id] = true;
+        el.classList.remove('pop');
+        void el.offsetWidth;
+        el.classList.add('pop');
+        const label = svg.querySelector('text[data-region="' + el.id + '"]');
+        if (label) label.style.opacity = 0;
+        checkComplete(svg, bug);
+      } else {
+        el.classList.remove('shake');
+        void el.offsetWidth;
+        el.classList.add('shake');
+      }
+    });
+  });
+
+  document.getElementById('celebration').classList.remove('show');
+}
+
+function checkComplete(svg, bug){
+  const allSolved = Object.keys(bug.numbers).every(id => state[currentBug][id]);
+  if (allSolved) celebrate();
+}
+
+function celebrate(){
+  const cel = document.getElementById('celebration');
+  cel.classList.add('show');
+  spawnConfetti();
+  setTimeout(() => cel.classList.remove('show'), 1800);
+}
+
+function spawnConfetti(){
+  const wrap = document.querySelector('.canvas-wrap');
+  const colors = COLORS.map(c => c.hex);
+  for (let i = 0; i < 24; i++){
+    const piece = document.createElement('div');
+    piece.className = 'confetti';
+    piece.style.left = Math.random() * 100 + '%';
+    piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+    piece.style.animationDuration = (0.9 + Math.random()*0.8) + 's';
+    piece.style.zIndex = 6;
+    wrap.appendChild(piece);
+    setTimeout(() => piece.remove(), 2000);
+  }
+}
+
+document.getElementById('resetBtn').onclick = () => {
+  state[currentBug] = {};
+  renderBug();
+};
+
+renderBug();
+</script>
+</body>
+</html>
