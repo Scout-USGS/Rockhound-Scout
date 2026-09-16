@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Texas Rockhound Scout — Direct Data (Prototype)</title>
+  <link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Barlow:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --stone:#1a1612; --granite:#2a2420; --quartz:#e8d5a3; --copper:#c4622d; --turquoise:#3d9e8c; --feldspar:#8b6f4e; --cream:#f2e8d0; --glow:#5bbfa8; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--stone); color:var(--cream); font-family:'Barlow',sans-serif; font-weight:300; min-height:100vh; overflow-x:hidden; }
+  body::before { content:''; position:fixed; inset:0; background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(196,98,45,0.04) 39px,rgba(196,98,45,0.04) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(196,98,45,0.03) 39px,rgba(196,98,45,0.03) 40px); pointer-events:none; z-index:0; }
+  .header { position:relative; z-index:10; padding:14px 16px; border-bottom:1px solid rgba(196,98,45,0.3); display:flex; align-items:center; gap:12px; background:rgba(26,22,18,0.98); }
+  .logo { width:38px; height:38px; flex-shrink:0; }
+  .title h1 { font-family:'Bebas Neue',sans-serif; font-size:1.7rem; letter-spacing:0.08em; color:var(--quartz); line-height:1; }
+  .title .sub { font-family:'Share Tech Mono',monospace; font-size:0.55rem; color:var(--turquoise); letter-spacing:0.15em; margin-top:2px; }
+  .status { margin-left:auto; font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); background:rgba(42,36,32,0.8); border:1px solid rgba(139,111,78,0.25); padding:4px 8px; border-radius:2px; white-space:nowrap; display:flex; align-items:center; gap:5px; }
+  .dot { width:6px; height:6px; border-radius:50%; background:var(--glow); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .usgs-badge { background:rgba(61,158,140,0.12); border:1px solid rgba(61,158,140,0.35); border-radius:2px; padding:8px 14px; font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--glow); letter-spacing:0.08em; text-align:center; line-height:1.6; }
+  .content { position:relative; z-index:5; padding:16px; display:flex; flex-direction:column; gap:14px; max-width:680px; margin:0 auto; }
+  .slabel { font-family:'Share Tech Mono',monospace; font-size:0.58rem; letter-spacing:0.22em; color:var(--copper); text-transform:uppercase; margin-bottom:8px; }
+  .rgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .rbtn { background:rgba(42,36,32,0.8); border:1px solid rgba(139,111,78,0.3); color:var(--cream); font-family:'Barlow',sans-serif; font-size:0.8rem; font-weight:600; padding:12px 10px; cursor:pointer; transition:all 0.2s; text-align:left; border-radius:3px; line-height:1.3; }
+  .rbtn .icon { font-size:1.1rem; display:block; margin-bottom:3px; }
+  .rbtn .hint { font-weight:300; font-size:0.65rem; color:var(--feldspar); display:block; margin-top:2px; }
+  .rbtn:hover { background:rgba(196,98,45,0.15); border-color:rgba(196,98,45,0.5); }
+  .rbtn.active { background:rgba(196,98,45,0.25); border-color:var(--copper); color:var(--quartz); }
+  .rbtn.active .hint { color:var(--quartz); opacity:0.7; }
+  .rbtn:disabled { opacity:0.35; cursor:not-allowed; }
+  .notes { background:rgba(42,36,32,0.5); border:1px dashed rgba(139,111,78,0.3); border-radius:3px; padding:10px 12px; font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--feldspar); width:100%; min-height:52px; resize:none; outline:none; line-height:1.6; }
+  .notes:focus { border-color:var(--copper); color:var(--cream); }
+  .notes::placeholder { color:rgba(139,111,78,0.4); }
+  hr { border:none; border-top:1px solid rgba(139,111,78,0.2); }
+  .scoutbtn { width:100%; background:linear-gradient(135deg,var(--copper),#9e3e18); border:none; color:var(--cream); font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.15em; padding:16px; cursor:pointer; transition:all 0.2s; border-radius:3px; }
+  .scoutbtn:hover:not(:disabled) { filter:brightness(1.12); transform:translateY(-1px); }
+  .scoutbtn:disabled { background:var(--granite); color:var(--feldspar); cursor:not-allowed; transform:none; }
+  .loading { display:none; flex-direction:column; align-items:center; gap:10px; padding:24px 16px; }
+  .loading.show { display:flex; }
+  .drill { font-size:2.2rem; animation:rock 0.5s steps(2) infinite; }
+  @keyframes rock { 0%{transform:rotate(-10deg)} 100%{transform:rotate(10deg)} }
+  .lmsg { font-family:'Share Tech Mono',monospace; font-size:0.68rem; color:var(--turquoise); letter-spacing:0.12em; animation:blink 1s infinite; text-align:center; }
+  .lprog { font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); text-align:center; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .errbox { display:none; background:rgba(224,92,42,0.1); border:1px solid rgba(224,92,42,0.4); border-radius:3px; padding:12px 14px; font-family:'Share Tech Mono',monospace; font-size:0.68rem; color:#e08a6a; line-height:1.6; }
+  .errbox.show { display:block; }
+  .results { display:flex; flex-direction:column; gap:14px; }
+  .hcard { background:rgba(42,36,32,0.75); border:1px solid rgba(139,111,78,0.3); border-radius:3px; overflow:hidden; animation:slideIn 0.35s ease forwards; opacity:0; }
+  @keyframes slideIn { to{opacity:1;transform:translateY(0)} from{opacity:0;transform:translateY(10px)} }
+  .htop { padding:10px 14px; background:rgba(30,24,20,0.65); border-bottom:1px solid rgba(139,111,78,0.2); display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap; }
+  .score-hot { font-family:'Share Tech Mono',monospace; font-size:0.6rem; padding:3px 8px; border-radius:2px; background:rgba(196,98,45,0.4); color:#f4b87a; border:1px solid rgba(196,98,45,0.6); }
+  .score-warm { font-family:'Share Tech Mono',monospace; font-size:0.6rem; padding:3px 8px; border-radius:2px; background:rgba(61,158,140,0.3); color:#7ec49a; border:1px solid rgba(61,158,140,0.5); }
+  .hname { font-weight:600; font-size:0.9rem; color:var(--quartz); flex:1; min-width:0; line-height:1.3; }
+  .hbody { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .field { display:flex; flex-direction:column; gap:3px; }
+  .field label { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.2em; color:var(--copper); text-transform:uppercase; }
+  .field p { font-size:0.8rem; line-height:1.55; color:var(--cream); }
+  .contact-strip { background:rgba(24,74,58,0.32); border:1px solid rgba(126,196,154,0.35); border-left:3px solid rgba(126,196,154,0.8); border-radius:2px; padding:8px 12px; }
+  .contact-strip .clabel { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.18em; color:rgba(126,196,154,0.9); display:block; margin-bottom:4px; text-transform:uppercase; }
+  .contact-strip .cval { font-size:0.8rem; color:var(--quartz); line-height:1.4; }
+  .drain-strip { background:rgba(15,45,58,0.5); border:1px solid rgba(107,191,212,0.2); border-left:3px solid rgba(107,191,212,0.5); border-radius:2px; padding:8px 12px; }
+  .drain-strip .dlabel { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.18em; color:rgba(107,191,212,0.7); display:block; margin-bottom:4px; text-transform:uppercase; }
+  .drain-strip .dval { font-family:'Share Tech Mono',monospace; font-size:0.72rem; color:#6bbfd4; line-height:1.5; }
+  .dir-strip { background:rgba(196,98,45,0.1); border:1px solid rgba(196,98,45,0.25); border-left:3px solid var(--copper); border-radius:2px; padding:10px 12px; }
+  .dir-strip .dirlabel { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.18em; color:var(--copper); display:block; margin-bottom:5px; text-transform:uppercase; }
+  .dir-strip .dirval { font-size:0.82rem; color:var(--quartz); line-height:1.6; }
+  .minerals { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+  .mtag { font-family:'Share Tech Mono',monospace; font-size:0.58rem; padding:2px 7px; background:rgba(61,158,140,0.12); border:1px solid rgba(61,158,140,0.3); color:var(--glow); border-radius:2px; }
+  .waze-box { background:rgba(20,40,25,0.55); border:1px solid rgba(126,196,154,0.2); border-radius:3px; padding:10px 12px; }
+  .waze-box .wlabel { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.2em; color:rgba(126,196,154,0.8); display:block; margin-bottom:6px; text-transform:uppercase; }
+  .waze-box input { width:100%; font-family:'Share Tech Mono',monospace; font-size:0.78rem; color:#7ec49a; background:rgba(0,0,0,0.4); border:1px solid rgba(126,196,154,0.3); border-radius:2px; padding:8px 10px; outline:none; cursor:text; }
+  .waze-box .winst { font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); margin-top:6px; line-height:1.5; display:block; }
+  .why { font-size:0.68rem; color:var(--feldspar); font-style:italic; line-height:1.5; padding-top:6px; border-top:1px solid rgba(139,111,78,0.15); }
+  .src { font-family:'Share Tech Mono',monospace; font-size:0.52rem; color:rgba(126,196,154,0.7); padding-top:2px; }
+  .verbadge { font-family:'Share Tech Mono',monospace; font-size:0.5rem; color:rgba(126,196,154,0.7); text-align:center; padding-top:10px; }
+</style>
+</head>
+<body>
+<header class="header">
+  <svg class="logo" viewBox="0 0 48 48" fill="none">
+    <polygon points="24,4 44,36 4,36" fill="none" stroke="#c4622d" stroke-width="1.5"/>
+    <circle cx="24" cy="26" r="6" fill="rgba(61,158,140,0.2)" stroke="#3d9e8c" stroke-width="1.2"/>
+    <circle cx="24" cy="26" r="2" fill="#3d9e8c"/>
+  </svg>
+  <div class="title">
+    <h1>Rockhound Scout</h1>
+    <div class="sub">▸ DIRECT USGS/BEG DATA — PROTOTYPE</div>
+  </div>
+  <div class="status"><span class="dot"></span><span id="statusTxt">READY</span></div>
+</header>
+<div class="content">
+  <div class="usgs-badge">
+    ⛏ READS THE REAL USGS / TEXAS BUREAU OF ECONOMIC GEOLOGY MAP DIRECTLY<br>
+    No AI guessing on location — AI only writes up what the map already found
+  </div>
+  <div style="font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
+    ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
+  </div>
+  <div>
+    <div class="slabel">▸ Pick your region</div>
+    <div class="rgrid">
+      <button class="rbtn active" data-region="llano" onclick="pick(this)"><span class="icon">⬡</span>Llano Uplift<span class="hint">Blue quartz · llanite · topaz</span></button>
+      <button class="rbtn" data-region="threerivers" onclick="pick(this)"><span class="icon">🪨</span>Three Rivers<span class="hint">Petrified palm wood</span></button>
+      <button class="rbtn" data-region="edwards" onclick="pick(this)"><span class="icon">▲</span>Edwards Plateau<span class="hint">Flint · chert · fossils</span></button>
+      <button class="rbtn" data-region="bigbend" onclick="pick(this)"><span class="icon">★</span>Big Bend<span class="hint">Agate · jasper · cinnabar</span></button>
+      <button class="rbtn" data-region="cretaceous" onclick="pick(this)"><span class="icon">🦕</span>Cretaceous Shelf<span class="hint">Ammonites · shark teeth</span></button>
+      <button class="rbtn" data-region="custom" onclick="pick(this)" disabled title="Not available in this prototype yet"><span class="icon">📍</span>Custom<span class="hint">Not in this prototype yet</span></button>
+    </div>
+  </div>
+  <hr>
+  <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
+  <div class="loading" id="loading">
+    <div class="drill">⛏</div>
+    <div class="lmsg" id="lmsg">READING REAL USGS/BEG GEOLOGIC MAP...</div>
+    <div class="lprog" id="lprog">Sampling road corridors against verified map data — 20-40 seconds</div>
+  </div>
+  <div class="errbox" id="errbox"></div>
+  <div class="results" id="results"></div>
+  <div class="verbadge">▸ v3-direct (prototype) — verified geologic contacts; AI only writes the description</div>
+</div>
+
+<script>
+let region = 'llano';
+
+// PROTOTYPE: direct-data engine. Instead of asking the AI to search the web,
+// this samples real points along each road directly against the free USGS/BEG
+// geologic map API (Macrostrat) and the free OpenStreetMap Overpass API, finds
+// where the mapped rock formation actually changes (a real contact), and only
+// then makes one small, tool-free Claude call per contact to write a friendly
+// field-note from the verified facts. No web_search tool is used anywhere here,
+// so there is no search cost, and the token cost per contact is tiny.
+const regionData = {
+  llano: {
+    label: 'Llano Uplift',
+    wazeTowns: { 'TX-16': 'Llano, TX', 'FM 783': 'Mason, TX', 'US-87': 'Mason, TX', 'FM 2768': 'Llano, TX' },
+    roads: [
+      { road: 'TX-16', pts: [[30.750,-98.670],[30.770,-98.665],[30.790,-98.660],[30.810,-98.658],[30.830,-98.655],[30.850,-98.652],[30.870,-98.648]] },
+      { road: 'FM 783', pts: [[30.748,-99.318],[30.720,-99.280],[30.695,-99.245],[30.668,-99.210]] },
+      { road: 'US-87', pts: [[30.750,-99.230],[30.790,-99.190],[30.830,-99.150],[30.870,-99.110]] },
+      { road: 'FM 2768', pts: [[30.780,-98.720],[30.800,-98.700],[30.820,-98.680],[30.840,-98.660]] }
+    ]
+  },
+  threerivers: {
+    label: 'Three Rivers',
+    wazeTowns: { 'FM 799': 'Three Rivers, TX', 'US-281': 'Three Rivers, TX', 'FM 534': 'Tilden, TX' },
+    roads: [
+      { road: 'FM 799', pts: [[28.460,-98.180],[28.420,-98.200],[28.380,-98.220],[28.340,-98.240]] },
+      { road: 'US-281', pts: [[28.460,-98.180],[28.380,-98.180],[28.300,-98.180]] },
+      { road: 'FM 534', pts: [[28.310,-98.340],[28.270,-98.360],[28.230,-98.380]] }
+    ]
+  },
+  edwards: {
+    label: 'Edwards Plateau',
+    wazeTowns: { 'FM 337': 'Leakey, TX', 'US-290': 'Johnson City, TX', 'US-83': 'Rocksprings, TX' },
+    roads: [
+      { road: 'FM 337', pts: [[29.735,-99.795],[29.720,-99.830],[29.705,-99.865],[29.690,-99.900]] },
+      { road: 'US-290', pts: [[30.280,-98.410],[30.275,-98.480],[30.270,-98.550],[30.265,-98.620]] },
+      { road: 'US-83', pts: [[29.890,-100.020],[29.820,-100.020],[29.750,-100.020]] }
+    ]
+  },
+  bigbend: {
+    label: 'Big Bend',
+    wazeTowns: { 'FM 170': 'Presidio, TX', 'TX-118': 'Alpine, TX', 'US-385': 'Marathon, TX' },
+    roads: [
+      { road: 'FM 170', pts: [[29.560,-104.370],[29.530,-104.290],[29.500,-104.210],[29.470,-104.130]] },
+      { road: 'TX-118', pts: [[30.158,-103.660],[30.080,-103.630],[30.000,-103.600]] },
+      { road: 'US-385', pts: [[30.210,-103.240],[30.150,-103.240],[30.090,-103.240]] }
+    ]
+  },
+  cretaceous: {
+    label: 'Cretaceous Shelf',
+    wazeTowns: { 'US-77': 'Cameron, TX', 'US-183': 'Lockhart, TX', 'FM 107': 'Corsicana, TX' },
+    roads: [
+      { road: 'US-77', pts: [[30.850,-97.020],[30.950,-97.020],[31.050,-97.020]] },
+      { road: 'US-183', pts: [[29.880,-97.670],[29.950,-97.680],[30.020,-97.690]] },
+      { road: 'FM 107', pts: [[32.080,-96.470],[32.060,-96.510],[32.040,-96.550]] }
+    ]
+  },
+  custom: { label: 'Custom', wazeTowns: {}, roads: [] }
+};
+
+function pick(btn) {
+  if (btn.disabled) return;
+  document.querySelectorAll('.rbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  region = btn.dataset.region;
+}
+function setStatus(t) { document.getElementById('statusTxt').textContent = t; }
+function showLoading(msg, prog) {
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('lmsg').textContent = msg;
+  document.getElementById('lprog').textContent = prog || '';
+  document.getElementById('errbox').classList.remove('show');
+  document.getElementById('results').innerHTML = '';
+}
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+function showError(msg) { const b = document.getElementById('errbox'); b.textContent = '⚠ ' + msg; b.classList.add('show'); }
+function setProgress(p) { document.getElementById('lprog').textContent = p; }
+
+// --- Direct-data engine ---
+
+async function fetchGeoUnit(lat, lon) {
+  try {
+    const r = await fetch(`https://macrostrat.org/api/v2/geologic_units/map?lat=${lat}&lng=${lon}&format=json`);
+    const d = await r.json();
+    const units = (d.success && d.success.data) ? d.success.data : [];
+    const named = units.find(u => u.strat_name) || units[0] || null;
+    if (!named) return null;
+    return { name: (named.strat_name || named.name || '').trim(), lith: named.lith || '' };
+  } catch (e) { return null; }
+}
+
+function densify(pts, stepDeg) {
+  const out = [pts[0]];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [lat1, lon1] = pts[i], [lat2, lon2] = pts[i + 1];
+    const dist = Math.hypot(lat2 - lat1, lon2 - lon1);
+    const steps = Math.max(1, Math.round(dist / stepDeg));
+    for (let s = 1; s <= steps; s++) {
+      const f = s / steps;
+      out.push([lat1 + (lat2 - lat1) * f, lon1 + (lon2 - lon1) * f]);
+    }
+  }
+  return out;
+}
+
+async function fetchDrainageNearby(lat, lon) {
+  try {
+    const d = 0.025;
+    const q = `[out:json][timeout:15];way["waterway"~"river|stream|creek"](${lat-d},${lon-d},${lat+d},${lon+d});out tags;`;
+    const r = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q));
+    const j = await r.json();
+    const names = (j.elements || []).map(e => e.tags && e.tags.name).filter(Boolean);
+    return [...new Set(names)].slice(0, 3);
+  } catch (e) { return []; }
+}
+
+async function findContactsForRoad(road, town) {
+  const dense = densify(road.pts, 0.012);
+  const seq = [];
+  for (const [lat, lon] of dense) {
+    const unit = await fetchGeoUnit(lat, lon);
+    seq.push({ lat, lon, unit });
+    await new Promise(r => setTimeout(r, 260));
+  }
+  const contacts = [];
+  for (let i = 1; i < seq.length; i++) {
+    const a = seq[i - 1], b = seq[i];
+    if (a.unit && b.unit && a.unit.name && b.unit.name && a.unit.name !== b.unit.name) {
+      contacts.push({
+        road: road.road, town,
+        lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2,
+        from: a.unit.name, fromLith: a.unit.lith,
+        to: b.unit.name, toLith: b.unit.lith,
+        spanMiles: (Math.hypot(b.lat - a.lat, b.lon - a.lon) * 69)
+      });
+    }
+  }
+  return contacts;
+}
+
+function parseRecord(raw) {
+  const lines = raw.replace('---RECORD---', '').trim().split('\n');
+  const obj = {};
+  for (const line of lines) {
+    const colon = line.indexOf(':');
+    if (colon === -1) continue;
+    const key = line.slice(0, colon).trim().toUpperCase();
+    const val = line.slice(colon + 1).trim();
+    obj[key] = val;
+  }
+  if (!obj.NAME) return null;
+  return {
+    name: obj.NAME || '', road: obj.ROAD || '', town: obj.TOWN || '',
+    score: (obj.SCORE || 'warm').toLowerCase().includes('hot') ? 'hot' : 'warm',
+    from_formation: obj.FROM || '', to_formation: obj.TO || '',
+    contact_location: obj.WHERE || '',
+    drainages: obj.DRAINAGES ? obj.DRAINAGES.split(',').map(s => s.trim()).filter(Boolean) : [],
+    minerals: obj.MINERALS ? obj.MINERALS.split(',').map(s => s.trim()).filter(Boolean) : [],
+    directions: obj.DIRECTIONS || '', from_the_truck: obj.TRUCK || '', why: obj.WHY || ''
+  };
+}
+
+async function writeUpContact(c) {
+  const drains = await fetchDrainageNearby(c.lat, c.lon);
+  const span = c.spanMiles.toFixed(1);
+  const prompt = `You are writing a rockhounding field-guide entry. Below are VERIFIED facts from the real USGS/Texas Bureau of Economic Geology geologic map (not a guess) — use ONLY these facts, do not invent additional precision beyond them.
+
+VERIFIED CONTACT:
+Road: ${c.road}, Texas
+Nearest town for directions: ${c.town}
+Formation A: ${c.from} (${c.fromLith})
+Formation B: ${c.to} (${c.toLith})
+The contact falls somewhere within a ~${span}-mile stretch centered near lat ${c.lat.toFixed(4)}, lon ${c.lon.toFixed(4)} — the exact contact line is not resolved at this map's scale, so describe it as a general stretch, not an exact spot.
+${drains.length ? 'Named waterways within ~1.5 miles: ' + drains.join(', ') : 'No named waterway found nearby.'}
+
+Write ONE hotspot record in EXACTLY this format (no markdown, no extra commentary):
+NAME: short catchy name for this contact
+ROAD: ${c.road}
+TOWN: ${c.town}
+SCORE: ${drains.length ? 'hot' : 'warm'}
+FROM: ${c.from}
+TO: ${c.to}
+WHERE: general stretch description, not an exact mile marker
+DRAINAGES: ${drains.join(', ')}
+MINERALS: 3-4 plausible minerals typically found at a contact like this between these two rock types
+DIRECTIONS: plain english driving directions from ${c.town}, describing the general stretch and telling the reader to check both shoulders since exact side is not verified
+TRUCK: what to watch for from the truck window
+WHY: one sentence why this contact is geologically interesting
+---RECORD---`;
+
+  const resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!resp.ok) throw new Error('API error ' + resp.status);
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message);
+  const raw = data.content.map(b => b.text || '').join('').trim();
+  return parseRecord(raw);
+}
+
+async function runScout() {
+  if (region === 'custom') {
+    showError('Custom search isn\'t wired up in this prototype yet — it needs a road list for the area. Use the original app for custom areas for now.');
+    return;
+  }
+  const rd = regionData[region];
+  const btn = document.getElementById('scoutBtn');
+  btn.disabled = true;
+  setStatus('SCANNING...');
+  showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling road corridors against verified map data — 20-40 seconds');
+
+  try {
+    let allContacts = [];
+    for (const road of rd.roads) {
+      setProgress('Checking ' + road.road + ' for formation contacts...');
+      const town = rd.wazeTowns[road.road] || rd.label;
+      const contacts = await findContactsForRoad(road, town);
+      allContacts = allContacts.concat(contacts);
+    }
+
+    if (allContacts.length === 0) {
+      hideLoading();
+      showError('No formation contacts found along the sampled roads this pass. Try again, or use the original app.');
+      setStatus('NO DATA');
+      btn.disabled = false;
+      return;
+    }
+
+    // Prefer the contacts with the widest, best-resolved span first
+    allContacts.sort((a, b) => b.spanMiles - a.spanMiles);
+    const toWrite = allContacts.slice(0, 4);
+
+    setProgress('Writing up ' + toWrite.length + ' verified contact(s)...');
+    const hotspots = [];
+    for (const c of toWrite) {
+      try {
+        const h = await writeUpContact(c);
+        if (h) hotspots.push(h);
+      } catch (e) { /* skip a failed write-up, keep the rest */ }
+    }
+
+    hideLoading();
+    if (hotspots.length === 0) {
+      showError('Found real formation contacts but the write-up step failed. Try again.');
+      setStatus('ERROR');
+    } else {
+      renderHotspots(hotspots);
+      setStatus(hotspots.length + ' VERIFIED HOTSPOTS');
+      try { sessionStorage.setItem('lastHotspotsDirect', JSON.stringify(hotspots)); } catch (ex) {}
+    }
+  } catch (err) {
+    hideLoading();
+    showError('Error: ' + err.message);
+    setStatus('ERROR');
+  }
+  btn.disabled = false;
+}
+
+window.addEventListener('pageshow', () => {
+  try {
+    const saved = sessionStorage.getItem('lastHotspotsDirect');
+    if (saved && !document.getElementById('results').children.length) { renderHotspots(JSON.parse(saved)); setStatus('RESTORED'); }
+  } catch (e) {}
+});
+
+function renderHotspots(spots) {
+  const c = document.getElementById('results');
+  c.innerHTML = '';
+  spots.forEach((h, i) => {
+    const isHot = h.score === 'hot';
+    const drains = h.drainages || [];
+    const card = document.createElement('div');
+    card.className = 'hcard';
+    card.style.animationDelay = (i * 0.1) + 's';
+    card.innerHTML =
+      '<div class="htop">' +
+        '<span class="' + (isHot ? 'score-hot' : 'score-warm') + '">' + (isHot ? '🔥 HOTSPOT' : '◉ WARM') + '</span>' +
+        '<span class="hname">' + h.name + '</span>' +
+      '</div>' +
+      '<div class="hbody">' +
+        '<div class="contact-strip">' +
+          '<span class="clabel">✓ Verified Formation Contact — USGS/BEG Geologic Map</span>' +
+          '<span class="cval">' + h.from_formation + ' ▸ ' + h.to_formation + '</span>' +
+          (h.contact_location ? '<span style="font-size:0.72rem;color:var(--feldspar);display:block;margin-top:3px;">' + h.contact_location + '</span>' : '') +
+        '</div>' +
+        (drains.length > 0 ?
+          '<div class="drain-strip">' +
+            '<span class="dlabel">Named Drainages Nearby (OpenStreetMap)</span>' +
+            '<span class="dval">〰 ' + drains.join('  〰 ') + '</span>' +
+          '</div>' : '') +
+        '<div class="dir-strip">' +
+          '<span class="dirlabel">Field Directions from ' + h.town + '</span>' +
+          '<span class="dirval">' + h.directions + '</span>' +
+        '</div>' +
+        '<div class="field"><label>Watch for from the truck</label><p>' + h.from_the_truck + '</p></div>' +
+        '<div class="field"><label>You may find</label>' +
+          '<div class="minerals">' + (h.minerals || []).map(m => '<span class="mtag">' + m + '</span>').join('') + '</div>' +
+        '</div>' +
+        '<div class="waze-box">' +
+          '<span class="wlabel">Waze Destination</span>' +
+          '<input type="text" readonly value="' + (h.town || '') + '" onclick="this.select()">' +
+          '<span class="winst">Tap to select — long press to copy — paste into Waze search</span>' +
+        '</div>' +
+        '<div class="why">' + h.why + '</div>' +
+        '<div class="src">▸ Formation contact verified directly against USGS/BEG geologic map data — AI only wrote the description; check both shoulders near the marked stretch</div>' +
+      '</div>';
+    c.appendChild(card);
+  });
+}
+</script>
+</body>
+</html>
