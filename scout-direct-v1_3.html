@@ -34,6 +34,7 @@
   .notes { background:rgba(42,36,32,0.5); border:1px dashed rgba(139,111,78,0.3); border-radius:3px; padding:10px 12px; font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--feldspar); width:100%; min-height:52px; resize:none; outline:none; line-height:1.6; }
   .notes:focus { border-color:var(--copper); color:var(--cream); }
   .notes::placeholder { color:rgba(139,111,78,0.4); }
+  input.notes { min-height:auto; }
   hr { border:none; border-top:1px solid rgba(139,111,78,0.2); }
   .scoutbtn { width:100%; background:linear-gradient(135deg,var(--copper),#9e3e18); border:none; color:var(--cream); font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.15em; padding:16px; cursor:pointer; transition:all 0.2s; border-radius:3px; }
   .scoutbtn:hover:not(:disabled) { filter:brightness(1.12); transform:translateY(-1px); }
@@ -107,8 +108,12 @@
       <button class="rbtn" data-region="edwards" onclick="pick(this)"><span class="icon">▲</span>Edwards Plateau<span class="hint">Flint · chert · fossils</span></button>
       <button class="rbtn" data-region="bigbend" onclick="pick(this)"><span class="icon">★</span>Big Bend<span class="hint">Agate · jasper · cinnabar</span></button>
       <button class="rbtn" data-region="cretaceous" onclick="pick(this)"><span class="icon">🦕</span>Cretaceous Shelf<span class="hint">Ammonites · shark teeth</span></button>
-      <button class="rbtn" data-region="custom" onclick="pick(this)" disabled title="Not available in this prototype yet"><span class="icon">📍</span>Custom<span class="hint">Not in this prototype yet</span></button>
+      <button class="rbtn" data-region="custom" onclick="pick(this)"><span class="icon">📍</span>Custom<span class="hint">Describe your area below</span></button>
     </div>
+  </div>
+  <div id="customLocWrap" style="display:none;">
+    <div class="slabel">▸ Describe your area</div>
+    <input type="text" class="notes" id="customLoc" placeholder='e.g. "near Bryan, TX" or a hotel name/address — searches ~20 miles around it'>
   </div>
   <hr>
   <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
@@ -119,7 +124,7 @@
   </div>
   <div class="errbox" id="errbox"></div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v3-direct (prototype) — verified geologic contacts; AI only writes the description</div>
+  <div class="verbadge">▸ v4-direct (prototype) — verified geologic contacts + live Custom area search; AI only writes descriptions</div>
 </div>
 
 <script>
@@ -220,6 +225,7 @@ function pick(btn) {
   document.querySelectorAll('.rbtn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   region = btn.dataset.region;
+  document.getElementById('customLocWrap').style.display = (region === 'custom') ? 'block' : 'none';
 }
 function setStatus(t) { document.getElementById('statusTxt').textContent = t; }
 function showLoading(msg, prog) {
@@ -280,6 +286,55 @@ async function fetchDrainageNearby(lat, lon) {
     const j = await r.json();
     const names = (j.elements || []).map(e => e.tags && e.tags.name).filter(Boolean);
     return [...new Set(names)].slice(0, 3);
+  } catch (e) { return []; }
+}
+
+// --- Custom area support -------------------------------------------------
+// Turns free-text ("near Bryan, TX", a hotel name, an address) into real
+// coordinates using OpenStreetMap's free Nominatim geocoder, then finds real
+// named state/US highways within ~20 miles using the same free Overpass API
+// already used above for drainages. Capped at 3 highways, same "prioritize
+// state/US highways" cost discipline as the AI-search version -- this keeps
+// a Custom scan the same size/cost as a preset scan, no open-ended guessing.
+async function geocodeLocation(query) {
+  try {
+    const q = query.toLowerCase().includes('texas') || /\btx\b/i.test(query) ? query : query + ', Texas';
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us'
+      + '&viewbox=-106.65,36.5,-93.51,25.83&bounded=1'
+      + '&q=' + encodeURIComponent(q);
+    const r = await fetchWithTimeout(url, 8000);
+    const arr = await r.json();
+    if (!arr || !arr.length) return null;
+    return { lat: parseFloat(arr[0].lat), lon: parseFloat(arr[0].lon), label: arr[0].display_name };
+  } catch (e) { return null; }
+}
+
+async function fetchNearbyHighways(lat, lon, radiusMiles) {
+  try {
+    const d = radiusMiles / 69;
+    const bbox = `${lat-d},${lon-d},${lat+d},${lon+d}`;
+    const q = `[out:json][timeout:20];(way["highway"~"trunk|primary"]["ref"](${bbox}););out tags geom;`;
+    const r = await fetchWithTimeout('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q), 15000);
+    const j = await r.json();
+    const byRef = {};
+    for (const el of (j.elements || [])) {
+      if (!el.tags || !el.tags.ref || !el.geometry || el.geometry.length < 2) continue;
+      const ref = el.tags.ref.split(';')[0].trim();
+      if (!byRef[ref]) byRef[ref] = [];
+      for (const g of el.geometry) byRef[ref].push([g.lat, g.lon]);
+    }
+    const refs = Object.keys(byRef).slice(0, 3); // SCOPE LIMIT: at most 3 highways, matches preset cost profile
+    const roads = [];
+    for (const ref of refs) {
+      let pts = byRef[ref];
+      if (pts.length > 5) {
+        const step = Math.max(1, Math.floor(pts.length / 5));
+        pts = pts.filter((_, i) => i % step === 0).slice(0, 5);
+      }
+      if (pts.length < 2) continue;
+      roads.push({ road: ref, pts });
+    }
+    return roads;
   } catch (e) { return []; }
 }
 
@@ -379,16 +434,35 @@ WHY: one sentence why this contact is geologically interesting
   return parseRecord(raw);
 }
 
-async function runScout() {
-  if (region === 'custom') {
-    showError('Custom search isn\'t wired up in this prototype yet — it needs a road list for the area. Use the original app for custom areas for now.');
-    return;
+// Shared by both preset regions and Custom: samples every road for contacts,
+// then writes up the best few. Same cost profile either way.
+async function scanRoadsForHotspots(roads, defaultTown, wazeTowns) {
+  let allContacts = [];
+  for (const road of roads) {
+    setProgress('Checking ' + road.road + ' for formation contacts...');
+    const town = (wazeTowns && wazeTowns[road.road]) || defaultTown;
+    const contacts = await findContactsForRoad(road, town);
+    allContacts = allContacts.concat(contacts);
   }
-  const rd = regionData[region];
+  let written = [];
+  if (allContacts.length > 0) {
+    allContacts.sort((a, b) => b.spanMiles - a.spanMiles);
+    const toWrite = allContacts.slice(0, 4);
+    setProgress('Writing up ' + toWrite.length + ' verified contact(s)...');
+    for (const c of toWrite) {
+      try {
+        const h = await writeUpContact(c);
+        if (h) { h.verified_by = 'map'; written.push(h); }
+      } catch (e) { /* skip a failed write-up, keep the rest */ }
+    }
+  }
+  return { allContacts, written };
+}
+
+async function runScout() {
   const btn = document.getElementById('scoutBtn');
   btn.disabled = true;
   setStatus('SCANNING...');
-  showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling road corridors against verified map data — 20-40 seconds');
 
   // Overall safety net: even if something upstream hangs in a way the
   // per-request timeouts don't catch, this guarantees the button re-enables
@@ -401,32 +475,63 @@ async function runScout() {
   }, 150000);
 
   try {
-    let allContacts = [];
-    for (const road of rd.roads) {
-      setProgress('Checking ' + road.road + ' for formation contacts...');
-      const town = rd.wazeTowns[road.road] || rd.label;
-      const contacts = await findContactsForRoad(road, town);
-      allContacts = allContacts.concat(contacts);
+    if (region === 'custom') {
+      const query = document.getElementById('customLoc').value.trim();
+      if (!query) {
+        clearTimeout(watchdog);
+        showError('Describe your area first — a town, a hotel, or an address.');
+        setStatus('READY');
+        btn.disabled = false;
+        return;
+      }
+      showLoading('LOCATING YOUR AREA...', 'Finding coordinates and nearby highways...');
+      const loc = await geocodeLocation(query);
+      if (!loc) {
+        clearTimeout(watchdog);
+        hideLoading();
+        showError('Could not find that location. Try a nearby town name, or be more specific.');
+        setStatus('NOT FOUND');
+        btn.disabled = false;
+        return;
+      }
+      setProgress('Found it — searching for highways within 20 miles...');
+      const roads = await fetchNearbyHighways(loc.lat, loc.lon, 20);
+      if (roads.length === 0) {
+        clearTimeout(watchdog);
+        hideLoading();
+        showError('No major state/US highways found within 20 miles of that area. Try a different description.');
+        setStatus('NO ROADS');
+        btn.disabled = false;
+        return;
+      }
+      showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling ' + roads.length + ' highway(s) near "' + query + '" — 20-40 seconds');
+      const { allContacts, written } = await scanRoadsForHotspots(roads, query, {});
+
+      clearTimeout(watchdog);
+      hideLoading();
+      if (written.length === 0) {
+        showError(allContacts.length === 0
+          ? 'No formation contacts found along highways near that area this pass. Try again, or a different area.'
+          : 'Found real formation contacts but the write-up step failed. Try again.');
+        setStatus(allContacts.length === 0 ? 'NO DATA' : 'ERROR');
+      } else {
+        renderHotspots(written);
+        setStatus(written.length + ' HOTSPOTS');
+        try { sessionStorage.setItem('lastHotspotsDirect', JSON.stringify(written)); } catch (ex) {}
+      }
+      btn.disabled = false;
+      return;
     }
+
+    // --- Preset region path ---
+    const rd = regionData[region];
+    showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling road corridors against verified map data — 20-40 seconds');
+
+    const { allContacts, written } = await scanRoadsForHotspots(rd.roads, rd.label, rd.wazeTowns);
 
     // Curated, hand-confirmed spots always show for this region, regardless
     // of what the live map scan finds this particular click.
     const curated = (curatedSpots[region] || []).map(s => ({ ...s }));
-
-    let written = [];
-    if (allContacts.length > 0) {
-      // Prefer the contacts with the widest, best-resolved span first
-      allContacts.sort((a, b) => b.spanMiles - a.spanMiles);
-      const toWrite = allContacts.slice(0, 4);
-      setProgress('Writing up ' + toWrite.length + ' verified contact(s)...');
-      for (const c of toWrite) {
-        try {
-          const h = await writeUpContact(c);
-          if (h) { h.verified_by = 'map'; written.push(h); }
-        } catch (e) { /* skip a failed write-up, keep the rest */ }
-      }
-    }
-
     const hotspots = curated.concat(written);
 
     clearTimeout(watchdog);
