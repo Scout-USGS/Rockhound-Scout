@@ -123,6 +123,12 @@
 <script>
 let region = 'llano';
 
+// Shared with the Cloudflare Worker so it can reject requests that
+// didn't come from this app's JS. Not a secret a user could ever see
+// misused against them -- it just keeps the endpoint from being a
+// wide-open free relay to a paid API.
+const APP_KEY = '_ZzTQCfGmNWwBxVu6r6depVVhVYShybI';
+
 const regionData = {
   llano: {
     label: 'Llano Uplift',
@@ -254,7 +260,7 @@ WHY: one sentence why productive
     setProgress('AI querying USGS API for each road point...');
     const resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-App-Key': APP_KEY },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 3000,
