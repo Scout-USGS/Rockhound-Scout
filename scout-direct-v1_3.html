@@ -113,7 +113,7 @@
   </div>
   <div id="customLocWrap" style="display:none;">
     <div class="slabel">▸ Describe your area</div>
-    <input type="text" class="notes" id="customLoc" placeholder='e.g. "near Bryan, TX" or a hotel name/address — searches ~20 miles around it'>
+    <input type="text" class="notes" id="customLoc" placeholder='e.g. "find agatized petrified wood near Bryan, TX" — a town, hotel or address works too; searches ~20 miles around it'>
   </div>
   <hr>
   <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
@@ -124,7 +124,7 @@
   </div>
   <div class="errbox" id="errbox"></div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v4-direct (prototype) — verified geologic contacts + live Custom area search; AI only writes descriptions</div>
+  <div class="verbadge">▸ v4.1-direct (prototype) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
 </div>
 
 <script>
@@ -135,6 +135,27 @@ let region = 'llano';
 // misused against them -- it just keeps the endpoint from being a
 // wide-open free relay to a paid API.
 const APP_KEY = '_ZzTQCfGmNWwBxVu6r6depVVhVYShybI';
+
+// Running token count for the current scan, so the real cost of a Custom
+// click can be seen (and logged) instead of guessed.
+let usageTotals = { inp: 0, out: 0, calls: 0 };
+function trackUsage(data) {
+  usageTotals.calls++;
+  if (data && data.usage) {
+    usageTotals.inp += data.usage.input_tokens || 0;
+    usageTotals.out += data.usage.output_tokens || 0;
+  }
+}
+function showCostLine() {
+  // Estimate only: assumes $3 per million input tokens and $15 per million
+  // output tokens. Update these two numbers if the model/pricing changes.
+  const cost = (usageTotals.inp * 3 + usageTotals.out * 15) / 1000000;
+  console.log('[Scout cost]', usageTotals, '~$' + cost.toFixed(4));
+  const el = document.createElement('div');
+  el.style.cssText = "font-family:'Share Tech Mono',monospace; font-size:0.56rem; color:var(--feldspar); text-align:center; padding:10px 8px;";
+  el.textContent = '▸ This scan: ' + usageTotals.calls + ' AI call(s), ' + usageTotals.inp + ' in / ' + usageTotals.out + ' out tokens ≈ $' + cost.toFixed(3);
+  document.getElementById('results').appendChild(el);
+}
 
 // PROTOTYPE: direct-data engine. Instead of asking the AI to search the web,
 // this samples real points along each road directly against the free USGS/BEG
@@ -309,6 +330,46 @@ async function geocodeLocation(query) {
   } catch (e) { return null; }
 }
 
+// AI step for Custom: reads a plain-English request like "find spots for
+// agatized pet wood in the Bryan tx area" and splits it into a clean place
+// (for the geocoder) and the thing being hunted (for the write-ups).
+// Tiny call: ~150 tokens in, ~30 out. Returns null if anything goes wrong,
+// and the caller falls back to using the raw text as the place.
+async function parseCustomRequest(text) {
+  const clean = text.replace(/[\r\n"]+/g, ' ').slice(0, 300);
+  const prompt = 'A rockhounder typed this into a search box: "' + clean + '"\n' +
+    'Extract two things and reply with ONLY a JSON object, no other text:\n' +
+    '{"place": "...", "target": "..."}\n' +
+    '- place: the location as a clean geocodable string, ideally "City, TX" (a Texas town, hotel, address, or landmark). Use "" if none is given.\n' +
+    '- target: what they want to find, with obvious typos corrected (e.g. "agatized petrified wood"). Use "" if none is given.';
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-App-Key': APP_KEY },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 150, messages: [{ role: 'user', content: prompt }] }),
+      signal: ctrl.signal
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (data.error) return null;
+    trackUsage(data);
+    const raw = data.content.map(b => b.text || '').join('');
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    const j = JSON.parse(m[0]);
+    return {
+      place: String(j.place || '').trim().slice(0, 120),
+      target: String(j.target || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 80)
+    };
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchNearbyHighways(lat, lon, radiusMiles) {
   try {
     const d = radiusMiles / 69;
@@ -386,7 +447,7 @@ function parseRecord(raw) {
   };
 }
 
-async function writeUpContact(c) {
+async function writeUpContact(c, target) {
   const drains = await fetchDrainageNearby(c.lat, c.lon);
   const span = c.spanMiles.toFixed(1);
   const prompt = `You are writing a rockhounding field-guide entry. Below are VERIFIED facts from the real USGS/Texas Bureau of Economic Geology geologic map (not a guess) — use ONLY these facts, do not invent additional precision beyond them.
@@ -398,7 +459,7 @@ Formation A: ${c.from} (${c.fromLith})
 Formation B: ${c.to} (${c.toLith})
 The contact falls somewhere within a ~${span}-mile stretch centered near lat ${c.lat.toFixed(4)}, lon ${c.lon.toFixed(4)} — the exact contact line is not resolved at this map's scale, so describe it as a general stretch, not an exact spot.
 ${drains.length ? 'Named waterways within ~1.5 miles: ' + drains.join(', ') : 'No named waterway found nearby.'}
-
+${target ? '\nThe hunter is specifically looking for: ' + target + '. In WHY, say honestly whether these two formations are known to produce it, or that it is uncertain — never promise it is there. Only list it in MINERALS if these formations are known to produce it.\n' : ''}
 Write ONE hotspot record in EXACTLY this format (no markdown, no extra commentary):
 NAME: short catchy name for this contact
 ROAD: ${c.road}
@@ -430,13 +491,14 @@ WHY: one sentence why this contact is geologically interesting
   if (!resp.ok) throw new Error('API error ' + resp.status);
   const data = await resp.json();
   if (data.error) throw new Error(data.error.message);
+  trackUsage(data);
   const raw = data.content.map(b => b.text || '').join('').trim();
   return parseRecord(raw);
 }
 
 // Shared by both preset regions and Custom: samples every road for contacts,
 // then writes up the best few. Same cost profile either way.
-async function scanRoadsForHotspots(roads, defaultTown, wazeTowns) {
+async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target) {
   let allContacts = [];
   for (const road of roads) {
     setProgress('Checking ' + road.road + ' for formation contacts...');
@@ -451,7 +513,7 @@ async function scanRoadsForHotspots(roads, defaultTown, wazeTowns) {
     setProgress('Writing up ' + toWrite.length + ' verified contact(s)...');
     for (const c of toWrite) {
       try {
-        const h = await writeUpContact(c);
+        const h = await writeUpContact(c, target);
         if (h) { h.verified_by = 'map'; written.push(h); }
       } catch (e) { /* skip a failed write-up, keep the rest */ }
     }
@@ -484,8 +546,22 @@ async function runScout() {
         btn.disabled = false;
         return;
       }
-      showLoading('LOCATING YOUR AREA...', 'Finding coordinates and nearby highways...');
-      const loc = await geocodeLocation(query);
+      usageTotals = { inp: 0, out: 0, calls: 0 };
+      showLoading('READING YOUR REQUEST...', 'Working out where you want to search and what you are hunting for...');
+      const parsed = await parseCustomRequest(query);
+      // If the AI step fails for any reason, fall back to the raw text as before.
+      const place = (parsed && parsed.place) ? parsed.place : query;
+      const target = parsed ? parsed.target : '';
+      if (parsed && !parsed.place) {
+        clearTimeout(watchdog);
+        hideLoading();
+        showError('I could not find a place in that. Try something like "agatized petrified wood near Bryan, TX".');
+        setStatus('NOT FOUND');
+        btn.disabled = false;
+        return;
+      }
+      showLoading('LOCATING YOUR AREA...', 'Finding coordinates for "' + place + '" and nearby highways...');
+      const loc = await geocodeLocation(place);
       if (!loc) {
         clearTimeout(watchdog);
         hideLoading();
@@ -504,8 +580,8 @@ async function runScout() {
         btn.disabled = false;
         return;
       }
-      showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling ' + roads.length + ' highway(s) near "' + query + '" — 20-40 seconds');
-      const { allContacts, written } = await scanRoadsForHotspots(roads, query, {});
+      showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling ' + roads.length + ' highway(s) near "' + place + '" — 20-40 seconds');
+      const { allContacts, written } = await scanRoadsForHotspots(roads, place, {}, target);
 
       clearTimeout(watchdog);
       hideLoading();
@@ -516,6 +592,7 @@ async function runScout() {
         setStatus(allContacts.length === 0 ? 'NO DATA' : 'ERROR');
       } else {
         renderHotspots(written);
+        showCostLine();
         setStatus(written.length + ' HOTSPOTS');
         try { sessionStorage.setItem('lastHotspotsDirect', JSON.stringify(written)); } catch (ex) {}
       }
