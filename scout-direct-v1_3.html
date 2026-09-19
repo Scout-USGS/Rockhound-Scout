@@ -133,7 +133,7 @@
   </div>
   <div class="errbox" id="errbox"></div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v4.2-direct (prototype) — verified geologic contacts + AI-read Custom search + on-demand local club finder</div>
+  <div class="verbadge">▸ v4.3-direct (prototype) — verified geologic contacts + AI-read Custom search + on-demand local club finder</div>
 </div>
 
 <script>
@@ -204,6 +204,52 @@ function extractJson(text) {
   try { return JSON.parse(m[0]); } catch (e) { return null; }
 }
 
+// Every balanced {...} chunk in the text (string-aware), so stray braces in
+// commentary or ```json fences around the answer can't break the reading.
+function balancedObjects(text) {
+  const out = [];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] !== '{') continue;
+    let depth = 0, inStr = false, esc = false;
+    for (let j = i; j < text.length; j++) {
+      const ch = text[j];
+      if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+      if (ch === '"') inStr = true;
+      else if (ch === '{') depth++;
+      else if (ch === '}') { depth--; if (depth === 0) { out.push(text.slice(i, j + 1)); break; } }
+    }
+  }
+  return out;
+}
+function looksLikeClubs(o) { return o && typeof o === 'object' && (Array.isArray(o.clubs) || Array.isArray(o.tips)); }
+
+function parseClubJson(text) {
+  let best = null;
+  for (const s of balancedObjects(text)) {
+    try {
+      const o = JSON.parse(s);
+      if (looksLikeClubs(o) && (!best || s.length > best.len)) best = { o: o, len: s.length };
+    } catch (e) {}
+  }
+  if (best) return best.o;
+  // Reply cut off mid-way (hit the length limit): keep every complete entry.
+  const start = text.indexOf('{');
+  if (start === -1) return null;
+  const body = text.slice(start);
+  let pos = body.length;
+  for (let tries = 0; tries < 80; tries++) {
+    pos = body.lastIndexOf('}', pos - 1);
+    if (pos <= 0) break;
+    for (const tail of ['', ']}']) {
+      try {
+        const o = JSON.parse(body.slice(0, pos + 1) + tail);
+        if (looksLikeClubs(o)) return o;
+      } catch (e) {}
+    }
+  }
+  return null;
+}
+
 async function findLocalClubs() {
   if (!lastArea) return;
   const area = cleanForPrompt(lastArea.area, 100);
@@ -232,6 +278,7 @@ async function findLocalClubs() {
   resetUsage();
 
   const prompt = 'A Texas rockhounder will be collecting near ' + area + (target ? ', hunting for ' + target : '') + '.\n' +
+    'Do not write any commentary between searches. Your FINAL message must be ONLY the JSON object described below — nothing before it, nothing after it, no code fences. Keep it compact: at most 5 clubs and 4 tips, each field under 30 words.\n\n' +
     'Use web search (at most 3 searches) to find LOCAL rock, mineral, gem, fossil or lapidary clubs and societies that serve this part of Texas. ' +
     'Prefer clubs within about 75 miles of ' + area + ': first any in or right next to it, then the club in the nearest larger city. ' +
     'Also look for local chatter — club newsletters, public club pages, field-trip announcements or forum posts — with practical tips about collecting in this area' + (target ? ', especially ' + target : '') + '.\n\n' +
@@ -253,7 +300,7 @@ async function findLocalClubs() {
       headers: { 'Content-Type': 'application/json', 'X-App-Key': APP_KEY },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
+        max_tokens: 2500,
         tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3,
                   user_location: { type: 'approximate', country: 'US', region: 'Texas' } }],
         messages: [{ role: 'user', content: prompt }]
@@ -280,15 +327,21 @@ async function findLocalClubs() {
         }
       }
     }
-    let r = null;
-    for (let i = texts.length - 1; i >= 0 && !r; i--) r = extractJson(texts[i]);
-    if (!r) r = extractJson(texts.join('\n'));
-    if (!r) throw new Error('The search finished but the answer came back in a format I could not read. Try again.');
+    // Web-search replies arrive split into many text pieces (around citations).
+    // They must be joined with NOTHING between them, or the answer breaks.
+    const fullText = texts.join('').trim();
+    console.log('[Scout club raw]', data.stop_reason, fullText.slice(0, 800));
+    let r = parseClubJson(fullText);
+    if (!r) {
+      if (!fullText) throw new Error('The search ran but returned no answer' + (data.stop_reason ? ' (stopped: ' + data.stop_reason + ')' : '') + '. Try again.');
+      // Could not read the layout — show the raw text rather than lose what was paid for.
+      r = { raw: fullText.slice(0, 3000), clubs: [], tips: [] };
+    }
 
     out.innerHTML = '';
     renderClubs(out, r, sources);
     showCostLine(out, 'This club search');
-    if ((r.clubs && r.clubs.length) || (r.tips && r.tips.length)) {
+    if (!r.raw && ((r.clubs && r.clubs.length) || (r.tips && r.tips.length))) {
       try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), r: r, sources: sources.slice(0, 12) })); } catch (e) {}
     }
   } catch (e) {
@@ -327,7 +380,15 @@ function renderClubs(out, r, sources) {
   const tips = Array.isArray(r.tips) ? r.tips.slice(0, 5) : [];
 
   if (r.summary) add(out, 'div', '▸ ' + r.summary, 'cnote');
-  if (!clubs.length && !tips.length) {
+  if (r.raw) {
+    const card = document.createElement('div');
+    card.className = 'clubcard';
+    add(card, 'h3', 'Search results (unformatted)');
+    add(card, 'div', 'The answer came back in an unexpected layout, so this is the raw text.', 'cnote');
+    const p = add(card, 'p', r.raw);
+    p.style.whiteSpace = 'pre-wrap';
+    out.appendChild(card);
+  } else if (!clubs.length && !tips.length) {
     add(out, 'div', 'No local clubs turned up for this area. Try the search again from a nearby larger town.', 'cnote');
   }
   clubs.forEach(c => {
