@@ -133,7 +133,7 @@
   </div>
   <div class="errbox" id="errbox"></div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v4.3-direct (prototype) — verified geologic contacts + AI-read Custom search + on-demand local club finder</div>
+  <div class="verbadge">▸ v4.4-direct (prototype) — verified geologic contacts + AI-read Custom search + on-demand local club finder</div>
 </div>
 
 <script>
@@ -189,6 +189,7 @@ const CLUB_BTN_LABEL = '🤝 FIND LOCAL ROCK CLUBS & TIPS NEAR ';
 
 function addClubButton(area, target) {
   lastArea = { area: area, target: target || '' };
+  try { sessionStorage.setItem('lastAreaDirect', JSON.stringify(lastArea)); } catch (e) {}
   const box = document.createElement('div');
   box.id = 'clubBox';
   box.style.cssText = 'margin-top:6px;';
@@ -913,7 +914,18 @@ async function runScout() {
 window.addEventListener('pageshow', () => {
   try {
     const saved = sessionStorage.getItem('lastHotspotsDirect');
-    if (saved && !document.getElementById('results').children.length) { renderHotspots(JSON.parse(saved)); setStatus('RESTORED'); }
+    if (saved && !document.getElementById('results').children.length) {
+      const spots = JSON.parse(saved);
+      renderHotspots(spots);
+      setStatus('RESTORED');
+      // Bring the club button back too, for the same area as the restored cards.
+      // (Older saved results have no saved area, so fall back to the cards' town.)
+      try {
+        const a = JSON.parse(sessionStorage.getItem('lastAreaDirect') || 'null');
+        if (a && a.area) addClubButton(a.area, a.target || '');
+        else if (spots[0] && spots[0].town) addClubButton(spots[0].town, '');
+      } catch (e2) {}
+    }
   } catch (e) {}
 });
 
