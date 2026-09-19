@@ -48,6 +48,15 @@
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .errbox { display:none; background:rgba(224,92,42,0.1); border:1px solid rgba(224,92,42,0.4); border-radius:3px; padding:12px 14px; font-family:'Share Tech Mono',monospace; font-size:0.68rem; color:#e08a6a; line-height:1.6; }
   .errbox.show { display:block; }
+  .clubbtn { width:100%; background:rgba(61,158,140,0.15); border:1px solid rgba(61,158,140,0.5); color:var(--glow); font-family:'Share Tech Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; padding:14px 10px; cursor:pointer; border-radius:3px; line-height:1.5; }
+  .clubbtn:hover:not(:disabled) { background:rgba(61,158,140,0.25); }
+  .clubbtn:disabled { opacity:0.55; cursor:not-allowed; }
+  .clubcard { background:rgba(42,36,32,0.75); border:1px solid rgba(61,158,140,0.3); border-radius:3px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+  .clubcard h3 { font-family:'Bebas Neue',sans-serif; font-weight:400; font-size:1.25rem; letter-spacing:0.06em; color:var(--quartz); }
+  .clubcard p { font-size:0.8rem; line-height:1.55; color:var(--cream); }
+  .clubcard a, .cnote a { color:var(--glow); }
+  .clabel2 { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.2em; color:var(--copper); text-transform:uppercase; }
+  .cnote { font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); line-height:1.6; margin-top:10px; }
   .results { display:flex; flex-direction:column; gap:14px; }
   .hcard { background:rgba(42,36,32,0.75); border:1px solid rgba(139,111,78,0.3); border-radius:3px; overflow:hidden; animation:slideIn 0.35s ease forwards; opacity:0; }
   @keyframes slideIn { to{opacity:1;transform:translateY(0)} from{opacity:0;transform:translateY(10px)} }
@@ -124,7 +133,7 @@
   </div>
   <div class="errbox" id="errbox"></div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v4.1-direct (prototype) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
+  <div class="verbadge">▸ v4.2-direct (prototype) — verified geologic contacts + AI-read Custom search + on-demand local club finder</div>
 </div>
 
 <script>
@@ -138,23 +147,227 @@ const APP_KEY = '_ZzTQCfGmNWwBxVu6r6depVVhVYShybI';
 
 // Running token count for the current scan, so the real cost of a Custom
 // click can be seen (and logged) instead of guessed.
-let usageTotals = { inp: 0, out: 0, calls: 0 };
+let usageTotals = { inp: 0, out: 0, calls: 0, searches: 0 };
+function resetUsage() { usageTotals = { inp: 0, out: 0, calls: 0, searches: 0 }; }
 function trackUsage(data) {
   usageTotals.calls++;
   if (data && data.usage) {
     usageTotals.inp += data.usage.input_tokens || 0;
     usageTotals.out += data.usage.output_tokens || 0;
+    const st = data.usage.server_tool_use;
+    usageTotals.searches += (st && st.web_search_requests) || 0;
   }
 }
-function showCostLine() {
-  // Estimate only: assumes $3 per million input tokens and $15 per million
-  // output tokens. Update these two numbers if the model/pricing changes.
-  const cost = (usageTotals.inp * 3 + usageTotals.out * 15) / 1000000;
+function showCostLine(container, label) {
+  // Estimate only: assumes $3 per million input tokens, $15 per million
+  // output tokens, and $0.01 per web search. Update these numbers if the
+  // model/pricing changes.
+  const cost = (usageTotals.inp * 3 + usageTotals.out * 15) / 1000000 + usageTotals.searches * 0.01;
   console.log('[Scout cost]', usageTotals, '~$' + cost.toFixed(4));
   const el = document.createElement('div');
   el.style.cssText = "font-family:'Share Tech Mono',monospace; font-size:0.56rem; color:var(--feldspar); text-align:center; padding:10px 8px;";
-  el.textContent = '▸ This scan: ' + usageTotals.calls + ' AI call(s), ' + usageTotals.inp + ' in / ' + usageTotals.out + ' out tokens ≈ $' + cost.toFixed(3);
-  document.getElementById('results').appendChild(el);
+  el.textContent = '▸ ' + (label || 'This scan') + ': ' + usageTotals.calls + ' AI call(s), ' +
+    (usageTotals.searches ? usageTotals.searches + ' web search(es), ' : '') +
+    usageTotals.inp + ' in / ' + usageTotals.out + ' out tokens ≈ $' + cost.toFixed(3);
+  (container || document.getElementById('results')).appendChild(el);
+}
+
+// --- Local rock clubs & tips (AI web search, on demand) --------------------
+// Separate button so only people who want it pay for it. Capped at 3 web
+// searches per lookup, results cached on this device for 30 days, and links
+// are only shown if they really appeared in the search results (the AI can't
+// invent a URL that gets displayed).
+let lastArea = null;
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function cleanForPrompt(s, n) { return String(s || '').replace(/[\r\n"{}]+/g, ' ').trim().slice(0, n); }
+function safeUrl(u) { return /^https?:\/\//i.test(u || '') ? u : null; }
+
+const CLUB_BTN_LABEL = '🤝 FIND LOCAL ROCK CLUBS & TIPS NEAR ';
+
+function addClubButton(area, target) {
+  lastArea = { area: area, target: target || '' };
+  const box = document.createElement('div');
+  box.id = 'clubBox';
+  box.style.cssText = 'margin-top:6px;';
+  box.innerHTML = '<button class="clubbtn" id="clubBtn" onclick="findLocalClubs()">' + esc(CLUB_BTN_LABEL + area.toUpperCase()) + '</button>' +
+    '<div class="cnote" style="margin-top:6px;text-align:center;">Uses AI web search — clubs are found online, not map-verified.</div>' +
+    '<div id="clubOut"></div>';
+  document.getElementById('results').appendChild(box);
+}
+
+function extractJson(text) {
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  try { return JSON.parse(m[0]); } catch (e) { return null; }
+}
+
+async function findLocalClubs() {
+  if (!lastArea) return;
+  const area = cleanForPrompt(lastArea.area, 100);
+  const target = cleanForPrompt(lastArea.target, 80);
+  const btn = document.getElementById('clubBtn');
+  const out = document.getElementById('clubOut');
+  const cacheKey = 'scoutClubs:' + area.toLowerCase() + '|' + target.toLowerCase();
+
+  try {
+    const c = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (c && c.r && (Date.now() - c.t) < 30 * 86400000) {
+      out.innerHTML = '';
+      renderClubs(out, c.r, c.sources || []);
+      const note = document.createElement('div');
+      note.className = 'cnote';
+      note.style.textAlign = 'center';
+      note.textContent = '▸ Saved result from ' + new Date(c.t).toLocaleDateString() + ' — no charge for this one.';
+      out.appendChild(note);
+      return;
+    }
+  } catch (e) {}
+
+  btn.disabled = true;
+  btn.textContent = '🔎 SEARCHING LOCAL CLUBS — 20-60 SECONDS...';
+  out.innerHTML = '';
+  resetUsage();
+
+  const prompt = 'A Texas rockhounder will be collecting near ' + area + (target ? ', hunting for ' + target : '') + '.\n' +
+    'Use web search (at most 3 searches) to find LOCAL rock, mineral, gem, fossil or lapidary clubs and societies that serve this part of Texas. ' +
+    'Prefer clubs within about 75 miles of ' + area + ': first any in or right next to it, then the club in the nearest larger city. ' +
+    'Also look for local chatter — club newsletters, public club pages, field-trip announcements or forum posts — with practical tips about collecting in this area' + (target ? ', especially ' + target : '') + '.\n\n' +
+    'Rules:\n' +
+    '- Only include clubs and tips that actually appear in your search results. If you find none, say so plainly. Never invent a club, meeting time, phone number, email or URL.\n' +
+    '- Give a meeting day/time or contact only if a source states it.\n' +
+    '- Do not give exact private-property locations. Mention landowner permission or club-run field trips where relevant.\n' +
+    '- Prefer sources from the last 2-3 years and say when a source looks old or undated.\n\n' +
+    'Reply with ONLY a JSON object, no other text:\n' +
+    '{"clubs":[{"name":"","city":"","about":"one sentence","visitors":"what the source says about meetings, visitors or dues, or \\"not stated\\"","url":"exact URL from your search results"}],' +
+    '"tips":[{"tip":"one practical local tip","url":"exact URL from your search results"}],' +
+    '"summary":"one or two sentences on how much local info was actually found"}';
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 90000);
+  try {
+    const resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-App-Key': APP_KEY },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3,
+                  user_location: { type: 'approximate', country: 'US', region: 'Texas' } }],
+        messages: [{ role: 'user', content: prompt }]
+      }),
+      signal: ctrl.signal
+    });
+    let data = null;
+    try { data = await resp.json(); } catch (e) {}
+    if (!resp.ok || !data || data.error) {
+      const msg = (data && data.error && (data.error.message || data.error)) || ('HTTP ' + resp.status);
+      throw new Error(String(msg));
+    }
+    trackUsage(data);
+
+    // Real URLs the search actually returned — the only links we will show.
+    const sources = [];
+    const seen = {};
+    const texts = [];
+    for (const b of (data.content || [])) {
+      if (b.type === 'text' && b.text) texts.push(b.text);
+      if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) {
+        for (const it of b.content) {
+          if (it && it.url && !seen[it.url]) { seen[it.url] = 1; sources.push({ url: it.url, title: it.title || it.url }); }
+        }
+      }
+    }
+    let r = null;
+    for (let i = texts.length - 1; i >= 0 && !r; i--) r = extractJson(texts[i]);
+    if (!r) r = extractJson(texts.join('\n'));
+    if (!r) throw new Error('The search finished but the answer came back in a format I could not read. Try again.');
+
+    out.innerHTML = '';
+    renderClubs(out, r, sources);
+    showCostLine(out, 'This club search');
+    if ((r.clubs && r.clubs.length) || (r.tips && r.tips.length)) {
+      try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), r: r, sources: sources.slice(0, 12) })); } catch (e) {}
+    }
+  } catch (e) {
+    let m = e.name === 'AbortError' ? 'The club search took too long. Try again.' : String(e.message || e);
+    if (/tool|web_search|not allowed|forbidden|403|400/i.test(m)) m += ' (The Cloudflare Worker may not be set up to allow web search yet.)';
+    const box = document.createElement('div');
+    box.className = 'errbox show';
+    box.style.marginTop = '10px';
+    box.textContent = '⚠ Club search failed: ' + m;
+    out.appendChild(box);
+  } finally {
+    clearTimeout(timer);
+    btn.disabled = false;
+    btn.textContent = CLUB_BTN_LABEL + area.toUpperCase();
+  }
+}
+
+function renderClubs(out, r, sources) {
+  const urlSet = {};
+  (sources || []).forEach(s => { urlSet[s.url] = 1; });
+  function link(u, text) {
+    if (!u || !urlSet[u] || !safeUrl(u)) return null;
+    const a = document.createElement('a');
+    a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.textContent = text || 'source ↗';
+    return a;
+  }
+  function add(parent, tag, text, cls) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    e.textContent = text;
+    parent.appendChild(e);
+    return e;
+  }
+  const clubs = Array.isArray(r.clubs) ? r.clubs.slice(0, 6) : [];
+  const tips = Array.isArray(r.tips) ? r.tips.slice(0, 5) : [];
+
+  if (r.summary) add(out, 'div', '▸ ' + r.summary, 'cnote');
+  if (!clubs.length && !tips.length) {
+    add(out, 'div', 'No local clubs turned up for this area. Try the search again from a nearby larger town.', 'cnote');
+  }
+  clubs.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'clubcard';
+    add(card, 'h3', (c.name || 'Club') + (c.city ? ' — ' + c.city : ''));
+    if (c.about) add(card, 'p', c.about);
+    if (c.visitors) {
+      add(card, 'div', 'Meetings / visitors', 'clabel2');
+      add(card, 'p', c.visitors);
+    }
+    const a = link(c.url, 'Open source page ↗');
+    if (a) { const p = document.createElement('p'); p.appendChild(a); card.appendChild(p); }
+    else add(card, 'div', '⚠ No matching source page in the search results — treat this one with caution.', 'cnote');
+    out.appendChild(card);
+  });
+  if (tips.length) {
+    const card = document.createElement('div');
+    card.className = 'clubcard';
+    add(card, 'h3', 'Local tips & chatter');
+    tips.forEach(t => {
+      const p = document.createElement('p');
+      p.appendChild(document.createTextNode('• ' + (t.tip || '') + ' '));
+      const a = link(t.url, '(source ↗)');
+      if (a) p.appendChild(a);
+      card.appendChild(p);
+    });
+    out.appendChild(card);
+  }
+  add(out, 'div', '▸ Found by AI web search — not verified against the geologic map. Meeting times and contacts change, so confirm with the club before you go, and always get landowner permission before collecting.', 'cnote');
+  if ((sources || []).length) {
+    const s = document.createElement('div');
+    s.className = 'cnote';
+    s.appendChild(document.createTextNode('Pages searched: '));
+    sources.slice(0, 6).forEach((x, i) => {
+      const a = link(x.url, (x.title || x.url).slice(0, 40));
+      if (a) { if (i) s.appendChild(document.createTextNode(' · ')); s.appendChild(a); }
+    });
+    out.appendChild(s);
+  }
 }
 
 // PROTOTYPE: direct-data engine. Instead of asking the AI to search the web,
@@ -525,6 +738,8 @@ async function runScout() {
   const btn = document.getElementById('scoutBtn');
   btn.disabled = true;
   setStatus('SCANNING...');
+  resetUsage();
+  lastArea = null;
 
   // Overall safety net: even if something upstream hangs in a way the
   // per-request timeouts don't catch, this guarantees the button re-enables
@@ -546,7 +761,6 @@ async function runScout() {
         btn.disabled = false;
         return;
       }
-      usageTotals = { inp: 0, out: 0, calls: 0 };
       showLoading('READING YOUR REQUEST...', 'Working out where you want to search and what you are hunting for...');
       const parsed = await parseCustomRequest(query);
       // If the AI step fails for any reason, fall back to the raw text as before.
@@ -593,6 +807,7 @@ async function runScout() {
       } else {
         renderHotspots(written);
         showCostLine();
+        addClubButton(place, target);
         setStatus(written.length + ' HOTSPOTS');
         try { sessionStorage.setItem('lastHotspotsDirect', JSON.stringify(written)); } catch (ex) {}
       }
@@ -620,6 +835,8 @@ async function runScout() {
       setStatus(allContacts.length === 0 ? 'NO DATA' : 'ERROR');
     } else {
       renderHotspots(hotspots);
+      showCostLine();
+      addClubButton(rd.label + ', TX', '');
       setStatus(hotspots.length + ' HOTSPOTS');
       try { sessionStorage.setItem('lastHotspotsDirect', JSON.stringify(hotspots)); } catch (ex) {}
     }
