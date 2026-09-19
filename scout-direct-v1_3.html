@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Barlow:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-  :root { --stone:#1a1612; --granite:#2a2420; --quartz:#e8d5a3; --copper:#c4622d; --turquoise:#3d9e8c; --feldspar:#8b6f4e; --cream:#f2e8d0; --glow:#5bbfa8; }
+  :root { --stone:#1a1612; --grcaanite:#2a2420; --quartz:#e8d5a3; --copper:#c4622d; --turquoise:#3d9e8c; --feldspar:#8b6f4e; --cream:#f2e8d0; --glow:#5bbfa8; }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:var(--stone); color:var(--cream); font-family:'Barlow',sans-serif; font-weight:300; min-height:100vh; overflow-x:hidden; }
   body::before { content:''; position:fixed; inset:0; background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(196,98,45,0.04) 39px,rgba(196,98,45,0.04) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(196,98,45,0.03) 39px,rgba(196,98,45,0.03) 40px); pointer-events:none; z-index:0; }
@@ -133,7 +133,7 @@
   </div>
   <div class="errbox" id="errbox"></div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v4.4-direct (prototype) — verified geologic contacts + AI-read Custom search + on-demand local club finder</div>
+  <div class="verbadge">▸ v4.5-direct (prototype) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
 </div>
 
 <script>
@@ -179,6 +179,11 @@ function showCostLine(container, label) {
 // invent a URL that gets displayed).
 let lastArea = null;
 
+// MASTER SWITCH: the club finder costs about $0.16 per click (3 web searches
+// plus ~37,000 tokens of page text), so it is OFF for now. Change false to
+// true to bring the button back. Everything else stays as is.
+const ENABLE_CLUB_FINDER = false;
+
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -188,6 +193,7 @@ function safeUrl(u) { return /^https?:\/\//i.test(u || '') ? u : null; }
 const CLUB_BTN_LABEL = '🤝 FIND LOCAL ROCK CLUBS & TIPS NEAR ';
 
 function addClubButton(area, target) {
+  if (!ENABLE_CLUB_FINDER) return;
   lastArea = { area: area, target: target || '' };
   try { sessionStorage.setItem('lastAreaDirect', JSON.stringify(lastArea)); } catch (e) {}
   const box = document.createElement('div');
