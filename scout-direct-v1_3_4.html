@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Rockhound Scout</title>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1612">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rockhound Scout">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Barlow:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --stone:#1a1612; --granite:#2a2420; --quartz:#e8d5a3; --copper:#c4622d; --turquoise:#3d9e8c; --feldspar:#8b6f4e; --cream:#f2e8d0; --glow:#5bbfa8; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--stone); color:var(--cream); font-family:'Barlow',sans-serif; font-weight:300; min-height:100vh; overflow-x:hidden; }
+  body::before { content:''; position:fixed; inset:0; background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(196,98,45,0.04) 39px,rgba(196,98,45,0.04) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(196,98,45,0.03) 39px,rgba(196,98,45,0.03) 40px); pointer-events:none; z-index:0; }
+  .header { position:relative; z-index:10; padding:14px 16px; border-bottom:1px solid rgba(196,98,45,0.3); display:flex; align-items:center; gap:12px; background:rgba(26,22,18,0.98); }
+  .logo { width:38px; height:38px; flex-shrink:0; }
+  .title h1 { font-family:'Bebas Neue',sans-serif; font-size:1.7rem; letter-spacing:0.08em; color:var(--quartz); line-height:1; }
+  .title .sub { font-family:'Share Tech Mono',monospace; font-size:0.55rem; color:var(--turquoise); letter-spacing:0.15em; margin-top:2px; }
+  .status { margin-left:auto; font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); background:rgba(42,36,32,0.8); border:1px solid rgba(139,111,78,0.25); padding:4px 8px; border-radius:2px; white-space:nowrap; display:flex; align-items:center; gap:5px; }
+  .dot { width:6px; height:6px; border-radius:50%; background:var(--glow); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .usgs-badge { background:rgba(61,158,140,0.12); border:1px solid rgba(61,158,140,0.35); border-radius:2px; padding:8px 14px; font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--glow); letter-spacing:0.08em; text-align:center; line-height:1.6; }
+  .content { position:relative; z-index:5; padding:16px; display:flex; flex-direction:column; gap:14px; max-width:680px; margin:0 auto; }
+  .slabel { font-family:'Share Tech Mono',monospace; font-size:0.58rem; letter-spacing:0.22em; color:var(--copper); text-transform:uppercase; margin-bottom:8px; }
+  .rgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .rbtn { background:rgba(42,36,32,0.8); border:1px solid rgba(139,111,78,0.3); color:var(--cream); font-family:'Barlow',sans-serif; font-size:0.8rem; font-weight:600; padding:12px 10px; cursor:pointer; transition:all 0.2s; text-align:left; border-radius:3px; line-height:1.3; }
+  .rbtn .icon { font-size:1.1rem; display:block; margin-bottom:3px; }
+  .rbtn .hint { font-weight:300; font-size:0.65rem; color:var(--feldspar); display:block; margin-top:2px; }
+  .rbtn:hover { background:rgba(196,98,45,0.15); border-color:rgba(196,98,45,0.5); }
+  .rbtn.active { background:rgba(196,98,45,0.25); border-color:var(--copper); color:var(--quartz); }
+  .rbtn.active .hint { color:var(--quartz); opacity:0.7; }
+  .rbtn:disabled { opacity:0.35; cursor:not-allowed; }
+  .notes { background:rgba(42,36,32,0.5); border:1px dashed rgba(139,111,78,0.3); border-radius:3px; padding:10px 12px; font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--feldspar); width:100%; min-height:52px; resize:none; outline:none; line-height:1.6; }
+  .notes:focus { border-color:var(--copper); color:var(--cream); }
+  .notes::placeholder { color:rgba(139,111,78,0.4); }
+  input.notes { min-height:auto; }
+  hr { border:none; border-top:1px solid rgba(139,111,78,0.2); }
+  .scoutbtn { width:100%; background:linear-gradient(135deg,var(--copper),#9e3e18); border:none; color:var(--cream); font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.15em; padding:16px; cursor:pointer; transition:all 0.2s; border-radius:3px; }
+  .scoutbtn:hover:not(:disabled) { filter:brightness(1.12); transform:translateY(-1px); }
+  .scoutbtn:disabled { background:var(--granite); color:var(--feldspar); cursor:not-allowed; transform:none; }
+  .loading { display:none; flex-direction:column; align-items:center; gap:10px; padding:24px 16px; }
+  .loading.show { display:flex; }
+  .drill { font-size:2.2rem; animation:rock 0.5s steps(2) infinite; }
+  @keyframes rock { 0%{transform:rotate(-10deg)} 100%{transform:rotate(10deg)} }
+  .lmsg { font-family:'Share Tech Mono',monospace; font-size:0.68rem; color:var(--turquoise); letter-spacing:0.12em; animation:blink 1s infinite; text-align:center; }
+  .lprog { font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); text-align:center; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .errbox { display:none; background:rgba(224,92,42,0.1); border:1px solid rgba(224,92,42,0.4); border-radius:3px; padding:12px 14px; font-family:'Share Tech Mono',monospace; font-size:0.68rem; color:#e08a6a; line-height:1.6; }
+  .errbox.show { display:block; }
+  .clubbtn { width:100%; background:rgba(61,158,140,0.15); border:1px solid rgba(61,158,140,0.5); color:var(--glow); font-family:'Share Tech Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; padding:14px 10px; cursor:pointer; border-radius:3px; line-height:1.5; }
+  .clubbtn:hover:not(:disabled) { background:rgba(61,158,140,0.25); }
+  .clubbtn:disabled { opacity:0.55; cursor:not-allowed; }
+  .clubcard { background:rgba(42,36,32,0.75); border:1px solid rgba(61,158,140,0.3); border-radius:3px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+  .clubcard h3 { font-family:'Bebas Neue',sans-serif; font-weight:400; font-size:1.25rem; letter-spacing:0.06em; color:var(--quartz); }
+  .clubcard p { font-size:0.8rem; line-height:1.55; color:var(--cream); }
+  .clubcard a, .cnote a { color:var(--glow); }
+  .clabel2 { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.2em; color:var(--copper); text-transform:uppercase; }
+  .cnote { font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); line-height:1.6; margin-top:10px; }
+  .results { display:flex; flex-direction:column; gap:14px; }
+  .hcard { background:rgba(42,36,32,0.75); border:1px solid rgba(139,111,78,0.3); border-radius:3px; overflow:hidden; animation:slideIn 0.35s ease forwards; opacity:0; }
+  @keyframes slideIn { to{opacity:1;transform:translateY(0)} from{opacity:0;transform:translateY(10px)} }
+  .htop { padding:10px 14px; background:rgba(30,24,20,0.65); border-bottom:1px solid rgba(139,111,78,0.2); display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap; }
+  .score-hot { font-family:'Share Tech Mono',monospace; font-size:0.6rem; padding:3px 8px; border-radius:2px; background:rgba(196,98,45,0.4); color:#f4b87a; border:1px solid rgba(196,98,45,0.6); }
+  .score-warm { font-family:'Share Tech Mono',monospace; font-size:0.6rem; padding:3px 8px; border-radius:2px; background:rgba(61,158,140,0.3); color:#7ec49a; border:1px solid rgba(61,158,140,0.5); }
+  .hname { font-weight:600; font-size:0.9rem; color:var(--quartz); flex:1; min-width:0; line-height:1.3; }
+  .hbody { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .field { display:flex; flex-direction:column; gap:3px; }
+  .field label { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.2em; color:var(--copper); text-transform:uppercase; }
+  .field p { font-size:0.8rem; line-height:1.55; color:var(--cream); }
+  .contact-strip { background:rgba(24,74,58,0.32); border:1px solid rgba(126,196,154,0.35); border-left:3px solid rgba(126,196,154,0.8); border-radius:2px; padding:8px 12px; }
+  .contact-strip .clabel { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.18em; color:rgba(126,196,154,0.9); display:block; margin-bottom:4px; text-transform:uppercase; }
+  .contact-strip .cval { font-size:0.8rem; color:var(--quartz); line-height:1.4; }
+  .drain-strip { background:rgba(15,45,58,0.5); border:1px solid rgba(107,191,212,0.2); border-left:3px solid rgba(107,191,212,0.5); border-radius:2px; padding:8px 12px; }
+  .drain-strip .dlabel { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.18em; color:rgba(107,191,212,0.7); display:block; margin-bottom:4px; text-transform:uppercase; }
+  .drain-strip .dval { font-family:'Share Tech Mono',monospace; font-size:0.72rem; color:#6bbfd4; line-height:1.5; }
+  .dir-strip { background:rgba(196,98,45,0.1); border:1px solid rgba(196,98,45,0.25); border-left:3px solid var(--copper); border-radius:2px; padding:10px 12px; }
+  .dir-strip .dirlabel { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.18em; color:var(--copper); display:block; margin-bottom:5px; text-transform:uppercase; }
+  .dir-strip .dirval { font-size:0.82rem; color:var(--quartz); line-height:1.6; }
+  .minerals { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+  .mtag { font-family:'Share Tech Mono',monospace; font-size:0.58rem; padding:2px 7px; background:rgba(61,158,140,0.12); border:1px solid rgba(61,158,140,0.3); color:var(--glow); border-radius:2px; }
+  .waze-box { background:rgba(20,40,25,0.55); border:1px solid rgba(126,196,154,0.2); border-radius:3px; padding:10px 12px; }
+  .waze-box .wlabel { font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.2em; color:rgba(126,196,154,0.8); display:block; margin-bottom:6px; text-transform:uppercase; }
+  .waze-box input { width:100%; font-family:'Share Tech Mono',monospace; font-size:0.78rem; color:#7ec49a; background:rgba(0,0,0,0.4); border:1px solid rgba(126,196,154,0.3); border-radius:2px; padding:8px 10px; outline:none; cursor:text; }
+  .waze-box .winst { font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); margin-top:6px; line-height:1.5; display:block; }
+  .why { font-size:0.68rem; color:var(--feldspar); font-style:italic; line-height:1.5; padding-top:6px; border-top:1px solid rgba(139,111,78,0.15); }
+  .src { font-family:'Share Tech Mono',monospace; font-size:0.52rem; color:rgba(126,196,154,0.7); padding-top:2px; }
+  .verbadge { font-family:'Share Tech Mono',monospace; font-size:0.5rem; color:rgba(126,196,154,0.7); text-align:center; padding-top:10px; }
+</style>
+</head>
+<body>
+<header class="header">
+  <svg class="logo" viewBox="0 0 48 48" fill="none">
+    <polygon points="24,4 44,36 4,36" fill="none" stroke="#c4622d" stroke-width="1.5"/>
+    <circle cx="24" cy="26" r="6" fill="rgba(61,158,140,0.2)" stroke="#3d9e8c" stroke-width="1.2"/>
+    <circle cx="24" cy="26" r="2" fill="#3d9e8c"/>
+  </svg>
+  <div class="title">
+    <h1>Rockhound Scout</h1>
+    <div class="sub">▸ DIRECT USGS/BEG DATA — PROTOTYPE</div>
+  </div>
+  <div class="status"><span class="dot"></span><span id="statusTxt">READY</span></div>
+</header>
+<div class="content">
+  <div class="usgs-badge">
+    ⛏ READS THE REAL USGS / TEXAS BUREAU OF ECONOMIC GEOLOGY MAP DIRECTLY<br>
+    No AI guessing on location — AI only writes up what the map already found
+  </div>
+  <div style="font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
+    ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
+  </div>
+  <div>
+    <div class="slabel">▸ Pick your region</div>
+    <div class="rgrid">
+      <button class="rbtn active" data-region="llano" onclick="pick(this)"><span class="icon">⬡</span>Llano Uplift<span class="hint">Blue quartz · llanite · topaz</span></button>
+      <button class="rbtn" data-region="threerivers" onclick="pick(this)"><span class="icon">🪨</span>Three Rivers<span class="hint">Petrified palm wood</span></button>
+      <button class="rbtn" data-region="edwards" onclick="pick(this)"><span class="icon">▲</span>Edwards Plateau<span class="hint">Flint · chert · fossils</span></button>
+      <button class="rbtn" data-region="bigbend" onclick="pick(this)"><span class="icon">★</span>Big Bend<span class="hint">Agate · jasper · cinnabar</span></button>
+      <button class="rbtn" data-region="cretaceous" onclick="pick(this)"><span class="icon">🦕</span>Cretaceous Shelf<span class="hint">Ammonites · shark teeth</span></button>
+      <button class="rbtn" data-region="custom" onclick="pick(this)"><span class="icon">📍</span>Custom<span class="hint">Describe your area below</span></button>
+    </div>
+  </div>
+  <div id="customLocWrap" style="display:none;">
+    <div class="slabel">▸ Describe your area</div>
+    <input type="text" class="notes" id="customLoc" placeholder='e.g. "find agatized petrified wood near Bryan, TX" — a town, hotel or address works too; searches ~20 miles around it'>
+  </div>
+  <hr>
+  <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
+  <div class="loading" id="loading">
+    <div class="drill">⛏</div>
+    <div class="lmsg" id="lmsg">READING REAL USGS/BEG GEOLOGIC MAP...</div>
+    <div class="lprog" id="lprog">Sampling road corridors against verified map data — 20-40 seconds</div>
+  </div>
+  <div class="errbox" id="errbox"></div>
+  <div class="results" id="results"></div>
+  <div class="verbadge">▸ v4.6-direct (prototype) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
+</div>
+
+<script>
+let region = 'llano';
+
+// Shared with the Cloudflare Worker so it can reject requests that
+// didn't come from this app's JS. Not a secret a user could ever see
+// misused against them -- it just keeps the endpoint from being a
+// wide-open free relay to a paid API.
+const APP_KEY = '_ZzTQCfGmNWwBxVu6r6depVVhVYShybI';
+
+// Running token count for the current scan, so the real cost of a Custom
+// click can be seen (and logged) instead of guessed.
+let usageTotals = { inp: 0, out: 0, calls: 0, searches: 0 };
+function resetUsage() { usageTotals = { inp: 0, out: 0, calls: 0, searches: 0 }; }
+function trackUsage(data) {
+  usageTotals.calls++;
+  if (data && data.usage) {
+    usageTotals.inp += data.usage.input_tokens || 0;
+    usageTotals.out += data.usage.output_tokens || 0;
+    const st = data.usage.server_tool_use;
+    usageTotals.searches += (st && st.web_search_requests) || 0;
+  }
+}
+function showCostLine(container, label) {
+  // Estimate only: assumes $3 per million input tokens, $15 per million
+  // output tokens, and $0.01 per web search. Update these numbers if the
+  // model/pricing changes.
+  const cost = (usageTotals.inp * 3 + usageTotals.out * 15) / 1000000 + usageTotals.searches * 0.01;
+  console.log('[Scout cost]', usageTotals, '~$' + cost.toFixed(4));
+  const el = document.createElement('div');
+  el.style.cssText = "font-family:'Share Tech Mono',monospace; font-size:0.56rem; color:var(--feldspar); text-align:center; padding:10px 8px;";
+  el.textContent = '▸ ' + (label || 'This scan') + ': ' + usageTotals.calls + ' AI call(s), ' +
+    (usageTotals.searches ? usageTotals.searches + ' web search(es), ' : '') +
+    usageTotals.inp + ' in / ' + usageTotals.out + ' out tokens ≈ $' + cost.toFixed(3);
+  (container || document.getElementById('results')).appendChild(el);
+}
+
+// --- Local rock clubs & tips (AI web search, on demand) --------------------
+// Separate button so only people who want it pay for it. Capped at 3 web
+// searches per lookup, results cached on this device for 30 days, and links
+// are only shown if they really appeared in the search results (the AI can't
+// invent a URL that gets displayed).
+let lastArea = null;
+
+// MASTER SWITCH: the club finder costs about $0.16 per click (3 web searches
+// plus ~37,000 tokens of page text), so it is OFF for now. Change false to
+// true to bring the button back. Everything else stays as is.
+const ENABLE_CLUB_FINDER = false;
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function cleanForPrompt(s, n) { return String(s || '').replace(/[\r\n"{}]+/g, ' ').trim().slice(0, n); }
+function safeUrl(u) { return /^https?:\/\//i.test(u || '') ? u : null; }
+
+const CLUB_BTN_LABEL = '🤝 FIND LOCAL ROCK CLUBS & TIPS NEAR ';
+
+function addClubButton(area, target) {
+  if (!ENABLE_CLUB_FINDER) return;
+  lastArea = { area: area, target: target || '' };
+  try { sessionStorage.setItem('lastAreaDirect', JSON.stringify(lastArea)); } catch (e) {}
+  const box = document.createElement('div');
+  box.id = 'clubBox';
+  box.style.cssText = 'margin-top:6px;';
+  box.innerHTML = '<button class="clubbtn" id="clubBtn" onclick="findLocalClubs()">' + esc(CLUB_BTN_LABEL + area.toUpperCase()) + '</button>' +
+    '<div class="cnote" style="margin-top:6px;text-align:center;">Uses AI web search — clubs are found online, not map-verified.</div>' +
+    '<div id="clubOut"></div>';
+  document.getElementById('results').appendChild(box);
+}
+
+function extractJson(text) {
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  try { return JSON.parse(m[0]); } catch (e) { return null; }
+}
+
+// Every balanced {...} chunk in the text (string-aware), so stray braces in
+// commentary or ```json fences around the answer can't break the reading.
+function balancedObjects(text) {
+  const out = [];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] !== '{') continue;
+    let depth = 0, inStr = false, esc = false;
+    for (let j = i; j < text.length; j++) {
+      const ch = text[j];
+      if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+      if (ch === '"') inStr = true;
+      else if (ch === '{') depth++;
+      else if (ch === '}') { depth--; if (depth === 0) { out.push(text.slice(i, j + 1)); break; } }
+    }
+  }
+  return out;
+}
+function looksLikeClubs(o) { return o && typeof o === 'object' && (Array.isArray(o.clubs) || Array.isArray(o.tips)); }
+
+function parseClubJson(text) {
+  let best = null;
+  for (const s of balancedObjects(text)) {
+    try {
+      const o = JSON.parse(s);
+      if (looksLikeClubs(o) && (!best || s.length > best.len)) best = { o: o, len: s.length };
+    } catch (e) {}
+  }
+  if (best) return best.o;
+  // Reply cut off mid-way (hit the length limit): keep every complete entry.
+  const start = text.indexOf('{');
+  if (start === -1) return null;
+  const body = text.slice(start);
+  let pos = body.length;
+  for (let tries = 0; tries < 80; tries++) {
+    pos = body.lastIndexOf('}', pos - 1);
+    if (pos <= 0) break;
+    for (const tail of ['', ']}']) {
+      try {
+        const o = JSON.parse(body.slice(0, pos + 1) + tail);
+        if (looksLikeClubs(o)) return o;
+      } catch (e) {}
+    }
+  }
+  return null;
+}
+
+async function findLocalClubs() {
+  if (!lastArea) return;
+  const area = cleanForPrompt(lastArea.area, 100);
+  const target = cleanForPrompt(lastArea.target, 80);
+  const btn = document.getElementById('clubBtn');
+  const out = document.getElementById('clubOut');
+  const cacheKey = 'scoutClubs:' + area.toLowerCase() + '|' + target.toLowerCase();
+
+  try {
+    const c = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (c && c.r && (Date.now() - c.t) < 30 * 86400000) {
+      out.innerHTML = '';
+      renderClubs(out, c.r, c.sources || []);
+      const note = document.createElement('div');
+      note.className = 'cnote';
+      note.style.textAlign = 'center';
+      note.textContent = '▸ Saved result from ' + new Date(c.t).toLocaleDateString() + ' — no charge for this one.';
+      out.appendChild(note);
+      return;
+    }
+  } catch (e) {}
+
+  btn.disabled = true;
+  btn.textContent = '🔎 SEARCHING LOCAL CLUBS — 20-60 SECONDS...';
+  out.innerHTML = '';
+  resetUsage();
+
+  const prompt = 'A Texas rockhounder will be collecting near ' + area + (target ? ', hunting for ' + target : '') + '.\n' +
+    'Do not write any commentary between searches. Your FINAL message must be ONLY the JSON object described below — nothing before it, nothing after it, no code fences. Keep it compact: at most 5 clubs and 4 tips, each field under 30 words.\n\n' +
+    'Use web search (at most 3 searches) to find LOCAL rock, mineral, gem, fossil or lapidary clubs and societies that serve this part of Texas. ' +
+    'Prefer clubs within about 75 miles of ' + area + ': first any in or right next to it, then the club in the nearest larger city. ' +
+    'Also look for local chatter — club newsletters, public club pages, field-trip announcements or forum posts — with practical tips about collecting in this area' + (target ? ', especially ' + target : '') + '.\n\n' +
+    'Rules:\n' +
+    '- Only include clubs and tips that actually appear in your search results. If you find none, say so plainly. Never invent a club, meeting time, phone number, email or URL.\n' +
+    '- Give a meeting day/time or contact only if a source states it.\n' +
+    '- Do not give exact private-property locations. Mention landowner permission or club-run field trips where relevant.\n' +
+    '- Prefer sources from the last 2-3 years and say when a source looks old or undated.\n\n' +
+    'Reply with ONLY a JSON object, no other text:\n' +
+    '{"clubs":[{"name":"","city":"","about":"one sentence","visitors":"what the source says about meetings, visitors or dues, or \\"not stated\\"","url":"exact URL from your search results"}],' +
+    '"tips":[{"tip":"one practical local tip","url":"exact URL from your search results"}],' +
+    '"summary":"one or two sentences on how much local info was actually found"}';
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 90000);
+  try {
+    const resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-App-Key': APP_KEY },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2500,
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3,
+                  user_location: { type: 'approximate', country: 'US', region: 'Texas' } }],
+        messages: [{ role: 'user', content: prompt }]
+      }),
+      signal: ctrl.signal
+    });
+    let data = null;
+    try { data = await resp.json(); } catch (e) {}
+    if (!resp.ok || !data || data.error) {
+      const msg = (data && data.error && (data.error.message || data.error)) || ('HTTP ' + resp.status);
+      throw new Error(String(msg));
+    }
+    trackUsage(data);
+
+    // Real URLs the search actually returned — the only links we will show.
+    const sources = [];
+    const seen = {};
+    const texts = [];
+    for (const b of (data.content || [])) {
+      if (b.type === 'text' && b.text) texts.push(b.text);
+      if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) {
+        for (const it of b.content) {
+          if (it && it.url && !seen[it.url]) { seen[it.url] = 1; sources.push({ url: it.url, title: it.title || it.url }); }
+        }
+      }
+    }
+    // Web-search replies arrive split into many text pieces (around citations).
+    // They must be joined with NOTHING between them, or the answer breaks.
+    const fullText = texts.join('').trim();
+    console.log('[Scout club raw]', data.stop_reason, fullText.slice(0, 800));
+    let r = parseClubJson(fullText);
+    if (!r) {
+      if (!fullText) throw new Error('The search ran but returned no answer' + (data.stop_reason ? ' (stopped: ' + data.stop_reason + ')' : '') + '. Try again.');
+      // Could not read the layout — show the raw text rather than lose what was paid for.
+      r = { raw: fullText.slice(0, 3000), clubs: [], tips: [] };
+    }
+
+    out.innerHTML = '';
+    renderClubs(out, r, sources);
+    showCostLine(out, 'This club search');
+    if (!r.raw && ((r.clubs && r.clubs.length) || (r.tips && r.tips.length))) {
+      try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), r: r, sources: sources.slice(0, 12) })); } catch (e) {}
+    }
+  } catch (e) {
+    let m = e.name === 'AbortError' ? 'The club search took too long. Try again.' : String(e.message || e);
+    if (/tool|web_search|not allowed|forbidden|403|400/i.test(m)) m += ' (The Cloudflare Worker may not be set up to allow web search yet.)';
+    const box = document.createElement('div');
+    box.className = 'errbox show';
+    box.style.marginTop = '10px';
+    box.textContent = '⚠ Club search failed: ' + m;
+    out.appendChild(box);
+  } finally {
+    clearTimeout(timer);
+    btn.disabled = false;
+    btn.textContent = CLUB_BTN_LABEL + area.toUpperCase();
+  }
+}
+
+function renderClubs(out, r, sources) {
+  const urlSet = {};
+  (sources || []).forEach(s => { urlSet[s.url] = 1; });
+  function link(u, text) {
+    if (!u || !urlSet[u] || !safeUrl(u)) return null;
+    const a = document.createElement('a');
+    a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.textContent = text || 'source ↗';
+    return a;
+  }
+  function add(parent, tag, text, cls) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    e.textContent = text;
+    parent.appendChild(e);
+    return e;
+  }
+  const clubs = Array.isArray(r.clubs) ? r.clubs.slice(0, 6) : [];
+  const tips = Array.isArray(r.tips) ? r.tips.slice(0, 5) : [];
+
+  if (r.summary) add(out, 'div', '▸ ' + r.summary, 'cnote');
+  if (r.raw) {
+    const card = document.createElement('div');
+    card.className = 'clubcard';
+    add(card, 'h3', 'Search results (unformatted)');
+    add(card, 'div', 'The answer came back in an unexpected layout, so this is the raw text.', 'cnote');
+    const p = add(card, 'p', r.raw);
+    p.style.whiteSpace = 'pre-wrap';
+    out.appendChild(card);
+  } else if (!clubs.length && !tips.length) {
+    add(out, 'div', 'No local clubs turned up for this area. Try the search again from a nearby larger town.', 'cnote');
+  }
+  clubs.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'clubcard';
+    add(card, 'h3', (c.name || 'Club') + (c.city ? ' — ' + c.city : ''));
+    if (c.about) add(card, 'p', c.about);
+    if (c.visitors) {
+      add(card, 'div', 'Meetings / visitors', 'clabel2');
+      add(card, 'p', c.visitors);
+    }
+    const a = link(c.url, 'Open source page ↗');
+    if (a) { const p = document.createElement('p'); p.appendChild(a); card.appendChild(p); }
+    else add(card, 'div', '⚠ No matching source page in the search results — treat this one with caution.', 'cnote');
+    out.appendChild(card);
+  });
+  if (tips.length) {
+    const card = document.createElement('div');
+    card.className = 'clubcard';
+    add(card, 'h3', 'Local tips & chatter');
+    tips.forEach(t => {
+      const p = document.createElement('p');
+      p.appendChild(document.createTextNode('• ' + (t.tip || '') + ' '));
+      const a = link(t.url, '(source ↗)');
+      if (a) p.appendChild(a);
+      card.appendChild(p);
+    });
+    out.appendChild(card);
+  }
+  add(out, 'div', '▸ Found by AI web search — not verified against the geologic map. Meeting times and contacts change, so confirm with the club before you go, and always get landowner permission before collecting.', 'cnote');
+  if ((sources || []).length) {
+    const s = document.createElement('div');
+    s.className = 'cnote';
+    s.appendChild(document.createTextNode('Pages searched: '));
+    sources.slice(0, 6).forEach((x, i) => {
+      const a = link(x.url, (x.title || x.url).slice(0, 40));
+      if (a) { if (i) s.appendChild(document.createTextNode(' · ')); s.appendChild(a); }
+    });
+    out.appendChild(s);
+  }
+}
+
+// PROTOTYPE: direct-data engine. Instead of asking the AI to search the web,
+// this samples real points along each road directly against the free USGS/BEG
+// geologic map API (Macrostrat) and the free OpenStreetMap Overpass API, finds
+// where the mapped rock formation actually changes (a real contact), and only
+// then makes one small, tool-free Claude call per contact to write a friendly
+// field-note from the verified facts. No web_search tool is used anywhere here,
+// so there is no search cost, and the token cost per contact is tiny.
+const regionData = {
+  llano: {
+    label: 'Llano Uplift',
+    wazeTowns: { 'TX-16': 'Llano, TX', 'FM 783': 'Mason, TX', 'US-87': 'Mason, TX', 'FM 2768': 'Llano, TX' },
+    roads: [
+      { road: 'TX-16', pts: [[30.750,-98.670],[30.770,-98.665],[30.790,-98.660],[30.810,-98.658],[30.830,-98.655],[30.850,-98.652],[30.870,-98.648]] },
+      { road: 'FM 783', pts: [[30.748,-99.318],[30.720,-99.280],[30.695,-99.245],[30.668,-99.210]] },
+      { road: 'US-87', pts: [[30.750,-99.230],[30.790,-99.190],[30.830,-99.150],[30.870,-99.110]] },
+      { road: 'FM 2768', pts: [[30.780,-98.720],[30.800,-98.700],[30.820,-98.680],[30.840,-98.660]] }
+    ]
+  },
+  threerivers: {
+    label: 'Three Rivers',
+    wazeTowns: { 'FM 799': 'Three Rivers, TX', 'US-281': 'Three Rivers, TX', 'FM 534': 'Tilden, TX' },
+    roads: [
+      { road: 'FM 799', pts: [[28.460,-98.180],[28.420,-98.200],[28.380,-98.220],[28.340,-98.240]] },
+      { road: 'US-281', pts: [[28.460,-98.180],[28.380,-98.180],[28.300,-98.180]] },
+      { road: 'FM 534', pts: [[28.310,-98.340],[28.270,-98.360],[28.230,-98.380]] }
+    ]
+  },
+  edwards: {
+    label: 'Edwards Plateau',
+    wazeTowns: { 'FM 337': 'Leakey, TX', 'US-290': 'Johnson City, TX', 'US-83': 'Rocksprings, TX' },
+    roads: [
+      { road: 'FM 337', pts: [[29.735,-99.795],[29.720,-99.830],[29.705,-99.865],[29.690,-99.900]] },
+      { road: 'US-290', pts: [[30.280,-98.410],[30.275,-98.480],[30.270,-98.550],[30.265,-98.620]] },
+      { road: 'US-83', pts: [[29.890,-100.020],[29.820,-100.020],[29.750,-100.020]] }
+    ]
+  },
+  bigbend: {
+    label: 'Big Bend',
+    wazeTowns: { 'FM 170': 'Presidio, TX', 'TX-118': 'Alpine, TX', 'US-385': 'Marathon, TX' },
+    roads: [
+      { road: 'FM 170', pts: [[29.560,-104.370],[29.530,-104.290],[29.500,-104.210],[29.470,-104.130]] },
+      { road: 'TX-118', pts: [[30.158,-103.660],[30.080,-103.630],[30.000,-103.600]] },
+      { road: 'US-385', pts: [[30.210,-103.240],[30.150,-103.240],[30.090,-103.240]] }
+    ]
+  },
+  cretaceous: {
+    label: 'Cretaceous Shelf',
+    wazeTowns: { 'US-77': 'Cameron, TX', 'US-183': 'Lockhart, TX', 'FM 107': 'Corsicana, TX' },
+    roads: [
+      { road: 'US-77', pts: [[30.850,-97.020],[30.950,-97.020],[31.050,-97.020]] },
+      { road: 'US-183', pts: [[29.880,-97.670],[29.950,-97.680],[30.020,-97.690]] },
+      { road: 'FM 107', pts: [[32.080,-96.470],[32.060,-96.510],[32.040,-96.550]] }
+    ]
+  },
+  custom: { label: 'Custom', wazeTowns: {}, roads: [] }
+};
+
+// Curated spots: permanent, hand-written entries the owner has personally
+// confirmed on the ground (plus independently-published sources where noted).
+// These always appear alongside whatever the live map-scan finds — they are
+// NOT generated by AI and cost nothing per click. Kept clearly separate from
+// the live map-verified cards via verified_by: 'owner'.
+// Sources for this entry: age (1.106 Ga) and "~9 miles north of Llano" —
+// James St. John, jsjgeology.net / Flickr (independent geologist, not us or
+// the AI). Valley Spring Gneiss is listed by USGS Geolex only as
+// "Precambrian age" with no published numeric age, so none is stated here.
+// Creek name — a creek near the Baby Head community carries the same name
+// per published Texas place-name references (exact GNIS record unconfirmed).
+// Directions, road side, and pulloff — confirmed on-site by the owner.
+const curatedSpots = {
+  llano: [{
+    name: 'Baby Head Ridge Llanite Dike Roadcut — TX-16 Northbound',
+    road: 'TX-16', town: 'Llano, TX', score: 'hot', verified_by: 'owner',
+    from_formation: 'Valley Spring Gneiss (Precambrian host rock)',
+    to_formation: 'Llanite dike (porphyritic rhyolite, ~1.106 billion years old — youngest unit in the Llano Uplift sequence)',
+    contact_location: 'Roadcut at the crest of a low ridge about 9 miles north of Llano, TX on TX-16 — the llanite dike cuts across the highway through the surrounding Valley Spring Gneiss.',
+    drainages: ['Baby Head Creek (a creek near the community carries the same name, per historical Texas place-name references)'],
+    minerals: ['Llanite (blue quartz phenocrysts — world type locality)', 'microcline feldspar', 'plagioclase', 'biotite'],
+    directions: 'From the Llano courthouse square, take TX-16 north about 9 miles. Baby Head Cemetery will be on your right (east side). Continue a short distance further north to a small gravel pullout at the roadcut — park there, not on the highway shoulder itself.',
+    from_the_truck: 'Watch for a low, dark ridge notching across the highway — the llanite is distinctly darker and more blocky than the pale pinkish-tan gneiss around it. Fractured boulders and rock fragments are visible at the roadcut on both sides of the pavement.',
+    why: 'This roadcut is the world type locality for llanite — its striking blue quartz phenocrysts get their color from microscopic ilmenite inclusions, and this rock is found nowhere else on Earth.'
+  }]
+};
+
+function pick(btn) {
+  if (btn.disabled) return;
+  document.querySelectorAll('.rbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  region = btn.dataset.region;
+  document.getElementById('customLocWrap').style.display = (region === 'custom') ? 'block' : 'none';
+}
+function setStatus(t) { document.getElementById('statusTxt').textContent = t; }
+function showLoading(msg, prog) {
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('lmsg').textContent = msg;
+  document.getElementById('lprog').textContent = prog || '';
+  document.getElementById('errbox').classList.remove('show');
+  document.getElementById('results').innerHTML = '';
+}
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+function showError(msg) { const b = document.getElementById('errbox'); b.textContent = '⚠ ' + msg; b.classList.add('show'); }
+function setProgress(p) { document.getElementById('lprog').textContent = p; }
+
+// --- Direct-data engine ---
+
+// Every outside fetch gets a hard timeout so a slow/unresponsive free public
+// server fails fast with an error instead of hanging the page forever.
+async function fetchWithTimeout(url, ms) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchGeoUnit(lat, lon) {
+  try {
+    const r = await fetchWithTimeout(`https://macrostrat.org/api/v2/geologic_units/map?lat=${lat}&lng=${lon}&format=json`, 8000);
+    const d = await r.json();
+    const units = (d.success && d.success.data) ? d.success.data : [];
+    const named = units.find(u => u.strat_name) || units[0] || null;
+    if (!named) return null;
+    return { name: (named.strat_name || named.name || '').trim(), lith: named.lith || '' };
+  } catch (e) { return null; }
+}
+
+function densify(pts, stepDeg) {
+  const out = [pts[0]];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [lat1, lon1] = pts[i], [lat2, lon2] = pts[i + 1];
+    const dist = Math.hypot(lat2 - lat1, lon2 - lon1);
+    const steps = Math.max(1, Math.round(dist / stepDeg));
+    for (let s = 1; s <= steps; s++) {
+      const f = s / steps;
+      out.push([lat1 + (lat2 - lat1) * f, lon1 + (lon2 - lon1) * f]);
+    }
+  }
+  return out;
+}
+
+async function fetchDrainageNearby(lat, lon) {
+  try {
+    const d = 0.025;
+    const q = `[out:json][timeout:10];way["waterway"~"river|stream|creek"](${lat-d},${lon-d},${lat+d},${lon+d});out tags;`;
+    const r = await fetchWithTimeout('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q), 12000);
+    const j = await r.json();
+    const names = (j.elements || []).map(e => e.tags && e.tags.name).filter(Boolean);
+    return [...new Set(names)].slice(0, 3);
+  } catch (e) { return []; }
+}
+
+// --- Custom area support -------------------------------------------------
+// Turns free-text ("near Bryan, TX", a hotel name, an address) into real
+// coordinates using OpenStreetMap's free Nominatim geocoder, then finds real
+// named state/US highways within ~20 miles using the same free Overpass API
+// already used above for drainages. Capped at 3 highways, same "prioritize
+// state/US highways" cost discipline as the AI-search version -- this keeps
+// a Custom scan the same size/cost as a preset scan, no open-ended guessing.
+async function geocodeLocation(query) {
+  try {
+    const q = query.toLowerCase().includes('texas') || /\btx\b/i.test(query) ? query : query + ', Texas';
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us'
+      + '&viewbox=-106.65,36.5,-93.51,25.83&bounded=1'
+      + '&q=' + encodeURIComponent(q);
+    const r = await fetchWithTimeout(url, 8000);
+    const arr = await r.json();
+    if (!arr || !arr.length) return null;
+    return { lat: parseFloat(arr[0].lat), lon: parseFloat(arr[0].lon), label: arr[0].display_name };
+  } catch (e) { return null; }
+}
+
+// AI step for Custom: reads a plain-English request like "find spots for
+// agatized pet wood in the Bryan tx area" and splits it into a clean place
+// (for the geocoder) and the thing being hunted (for the write-ups).
+// Tiny call: ~150 tokens in, ~30 out. Returns null if anything goes wrong,
+// and the caller falls back to using the raw text as the place.
+async function parseCustomRequest(text) {
+  const clean = text.replace(/[\r\n"]+/g, ' ').slice(0, 300);
+  const prompt = 'A rockhounder typed this into a search box: "' + clean + '"\n' +
+    'Extract two things and reply with ONLY a JSON object, no other text:\n' +
+    '{"place": "...", "target": "..."}\n' +
+    '- place: the location as a clean geocodable string, ideally "City, TX" (a Texas town, hotel, address, or landmark). Use "" if none is given.\n' +
+    '- target: what they want to find, with obvious typos corrected (e.g. "agatized petrified wood"). Use "" if none is given.';
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-App-Key': APP_KEY },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 150, messages: [{ role: 'user', content: prompt }] }),
+      signal: ctrl.signal
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (data.error) return null;
+    trackUsage(data);
+    const raw = data.content.map(b => b.text || '').join('');
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    const j = JSON.parse(m[0]);
+    return {
+      place: String(j.place || '').trim().slice(0, 120),
+      target: String(j.target || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 80)
+    };
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchNearbyHighways(lat, lon, radiusMiles) {
+  try {
+    const d = radiusMiles / 69;
+    const bbox = `${lat-d},${lon-d},${lat+d},${lon+d}`;
+    const q = `[out:json][timeout:20];(way["highway"~"trunk|primary"]["ref"](${bbox}););out tags geom;`;
+    const r = await fetchWithTimeout('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q), 15000);
+    const j = await r.json();
+    const byRef = {};
+    for (const el of (j.elements || [])) {
+      if (!el.tags || !el.tags.ref || !el.geometry || el.geometry.length < 2) continue;
+      const ref = el.tags.ref.split(';')[0].trim();
+      if (!byRef[ref]) byRef[ref] = [];
+      for (const g of el.geometry) byRef[ref].push([g.lat, g.lon]);
+    }
+    const refs = Object.keys(byRef).slice(0, 3); // SCOPE LIMIT: at most 3 highways, matches preset cost profile
+    const roads = [];
+    for (const ref of refs) {
+      let pts = byRef[ref];
+      if (pts.length > 5) {
+        const step = Math.max(1, Math.floor(pts.length / 5));
+        pts = pts.filter((_, i) => i % step === 0).slice(0, 5);
+      }
+      if (pts.length < 2) continue;
+      roads.push({ road: ref, pts });
+    }
+    return roads;
+  } catch (e) { return []; }
+}
+
+async function findContactsForRoad(road, town) {
+  const dense = densify(road.pts, 0.012);
+  const seq = [];
+  for (let i = 0; i < dense.length; i++) {
+    const [lat, lon] = dense[i];
+    setProgress('Checking ' + road.road + ' — point ' + (i + 1) + ' of ' + dense.length + '...');
+    const unit = await fetchGeoUnit(lat, lon);
+    seq.push({ lat, lon, unit });
+    await new Promise(r => setTimeout(r, 260));
+  }
+  const contacts = [];
+  for (let i = 1; i < seq.length; i++) {
+    const a = seq[i - 1], b = seq[i];
+    if (a.unit && b.unit && a.unit.name && b.unit.name && a.unit.name !== b.unit.name) {
+      contacts.push({
+        road: road.road, town,
+        lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2,
+        from: a.unit.name, fromLith: a.unit.lith,
+        to: b.unit.name, toLith: b.unit.lith,
+        spanMiles: (Math.hypot(b.lat - a.lat, b.lon - a.lon) * 69)
+      });
+    }
+  }
+  return contacts;
+}
+
+function parseRecord(raw) {
+  const lines = raw.replace('---RECORD---', '').trim().split('\n');
+  const obj = {};
+  for (const line of lines) {
+    const colon = line.indexOf(':');
+    if (colon === -1) continue;
+    const key = line.slice(0, colon).trim().toUpperCase();
+    const val = line.slice(colon + 1).trim();
+    obj[key] = val;
+  }
+  if (!obj.NAME) return null;
+  return {
+    name: obj.NAME || '', road: obj.ROAD || '', town: obj.TOWN || '',
+    score: (obj.SCORE || 'warm').toLowerCase().includes('hot') ? 'hot' : 'warm',
+    from_formation: obj.FROM || '', to_formation: obj.TO || '',
+    contact_location: obj.WHERE || '',
+    drainages: obj.DRAINAGES ? obj.DRAINAGES.split(',').map(s => s.trim()).filter(Boolean) : [],
+    minerals: obj.MINERALS ? obj.MINERALS.split(',').map(s => s.trim()).filter(Boolean) : [],
+    directions: obj.DIRECTIONS || '', from_the_truck: obj.TRUCK || '', why: obj.WHY || ''
+  };
+}
+
+async function writeUpContact(c, target) {
+  const drains = await fetchDrainageNearby(c.lat, c.lon);
+  const span = c.spanMiles.toFixed(1);
+  const prompt = `You are writing a rockhounding field-guide entry. Below are VERIFIED facts from the real USGS/Texas Bureau of Economic Geology geologic map (not a guess) — use ONLY these facts, do not invent additional precision beyond them.
+
+VERIFIED CONTACT:
+Road: ${c.road}, Texas
+Nearest town for directions: ${c.town}
+Formation A: ${c.from} (${c.fromLith})
+Formation B: ${c.to} (${c.toLith})
+The contact falls somewhere within a ~${span}-mile stretch centered near lat ${c.lat.toFixed(4)}, lon ${c.lon.toFixed(4)} — the exact contact line is not resolved at this map's scale, so describe it as a general stretch, not an exact spot.
+${drains.length ? 'Named waterways within ~1.5 miles: ' + drains.join(', ') : 'No named waterway found nearby.'}
+${target ? '\nThe hunter is specifically looking for: ' + target + '. In WHY, say honestly whether these two formations are known to produce it, or that it is uncertain — never promise it is there. Only list it in MINERALS if these formations are known to produce it.\n' : ''}
+Write ONE hotspot record in EXACTLY this format (no markdown, no extra commentary):
+NAME: short catchy name for this contact
+ROAD: ${c.road}
+TOWN: ${c.town}
+SCORE: ${drains.length ? 'hot' : 'warm'}
+FROM: ${c.from}
+TO: ${c.to}
+WHERE: general stretch description, not an exact mile marker
+DRAINAGES: ${drains.join(', ')}
+MINERALS: 3-4 plausible minerals typically found at a contact like this between these two rock types
+DIRECTIONS: plain english driving directions from ${c.town}, describing the general stretch and telling the reader to check both shoulders since exact side is not verified
+TRUCK: what to watch for from the truck window
+WHY: one sentence why this contact is geologically interesting
+---RECORD---`;
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 25000);
+  let resp;
+  try {
+    resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-App-Key': APP_KEY },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, messages: [{ role: 'user', content: prompt }] }),
+      signal: ctrl.signal
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!resp.ok) throw new Error('API error ' + resp.status);
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message);
+  trackUsage(data);
+  const raw = data.content.map(b => b.text || '').join('').trim();
+  return parseRecord(raw);
+}
+
+// Shared by both preset regions and Custom: samples every road for contacts,
+// then writes up the best few. Same cost profile either way.
+async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target) {
+  let allContacts = [];
+  for (const road of roads) {
+    setProgress('Checking ' + road.road + ' for formation contacts...');
+    const town = (wazeTowns && wazeTowns[road.road]) || defaultTown;
+    const contacts = await findContactsForRoad(road, town);
+    allContacts = allContacts.concat(contacts);
+  }
+  let written = [];
+  if (allContacts.length > 0) {
+    allContacts.sort((a, b) => b.spanMiles - a.spanMiles);
+    const toWrite = allContacts.slice(0, 4);
+    setProgress('Writing up ' + toWrite.length + ' verified contact(s)...');
+    for (const c of toWrite) {
+      try {
+        const h = await writeUpContact(c, target);
+        if (h) { h.verified_by = 'map'; written.push(h); }
+      } catch (e) { /* skip a failed write-up, keep the rest */ }
+    }
+  }
+  return { allContacts, written };
+}
+
+async function runScout() {
+  const btn = document.getElementById('scoutBtn');
+  btn.disabled = true;
+  setStatus('SCANNING...');
+  resetUsage();
+  lastArea = null;
+
+  // Overall safety net: even if something upstream hangs in a way the
+  // per-request timeouts don't catch, this guarantees the button re-enables
+  // and an error shows instead of spinning forever.
+  const watchdog = setTimeout(() => {
+    hideLoading();
+    showError('This is taking much longer than it should — something likely stalled. Please try again.');
+    setStatus('TIMEOUT');
+    document.getElementById('scoutBtn').disabled = false;
+  }, 150000);
+
+  try {
+    if (region === 'custom') {
+      const query = document.getElementById('customLoc').value.trim();
+      if (!query) {
+        clearTimeout(watchdog);
+        showError('Describe your area first — a town, a hotel, or an address.');
+        setStatus('READY');
+        btn.disabled = false;
+        return;
+      }
+      showLoading('READING YOUR REQUEST...', 'Working out where you want to search and what you are hunting for...');
+      const parsed = await parseCustomRequest(query);
+      // If the AI step fails for any reason, fall back to the raw text as before.
+      const place = (parsed && parsed.place) ? parsed.place : query;
+      const target = parsed ? parsed.target : '';
+      if (parsed && !parsed.place) {
+        clearTimeout(watchdog);
+        hideLoading();
+        showError('I could not find a place in that. Try something like "agatized petrified wood near Bryan, TX".');
+        setStatus('NOT FOUND');
+        btn.disabled = false;
+        return;
+      }
+      showLoading('LOCATING YOUR AREA...', 'Finding coordinates for "' + place + '" and nearby highways...');
+      const loc = await geocodeLocation(place);
+      if (!loc) {
+        clearTimeout(watchdog);
+        hideLoading();
+        showError('Could not find that location. Try a nearby town name, or be more specific.');
+        setStatus('NOT FOUND');
+        btn.disabled = false;
+        return;
+      }
+      setProgress('Found it — searching for highways within 20 miles...');
+      const roads = await fetchNearbyHighways(loc.lat, loc.lon, 20);
+      if (roads.length === 0) {
+        clearTimeout(watchdog);
+        hideLoading();
+        showError('No major state/US highways found within 20 miles of that area. Try a different description.');
+        setStatus('NO ROADS');
+        btn.disabled = false;
+        return;
+      }
+      showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling ' + roads.length + ' highway(s) near "' + place + '" — 20-40 seconds');
+      const { allContacts, written } = await scanRoadsForHotspots(roads, place, {}, target);
+
+      clearTimeout(watchdog);
+      hideLoading();
+      if (written.length === 0) {
+        showError(allContacts.length === 0
+          ? 'No formation contacts found along highways near that area this pass. Try again, or a different area.'
+          : 'Found real formation contacts but the write-up step failed. Try again.');
+        setStatus(allContacts.length === 0 ? 'NO DATA' : 'ERROR');
+      } else {
+        renderHotspots(written);
+        showCostLine();
+        addClubButton(place, target);
+        setStatus(written.length + ' HOTSPOTS');
+        try { sessionStorage.setItem('lastHotspotsDirect', JSON.stringify(written)); } catch (ex) {}
+      }
+      btn.disabled = false;
+      return;
+    }
+
+    // --- Preset region path ---
+    const rd = regionData[region];
+    showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling road corridors against verified map data — 20-40 seconds');
+
+    const { allContacts, written } = await scanRoadsForHotspots(rd.roads, rd.label, rd.wazeTowns);
+
+    // Curated, hand-confirmed spots always show for this region, regardless
+    // of what the live map scan finds this particular click.
+    const curated = (curatedSpots[region] || []).map(s => ({ ...s }));
+    const hotspots = curated.concat(written);
+
+    clearTimeout(watchdog);
+    hideLoading();
+    if (hotspots.length === 0) {
+      showError(allContacts.length === 0
+        ? 'No formation contacts found along the sampled roads this pass. Try again, or use the original app.'
+        : 'Found real formation contacts but the write-up step failed. Try again.');
+      setStatus(allContacts.length === 0 ? 'NO DATA' : 'ERROR');
+    } else {
+      renderHotspots(hotspots);
+      showCostLine();
+      addClubButton(rd.label + ', TX', '');
+      setStatus(hotspots.length + ' HOTSPOTS');
+      try { sessionStorage.setItem('lastHotspotsDirect', JSON.stringify(hotspots)); } catch (ex) {}
+    }
+  } catch (err) {
+    clearTimeout(watchdog);
+    hideLoading();
+    showError('Error: ' + err.message);
+    setStatus('ERROR');
+  }
+  btn.disabled = false;
+}
+
+window.addEventListener('pageshow', () => {
+  try {
+    const saved = sessionStorage.getItem('lastHotspotsDirect');
+    if (saved && !document.getElementById('results').children.length) {
+      const spots = JSON.parse(saved);
+      renderHotspots(spots);
+      setStatus('RESTORED');
+      // Bring the club button back too, for the same area as the restored cards.
+      // (Older saved results have no saved area, so fall back to the cards' town.)
+      try {
+        const a = JSON.parse(sessionStorage.getItem('lastAreaDirect') || 'null');
+        if (a && a.area) addClubButton(a.area, a.target || '');
+        else if (spots[0] && spots[0].town) addClubButton(spots[0].town, '');
+      } catch (e2) {}
+    }
+  } catch (e) {}
+});
+
+function renderHotspots(spots) {
+  const c = document.getElementById('results');
+  c.innerHTML = '';
+  spots.forEach((h, i) => {
+    const isHot = h.score === 'hot';
+    const drains = h.drainages || [];
+    const isOwnerConfirmed = h.verified_by === 'owner';
+    const card = document.createElement('div');
+    card.className = 'hcard';
+    card.style.animationDelay = (i * 0.1) + 's';
+    card.innerHTML =
+      '<div class="htop">' +
+        '<span class="' + (isHot ? 'score-hot' : 'score-warm') + '">' + (isHot ? '🔥 HOTSPOT' : '◉ WARM') + '</span>' +
+        '<span class="hname">' + h.name + '</span>' +
+      '</div>' +
+      '<div class="hbody">' +
+        (isOwnerConfirmed ?
+          '<div style="font-family:\'Share Tech Mono\',monospace; font-size:0.56rem; letter-spacing:0.1em; color:#f4b87a; background:rgba(196,98,45,0.12); border:1px solid rgba(196,98,45,0.35); border-radius:2px; padding:5px 10px; margin-bottom:2px; display:inline-block;">📍 KNOWN PRODUCTIVE SITE — CONFIRMED ON-SITE</div>'
+          : '') +
+        '<div class="contact-strip">' +
+          '<span class="clabel">' + (isOwnerConfirmed ? 'Formation (published sources + owner-confirmed location)' : '✓ Verified Formation Contact — USGS/BEG Geologic Map') + '</span>' +
+          '<span class="cval">' + h.from_formation + ' ▸ ' + h.to_formation + '</span>' +
+          (h.contact_location ? '<span style="font-size:0.72rem;color:var(--feldspar);display:block;margin-top:3px;">' + h.contact_location + '</span>' : '') +
+        '</div>' +
+        (drains.length > 0 ?
+          '<div class="drain-strip">' +
+            '<span class="dlabel">Named Drainages Nearby (OpenStreetMap)</span>' +
+            '<span class="dval">〰 ' + drains.join('  〰 ') + '</span>' +
+          '</div>' : '') +
+        '<div class="dir-strip">' +
+          '<span class="dirlabel">Field Directions from ' + h.town + '</span>' +
+          '<span class="dirval">' + h.directions + '</span>' +
+        '</div>' +
+        '<div class="field"><label>Watch for from the truck</label><p>' + h.from_the_truck + '</p></div>' +
+        '<div class="field"><label>You may find</label>' +
+          '<div class="minerals">' + (h.minerals || []).map(m => '<span class="mtag">' + m + '</span>').join('') + '</div>' +
+        '</div>' +
+        '<div class="waze-box">' +
+          '<span class="wlabel">Waze Destination</span>' +
+          '<input type="text" readonly value="' + (h.town || '') + '" onclick="this.select()">' +
+          '<span class="winst">Tap to select — long press to copy — paste into Waze search</span>' +
+        '</div>' +
+        '<div class="why">' + h.why + '</div>' +
+        '<div class="src">' + (isOwnerConfirmed
+          ? '▸ Location and directions confirmed on-site by the app\'s owner; age and mineralogy from independently published geology sources — not AI-generated'
+          : '▸ Formation contact verified directly against USGS/BEG geologic map data — AI only wrote the description; check both shoulders near the marked stretch') + '</div>' +
+      '</div>';
+    c.appendChild(card);
+  });
+}
+</script>
+</body>
+</html>
