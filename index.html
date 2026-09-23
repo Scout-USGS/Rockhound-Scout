@@ -16,7 +16,8 @@ a{color:var(--glow)}
 .wrap{max-width:780px;margin:0 auto;padding:0 20px}
 header{border-bottom:1px solid rgba(196,98,45,.35);background:rgba(26,22,18,.98)}
 header .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;padding:14px 20px}
-.brand{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.08em;color:var(--quartz);text-decoration:none;line-height:1}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.08em;color:var(--quartz);text-decoration:none;line-height:1;display:flex;align-items:center;gap:10px}
+.brand-logo{height:34px;width:34px;display:block}
 nav{display:flex;flex-wrap:wrap;gap:6px 18px;margin-left:auto}
 nav a{font-family:'Share Tech Mono',monospace;font-size:.78rem;letter-spacing:.08em;color:var(--feld);text-decoration:none;text-transform:uppercase}
 nav a:hover,nav a[aria-current]{color:var(--cream)}
@@ -67,14 +68,15 @@ footer p{margin-bottom:8px}
 #lightbox .lb-close{position:fixed;top:16px;right:20px;font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--cream);background:rgba(42,36,32,.95);border:1px solid rgba(139,111,78,.5);border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1}
 #lightbox .lb-close:hover{color:var(--copper)}
 .showcase{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}
-.showcase figure{margin:0;background:rgba(42,36,32,.8);border:1px solid rgba(139,111,78,.35);border-radius:4px;overflow:hidden;padding:8px;display:flex;align-items:center}
+.showcase figure{margin:0;background:rgba(42,36,32,.8);border:1px solid rgba(139,111,78,.35);border-radius:4px;overflow:hidden;padding:8px;display:flex;flex-direction:column;align-items:center}
+.showcase h3{margin:0 0 8px;text-align:center}
 .showcase img{display:block;width:100%;height:auto;border-radius:3px;cursor:zoom-in}
 @media(max-width:600px){.showcase{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header><div class="wrap">
-<a class="brand" href="index.html">ROCKHOUND SCOUT</a>
+<a class="brand" href="index.html"><img class="brand-logo" src="icon-192.png" alt="Rockhound Scout logo">ROCKHOUND SCOUT</a>
 <nav><a href="index.html" aria-current="page">Home</a><a href="index.html#pricing">Pricing</a><a href="refund-policy.html">Refunds</a><a href="privacy-policy.html">Privacy</a><a href="terms.html">Terms</a></nav>
 </div></header>
 <main><div class="wrap">
@@ -84,8 +86,8 @@ footer p{margin-bottom:8px}
 <p class="lead">Rockhound Scout checks published geologic map data along state and U.S. highways, finds the stretches where one rock formation meets another, and writes you a field guide entry (Hotspot Card) for each one: where to look, what to watch for from the truck, and what you might find.</p>
 
 <div class="showcase">
-<figure><img src="gallery/app-home.png" alt="The Rockhound Scout app home screen, showing region cards and the Find My Hotspots button." onclick="openLB(this.src,this.alt)"></figure>
-<figure><img src="gallery/hotspot-card.png" alt="A real Rockhound Scout hotspot card for the Baby Head Ridge Llanite Dike Roadcut, showing formation, directions, and what to look for." onclick="openLB(this.src,this.alt)"></figure>
+<figure><h3>Simple Search Controls</h3><img src="gallery/app-home.png" alt="The Rockhound Scout app home screen, showing region cards and the Find My Hotspots button." onclick="openLB(this.src,this.alt)"></figure>
+<figure><h3>Actual Sample Hotspot Card</h3><img src="gallery/hotspot-card.png" alt="A real Rockhound Scout hotspot card for the Baby Head Ridge Llanite Dike Roadcut, showing formation, directions, and what to look for." onclick="openLB(this.src,this.alt)"></figure>
 </div>
 <p class="note" style="text-align:center;margin-top:-10px">The app itself: pick a region, tap Find My Hotspots, and get back a real hotspot card &mdash; this one for the Baby Head Ridge Llanite Dike Roadcut, one of the only sources of llanite on Earth.</p>
 
@@ -100,30 +102,30 @@ footer p{margin-bottom:8px}
 <div class="grid">
 <div class="card"><h3>Preset regions</h3><p>Llano Uplift, Three Rivers, Edwards Plateau, Big Bend, and the Cretaceous Shelf.</p></div>
 <div class="card"><h3>Custom search</h3><p>Any spot in Texas. Type a town, address, or what gems/minerals you&rsquo;re hunting. Included at no extra charge.</p></div>
-<div class="card"><h3>Map-based locations</h3><p>Formation contacts come from published geologic map data, not from AI guesses.</p></div>
-<div class="card"><h3>Informative &amp; helpful write-ups</h3><p>Top-shelf instructions, tips, and data for every hotspot &mdash; nothing generic.</p></div>
+<div class="card"><h3>Map-based locations</h3><p>Formation contacts come from searching published map and geologic data.</p></div>
+<div class="card"><h3>Informative &amp; helpful write-ups</h3><p>Top-shelf instructions, tips, and data for every hotspot &mdash; nothing generic or boilerplate.</p></div>
 </div>
 
 <h2>Real finds</h2>
-<p>No stock photos here. These are the owner&rsquo;s own hauls, pulled straight out of the ground by chasing these exact hotspot cards across the Llano Uplift and all over Texas.</p>
+<p>No stock photos here. These are the owner&rsquo;s own hauls, pulled straight out of the ground by chasing similar Hotspot cards all over the great state of Texas.</p>
 <div class="photo-grid">
 <figure><img src="gallery/llanite-closeup-1.jpg" alt="Close-up of llanite showing salmon-pink and blue-grey quartz phenocrysts, with a quarter for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite, up close</strong>Salmon-pink and storm-blue quartz phenocrysts locked in dark rock. This exact combination exists almost nowhere else on Earth.</figcaption></figure>
-<figure><img src="gallery/llanite-closeup-2.jpg" alt="The 300 lb llanite boulder from the Baby Head roadcut, with a quarter for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite, the 300 lb boulder</strong>This is the 300-lb llanite boulder pulled from the Baby Head roadcut near Llano. Same signature salmon-pink and blue quartz phenocrysts.</figcaption></figure>
-<figure><img src="gallery/llanite-tumbled.jpg" alt="A group of llanite pieces, both river-tumbled and jewelry-grade rough." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite: river-tumbled and jewelry grade</strong>The rounded pieces are river-tumbled llanite from the Slab near Kingsland, smoothed by decades of current. The sharper pieces are jewelry-grade rough straight from Baby Head &mdash; not yet cut and polished.</figcaption></figure>
+<figure><img src="gallery/llanite-closeup-2.jpg" alt="The 300 lb llanite boulder from the Baby Head roadcut, with a quarter for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite, the 300 lb boulder</strong>One face is polished, exposing a window into this beautiful stone.</figcaption></figure>
+<figure><img src="gallery/llanite-tumbled.jpg" alt="A group of llanite pieces, both river-tumbled and jewelry-grade rough." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite: river-tumbled and jewelry grade</strong>The rounded pieces are river-tumbled and weathered llanite. The sharper pieces, I call jewelry grade &mdash; a couple have been cut, revealing the hard, dark llanite underneath.</figcaption></figure>
 <figure><img src="gallery/granite-boulder.jpg" alt="A Town Mountain Granite boulder showing swirled gneissic banding." onclick="openLB(this.src,this.alt)"><figcaption><strong>Town Mountain Granite</strong>Those swirled bands are over a billion years of crushing pressure frozen in stone &mdash; the ancient basement the whole Llano Uplift sits on.</figcaption></figure>
 <figure><img src="gallery/granite-quartz-float.jpg" alt="A granite boulder with a quarter for scale, next to pieces of vein quartz." onclick="openLB(this.src,this.alt)"><figcaption><strong>Granite &amp; quartz specimens</strong>Vein quartz stained rust-red by iron bleeding through old fractures. Found in dry creek beds on the Llano Uplift.</figcaption></figure>
 <figure><img src="gallery/granite-quartz-group.jpg" alt="A mixed group of quartz and banded granite pieces." onclick="openLB(this.src,this.alt)"><figcaption><strong>A haul from the Uplift</strong>Quartz, banded granite, and iron-streaked float &mdash; a sample of how much variety turns up in a single afternoon out there.</figcaption></figure>
-<figure><img src="gallery/pet-wood-opal.jpg" alt="A piece of petrified palm wood with a natural cavity, coin for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Petrified palm wood &mdash; with an opal inside</strong>That dark cavity near the coin holds a genuine pocket of precious opal, confirmed under UV light.</figcaption></figure>
-<figure><img src="gallery/pet-wood-face.jpg" alt="A weathered face of petrified wood showing growth-ring banding." onclick="openLB(this.src,this.alt)"><figcaption><strong>Petrified wood, frozen mid-decay</strong>Every ring here was carved by the living tree, then locked in stone forever when silica replaced the wood, cell by cell.</figcaption></figure>
-<figure><img src="gallery/pet-wood-group.jpg" alt="A group of assorted petrified wood pieces found at different locations." onclick="openLB(this.src,this.alt)"><figcaption><strong>Petrified wood, three finds, three places</strong>Driftwood-pale to deep amber &mdash; none of these came from the same spot. Using the app to find the next hotspot and treasured specimen is incredibly fun.</figcaption></figure>
+<figure><img src="gallery/pet-wood-opal.jpg" alt="A piece of petrified palm wood with a natural cavity, coin for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Petrified palm wood &mdash; with opal inside</strong>That dark cavity near the coin holds a genuine pocket of precious opal, confirmed under UV light.</figcaption></figure>
+<figure><img src="gallery/pet-wood-face.jpg" alt="A weathered face of petrified wood showing growth-ring banding." onclick="openLB(this.src,this.alt)"><figcaption><strong>Petrified palm wood, frozen mid-decay &mdash; 2nd side</strong>Palm isn&rsquo;t a tree, so it never grew rings. It&rsquo;s built from vascular bundles instead, with the softer tissue between them decaying first &mdash; then every bit of it, fast-decaying and slow alike, replaced by silica cell by cell.</figcaption></figure>
+<figure><img src="gallery/pet-wood-group.jpg" alt="A group of assorted petrified wood pieces found at different locations." onclick="openLB(this.src,this.alt)"><figcaption><strong>Petrified wood, LaGrange &amp; Three Rivers</strong>Driftwood-pale to deep amber &mdash; none of these came from the same spot. Using the app to find the next hotspot and treasured specimen is incredibly fun.</figcaption></figure>
 <figure><img src="gallery/glen-rose-limestone.jpg" alt="Vuggy limestone from the Glen Rose Formation with a small ring-shaped piece in front." onclick="openLB(this.src,this.alt)"><figcaption><strong>Limestone, honeycombed by time</strong>Every hole here is where a softer streak of Glen Rose limestone simply dissolved away. The little ring in front formed the same way &mdash; a natural stone donut.</figcaption></figure>
-<figure><img src="gallery/chert-rudist.jpg" alt="Chert nodules and a fossilized rudist clam shell." onclick="openLB(this.src,this.alt)"><figcaption><strong>Chert &amp; a 100-million-year-old clam</strong>That ribbed shell is a rudist &mdash; an extinct reef-building clam from the sea that once covered Texas &mdash; next to chert in some of the beautiful colors the Hill Country produces.</figcaption></figure>
+<figure><img src="gallery/chert-rudist.jpg" alt="Chert nodules and a fossilized rudist clam shell." onclick="openLB(this.src,this.alt)"><figcaption><strong>Chert &amp; a 100-million-year-old clam cluster</strong>That ribbed fossil is a cluster of rudists &mdash; extinct reef-building clams from the sea that once covered Texas &mdash; next to chert in some of the beautiful colors the Hill Country produces.</figcaption></figure>
 </div>
 <p class="note" style="text-align:center">Tap any photo to see it full size.</p>
 
 <h2>What the app is doing behind the scenes</h2>
 <div class="card">
-<p>Rockhound Scout doesn&rsquo;t pull from some pre-made list. Each time you tap it, the app is out there live: pulling real highway data, sampling the geologic map mile by mile along every road near you, and cross-referencing rock formations in real time. That's a genuinely large amount of data to chew through, so a scan usually takes about a minute. If you&rsquo;re the type who finds that kind of thing impressive rather than annoying &mdash; welcome, you&rsquo;re among friends.</p>
+<p>Rockhound Scout doesn&rsquo;t pull from some pre-made list. Each time you press Find My Hotspots, the app is out there live: pulling real highway data, sampling the geologic map mile by mile along every road in your target area, and cross-referencing rock formations in real time. Scans can take a minute or so to run &mdash; be patient. If you&rsquo;re the type who finds that kind of thing impressive rather than annoying &mdash; welcome, you&rsquo;re among friends.</p>
 </div>
 
 <h2 id="pricing">Pricing</h2>
