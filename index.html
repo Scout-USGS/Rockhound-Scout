@@ -73,7 +73,8 @@ footer p{margin-bottom:8px}
 .showcase img{display:block;width:100%;height:auto;border-radius:3px;cursor:zoom-in}
 @media(max-width:600px){.showcase{grid-template-columns:1fr}}
 .bg-fade{position:relative}
-.bg-fade::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background-image:url('gallery/llanite-closeup-1.jpg');background-size:cover;background-position:center;opacity:.1;z-index:-1;-webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%);mask-image:linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%)}
+.bg-fade::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background-image:url('gallery/llanite-closeup-1.jpg');background-size:cover;background-position:center;opacity:.18;z-index:-2}
+.bg-fade::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(to bottom, transparent 0%, transparent 55%, var(--stone) 100%);z-index:-1}
 </style>
 </head>
 <body>
