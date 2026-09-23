@@ -41,7 +41,7 @@ ul,ol{padding-left:22px;margin-bottom:12px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid .card{margin:0}
 .grid h3{margin-top:0;font-size:1.05rem}
-.note{font-size:.92rem;color:var(--feld)}
+.note{font-size:.92rem;color:var(--cream)}
 .steps{counter-reset:s;list-style:none;padding:0}
 .steps li{counter-increment:s;position:relative;padding-left:46px;margin-bottom:16px}
 .steps li::before{content:counter(s);position:absolute;left:0;top:-2px;width:32px;height:32px;border:1px solid var(--copper);color:var(--copper);font-family:'Bebas Neue',sans-serif;font-size:1.3rem;display:flex;align-items:center;justify-content:center;border-radius:2px}
@@ -173,17 +173,4 @@ footer p{margin-bottom:8px}
 <footer><div class="wrap">
 <p>Rockhound Scout is operated by John Thompson dba Rockhound Scout, Texas. Questions or support: <a href="mailto:RockhoundScoutApp@gmail.com">RockhoundScoutApp@gmail.com</a></p>
 <p>Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>. Geologic unit data via <a href="https://macrostrat.org">Macrostrat</a>. Rockhound Scout is not affiliated with or endorsed by the U.S. Geological Survey, the Texas Bureau of Economic Geology, Macrostrat, or OpenStreetMap.</p>
-<p><a href="refund-policy.html">Refund &amp; Dispute Policy</a> &middot; <a href="privacy-policy.html">Privacy Policy</a> &middot; <a href="terms.html">Terms of Service</a></p>
-<p>&copy; 2026 John Thompson dba Rockhound Scout</p>
-</div></footer>
-<div id="lightbox" onclick="if(event.target===this)closeLB()">
-<span class="lb-close" onclick="closeLB()">&times;</span>
-<img id="lbImg" src="" alt="" onclick="this.classList.toggle('zoomed')">
-</div>
-<script>
-function openLB(src,alt){document.getElementById('lbImg').src=src;document.getElementById('lbImg').alt=alt;document.getElementById('lbImg').classList.remove('zoomed');document.getElementById('lightbox').classList.add('open');}
-function closeLB(){document.getElementById('lightbox').classList.remove('open');}
-document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLB();});
-</script>
-</body>
-</html>
+<p><a href="refund-policy.html">Refund &amp; Dispute Policy</a> &middot; <a href="privacy-policy.html">Privacy Policy</a> &middot; <a
