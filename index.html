@@ -40,7 +40,7 @@ ul,ol{padding-left:22px;margin-bottom:12px}
 .btn.off{background:var(--granite);color:var(--feld);cursor:not-allowed;border:1px dashed rgba(139,111,78,.5)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid .card{margin:0}
-.grid h3{margin-top:0}
+.grid h3{margin-top:0;font-size:1.05rem}
 .note{font-size:.92rem;color:var(--feld)}
 .steps{counter-reset:s;list-style:none;padding:0}
 .steps li{counter-increment:s;position:relative;padding-left:46px;margin-bottom:16px}
@@ -72,6 +72,8 @@ footer p{margin-bottom:8px}
 .showcase h3{margin:0 0 8px;text-align:center}
 .showcase img{display:block;width:100%;height:auto;border-radius:3px;cursor:zoom-in}
 @media(max-width:600px){.showcase{grid-template-columns:1fr}}
+.bg-fade{position:relative}
+.bg-fade::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background-image:url('gallery/llanite-closeup-1.jpg');background-size:cover;background-position:center;opacity:.1;z-index:-1;-webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%);mask-image:linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%)}
 </style>
 </head>
 <body>
@@ -81,9 +83,10 @@ footer p{margin-bottom:8px}
 </div></header>
 <main><div class="wrap">
 
+<div class="bg-fade">
 <span class="tag">Launching soon</span>
 <h1>Find rockhounding hotspots along Texas highways</h1>
-<p class="lead">Rockhound Scout checks published geologic map data along state and U.S. highways, finds the stretches where one rock formation meets another, and writes you a field guide entry (Hotspot Card) for each one: where to look, what to watch for from the truck, and what you might find.</p>
+<p class="lead">Rockhound Scout checks published geologic map data along state and U.S. highways, finds the stretches where one rock formation meets another, prioritizes drainage crossings, and writes you a field guide entry (Hotspot Card) for each one: where to look, what to watch for from the truck, and what you might find.</p>
 
 <div class="showcase">
 <figure><h3>Simple Search Controls</h3><img src="gallery/app-home.png" alt="The Rockhound Scout app home screen, showing region cards and the Find My Hotspots button." onclick="openLB(this.src,this.alt)"></figure>
@@ -93,7 +96,7 @@ footer p{margin-bottom:8px}
 
 <h2>How it works</h2>
 <ol class="steps">
-<li><strong>Pick a region or type your own area.</strong> Choose a preset Texas region, or use Custom to type a town, address/area, or a plain sentence like &ldquo;within 20 miles of my hotel at [address]&rdquo; or &ldquo;agatized petrified wood near Bryan, TX.&rdquo;</li>
+<li><strong>Pick a region or type your own Custom area.</strong> Choose a preset Texas region, or use Custom to type a town, area, or a plain sentence like &ldquo;within 20 miles of my hotel at [address]&rdquo; or &ldquo;agatized petrified wood near Bryan, TX.&rdquo;</li>
 <li><strong>The app reads the maps.</strong> It finds nearby state and U.S. highways, samples the geologic map along each road, and prioritizes named drainages. Those contacts are where minerals, fossils, and petrified wood often concentrate.</li>
 <li><strong>You get hotspot cards.</strong> Each card gives the formations on either side of the contact, named creeks nearby, driving directions from a nearby town, what to look for from the truck window, likely finds, and a Waze search term.</li>
 </ol>
@@ -105,27 +108,28 @@ footer p{margin-bottom:8px}
 <div class="card"><h3>Map-based locations</h3><p>Formation contacts come from searching published map and geologic data.</p></div>
 <div class="card"><h3>Informative &amp; helpful write-ups</h3><p>Top-shelf instructions, tips, and data for every hotspot &mdash; nothing generic or boilerplate.</p></div>
 </div>
+</div>
 
 <h2>Real finds</h2>
-<p>No stock photos here. These are the owner&rsquo;s own hauls, pulled straight out of the ground by chasing similar Hotspot cards all over the great state of Texas.</p>
+<p>No stock photos here. These are the owner&rsquo;s found treasures, pulled straight out of the ground by chasing similar Hotspot cards all over the great state of Texas.</p>
 <div class="photo-grid">
-<figure><img src="gallery/llanite-closeup-1.jpg" alt="Close-up of llanite showing salmon-pink and blue-grey quartz phenocrysts, with a quarter for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite, up close</strong>Salmon-pink and storm-blue quartz phenocrysts locked in dark rock. This exact combination exists almost nowhere else on Earth.</figcaption></figure>
+<figure><img src="gallery/llanite-closeup-1.jpg" alt="Close-up of llanite showing salmon-pink and blue-grey quartz phenocrysts, with a quarter for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite, up close</strong>Salmon-pink and storm-blue quartz phenocrysts locked in dark rock. This exact combination exists nowhere else on Earth.</figcaption></figure>
 <figure><img src="gallery/llanite-closeup-2.jpg" alt="The 300 lb llanite boulder from the Baby Head roadcut, with a quarter for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite, the 300 lb boulder</strong>One face is polished, exposing a window into this beautiful stone.</figcaption></figure>
 <figure><img src="gallery/llanite-tumbled.jpg" alt="A group of llanite pieces, both river-tumbled and jewelry-grade rough." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite: river-tumbled and jewelry grade</strong>The rounded pieces are river-tumbled and weathered llanite. The sharper pieces, I call jewelry grade &mdash; a couple have been cut, revealing the hard, dark llanite underneath.</figcaption></figure>
 <figure><img src="gallery/granite-boulder.jpg" alt="A Town Mountain Granite boulder showing swirled gneissic banding." onclick="openLB(this.src,this.alt)"><figcaption><strong>Town Mountain Granite</strong>Those swirled bands are over a billion years of crushing pressure frozen in stone &mdash; the ancient basement the whole Llano Uplift sits on.</figcaption></figure>
 <figure><img src="gallery/granite-quartz-float.jpg" alt="A granite boulder with a quarter for scale, next to pieces of vein quartz." onclick="openLB(this.src,this.alt)"><figcaption><strong>Granite &amp; quartz specimens</strong>Vein quartz stained rust-red by iron bleeding through old fractures. Found in dry creek beds on the Llano Uplift.</figcaption></figure>
 <figure><img src="gallery/granite-quartz-group.jpg" alt="A mixed group of quartz and banded granite pieces." onclick="openLB(this.src,this.alt)"><figcaption><strong>A haul from the Uplift</strong>Quartz, banded granite, and iron-streaked float &mdash; a sample of how much variety turns up in a single afternoon out there.</figcaption></figure>
-<figure><img src="gallery/pet-wood-opal.jpg" alt="A piece of petrified palm wood with a natural cavity, coin for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Petrified palm wood &mdash; with opal inside</strong>That dark cavity near the coin holds a genuine pocket of precious opal, confirmed under UV light.</figcaption></figure>
+<figure><img src="gallery/pet-wood-opal.jpg" alt="A piece of petrified palm wood with a natural cavity, coin for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Petrified palm wood &mdash; with opal inside</strong>That dark cavity near the coin holds a genuine pocket of precious opal, confirmed under UV light. I suspect if cut, the center is full of opal.</figcaption></figure>
 <figure><img src="gallery/pet-wood-face.jpg" alt="A weathered face of petrified wood showing growth-ring banding." onclick="openLB(this.src,this.alt)"><figcaption><strong>Petrified palm wood, frozen mid-decay &mdash; 2nd side</strong>Palm isn&rsquo;t a tree, so it never grew rings. It&rsquo;s built from vascular bundles instead, with the softer tissue between them decaying first &mdash; then every bit of it, fast-decaying and slow alike, replaced by silica cell by cell.</figcaption></figure>
 <figure><img src="gallery/pet-wood-group.jpg" alt="A group of assorted petrified wood pieces found at different locations." onclick="openLB(this.src,this.alt)"><figcaption><strong>Petrified wood, LaGrange &amp; Three Rivers</strong>Driftwood-pale to deep amber &mdash; none of these came from the same spot. Using the app to find the next hotspot and treasured specimen is incredibly fun.</figcaption></figure>
 <figure><img src="gallery/glen-rose-limestone.jpg" alt="Vuggy limestone from the Glen Rose Formation with a small ring-shaped piece in front." onclick="openLB(this.src,this.alt)"><figcaption><strong>Limestone, honeycombed by time</strong>Every hole here is where a softer streak of Glen Rose limestone simply dissolved away. The little ring in front formed the same way &mdash; a natural stone donut.</figcaption></figure>
-<figure><img src="gallery/chert-rudist.jpg" alt="Chert nodules and a fossilized rudist clam shell." onclick="openLB(this.src,this.alt)"><figcaption><strong>Chert &amp; a 100-million-year-old clam cluster</strong>That ribbed fossil is a cluster of rudists &mdash; extinct reef-building clams from the sea that once covered Texas &mdash; next to chert in some of the beautiful colors the Hill Country produces.</figcaption></figure>
+<figure><img src="gallery/chert-rudist.jpg" alt="Chert nodules and a fossilized rudist clam shell." onclick="openLB(this.src,this.alt)"><figcaption><strong>Chert &amp; a 100-million-year-old clam cluster</strong>The large ribbed fossil is a cluster of rudists &mdash; extinct reef-building bi-valves from the sea that once covered Texas. Far left: a river-tumbled rudist fossil. Chert fossils (bottom stones) in a variety of Hill Country specimen colors.</figcaption></figure>
 </div>
 <p class="note" style="text-align:center">Tap any photo to see it full size.</p>
 
-<h2>What the app is doing behind the scenes</h2>
+<h2>Scans can take a minute to run &mdash; be patient.</h2>
 <div class="card">
-<p>Rockhound Scout doesn&rsquo;t pull from some pre-made list. Each time you press Find My Hotspots, the app is out there live: pulling real highway data, sampling the geologic map mile by mile along every road in your target area, and cross-referencing rock formations in real time. Scans can take a minute or so to run &mdash; be patient. If you&rsquo;re the type who finds that kind of thing impressive rather than annoying &mdash; welcome, you&rsquo;re among friends.</p>
+<p>Rockhound Scout doesn&rsquo;t pull from some pre-made list. Each time you press the button &ldquo;Find My Hotspots,&rdquo; the app is out there live: pulling real highway data, sampling the geologic map mile by mile along every road in your target area, and cross-referencing rock formations in real time. Scans can take a minute or so to run &mdash; be patient. There is a tremendous amount of data to query. If you&rsquo;re the type who finds that kind of thing impressive rather than annoying &mdash; welcome, you&rsquo;re among friends.</p>
 </div>
 
 <h2 id="pricing">Pricing</h2>
@@ -155,8 +159,8 @@ footer p{margin-bottom:8px}
 <details><summary>Do scans expire?</summary><p>No. Use them whenever you like.</p></details>
 <details><summary>What counts as a scan?</summary><p>One tap of Find My Hotspots, for a preset region or a Custom search. If the scan ends in an error or returns no hotspots, it isn&rsquo;t deducted.</p></details>
 <details><summary>Can I get a refund?</summary><p>We don&rsquo;t refund unused scans or change-of-mind purchases. If we charge you by mistake, a scan is wrongly deducted, or the app is broken for an extended period, we&rsquo;ll make it right. Details are in the <a href="refund-policy.html">Refund &amp; Dispute Policy</a>.</p></details>
-<details><summary>Does it cover places outside Texas?</summary><p>No. Rockhound Scout currently works only for Texas.</p></details>
-<details><summary>Where does the data come from?</summary><p>Rock formation data comes from Macrostrat, a public database that compiles published geologic maps. Roads and creek names come from OpenStreetMap. AI is used only to write the descriptions.</p></details>
+<details><summary>Does it cover places outside Texas?</summary><p>Not yet. Rockhound Scout currently works only for Texas.</p></details>
+<details><summary>Where does the data come from?</summary><p>Rock formation data comes from Macrostrat, a public database that compiles published geologic maps from sources including the U.S. Geological Survey and the Texas Bureau of Economic Geology. Roads and creek names come from OpenStreetMap. AI is used only to write the descriptions.</p></details>
 <details><summary>How do I contact you?</summary><p>Email <a href="mailto:RockhoundScoutApp@gmail.com">RockhoundScoutApp@gmail.com</a>.</p></details>
 
 <blockquote class="quote">
