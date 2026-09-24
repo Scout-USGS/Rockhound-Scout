@@ -134,7 +134,7 @@
   </div>
   <div class="errbox" id="errbox"></div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v4.7-direct (prototype) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
+  <div class="verbadge">▸ v4.8-direct (prototype) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
 </div>
 
 <script>
@@ -477,11 +477,14 @@ const regionData = {
   },
   bigbend: {
     label: 'Big Bend',
-    wazeTowns: { 'FM 170': 'Presidio, TX', 'TX-118': 'Alpine, TX', 'US-385': 'Marathon, TX' },
+    wazeTowns: { 'FM 170': 'Presidio, TX', 'TX-118': 'Alpine, TX', 'US-90': 'Alpine, TX', 'TX-17': 'Fort Davis, TX' },
+    // v4.8: retargeted toward the Tertiary volcanic country (Alpine-Marfa-Fort Davis)
+    // where Big Bend agate actually weathers out. FM 170 kept (shortened) for river-road contacts.
     roads: [
-      { road: 'FM 170', pts: [[29.560,-104.370],[29.530,-104.290],[29.500,-104.210],[29.470,-104.130]] },
-      { road: 'TX-118', pts: [[30.158,-103.660],[30.080,-103.630],[30.000,-103.600]] },
-      { road: 'US-385', pts: [[30.210,-103.240],[30.150,-103.240],[30.090,-103.240]] }
+      { road: 'FM 170', pts: [[29.560,-104.370],[29.530,-104.290],[29.500,-104.210]] },
+      { road: 'TX-118', pts: [[30.300,-103.662],[30.230,-103.665],[30.158,-103.660],[30.080,-103.630],[30.000,-103.600]] },
+      { road: 'US-90', pts: [[30.357,-103.668],[30.330,-103.720],[30.300,-103.770],[30.271,-103.815],[30.280,-103.870]] },
+      { road: 'TX-17', pts: [[30.400,-103.975],[30.470,-103.945],[30.540,-103.915]] }
     ]
   },
   cretaceous: {
