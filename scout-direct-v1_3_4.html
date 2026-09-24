@@ -19,7 +19,7 @@
   body { background:var(--stone); color:var(--cream); font-family:'Barlow',sans-serif; font-weight:300; min-height:100vh; overflow-x:hidden; }
   body::before { content:''; position:fixed; inset:0; background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(196,98,45,0.04) 39px,rgba(196,98,45,0.04) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(196,98,45,0.03) 39px,rgba(196,98,45,0.03) 40px); pointer-events:none; z-index:0; }
   .header { position:relative; z-index:10; padding:14px 16px; border-bottom:1px solid rgba(196,98,45,0.3); display:flex; align-items:center; gap:12px; background:rgba(26,22,18,0.98); }
-  .logo { width:38px; height:38px; flex-shrink:0; }
+  .logo { width:38px; height:38px; flex-shrink:0; display:block; border-radius:6px; }
   .title h1 { font-family:'Bebas Neue',sans-serif; font-size:1.7rem; letter-spacing:0.08em; color:var(--quartz); line-height:1; }
   .title .sub { font-family:'Share Tech Mono',monospace; font-size:0.55rem; color:var(--turquoise); letter-spacing:0.15em; margin-top:2px; }
   .status { margin-left:auto; font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); background:rgba(42,36,32,0.8); border:1px solid rgba(139,111,78,0.25); padding:4px 8px; border-radius:2px; white-space:nowrap; display:flex; align-items:center; gap:5px; }
@@ -95,11 +95,7 @@
 </head>
 <body>
 <header class="header">
-  <svg class="logo" viewBox="0 0 48 48" fill="none">
-    <polygon points="24,4 44,36 4,36" fill="none" stroke="#c4622d" stroke-width="1.5"/>
-    <circle cx="24" cy="26" r="6" fill="rgba(61,158,140,0.2)" stroke="#3d9e8c" stroke-width="1.2"/>
-    <circle cx="24" cy="26" r="2" fill="#3d9e8c"/>
-  </svg>
+  <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
     <h1>Rockhound Scout</h1>
     <div class="sub">▸ DIRECT USGS/BEG DATA — PROTOTYPE</div>
@@ -138,7 +134,7 @@
   </div>
   <div class="errbox" id="errbox"></div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v4.6-direct (prototype) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
+  <div class="verbadge">▸ v4.7-direct (prototype) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
 </div>
 
 <script>
@@ -892,7 +888,17 @@ async function runScout() {
     const rd = regionData[region];
     showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling road corridors against verified map data — 20-40 seconds');
 
-    const { allContacts, written } = await scanRoadsForHotspots(rd.roads, rd.label, rd.wazeTowns);
+    // What people come to each preset region for (same as the button hints).
+    // Passed to the write-up so the AI lists these when the formations are
+    // actually known to produce them, and says "uncertain" when not.
+    const presetTargets = {
+      llano: 'blue quartz, llanite, topaz',
+      threerivers: 'petrified palm wood',
+      edwards: 'flint, chert, fossils',
+      bigbend: 'agate, jasper, cinnabar',
+      cretaceous: 'ammonites, shark teeth'
+    };
+    const { allContacts, written } = await scanRoadsForHotspots(rd.roads, rd.label, rd.wazeTowns, presetTargets[region] || '');
 
     // Curated, hand-confirmed spots always show for this region, regardless
     // of what the live map scan finds this particular click.
