@@ -134,7 +134,7 @@
   </div>
   <div class="errbox" id="errbox"></div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v5.0-direct (prototype) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
+  <div class="verbadge">▸ v5.1-direct (prototype) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
 </div>
 
 <script>
@@ -786,7 +786,7 @@ Formation A: ${c.from} (${c.fromLith})
 Formation B: ${c.to} (${c.toLith})
 The contact falls somewhere within a ~${span}-mile stretch centered near lat ${c.lat.toFixed(4)}, lon ${c.lon.toFixed(4)} — the exact contact line is not resolved at this map's scale, so describe it as a general stretch, not an exact spot.
 ${drains.length ? 'Named waterways within ~1.5 miles: ' + drains.join(', ') : 'No named waterway found nearby.'}
-${distFact ? distFact + '\n' : ''}${target ? '\nThe hunter is specifically looking for: ' + target + '. For each of these: if these formations are documented to produce it, list it in MINERALS. If not documented here but the rock type commonly hosts it (for example agate or jasper in volcanic rocks such as basalt, andesite, rhyolite or tuff, or in gravels/conglomerate/alluvium derived from volcanic rocks), list it in MINERALS with "(possible)" after the name. If the rock type does not normally host it (for example agate in plain limestone or shale), do not list it. In WHY, say honestly that it is documented, possible, or unlikely here — never promise it is there.\n' : ''}
+${distFact ? distFact + '\n' : ''}${target ? '\nThe hunter is specifically looking for: ' + target + '. For each of these: if these formations are documented to produce it, list it in MINERALS. If not documented here but the rock type commonly hosts it (for example agate or jasper in volcanic rocks such as basalt, andesite, rhyolite or tuff, or in gravels/conglomerate/alluvium derived from volcanic rocks), list it in MINERALS with "(possible)" after the name. If the rock type does not normally host it (for example agate in plain limestone or shale), do not list it. Where a target has a rule in parentheses, follow that rule exactly — judge ONLY by the rock types of Formation A and Formation B above, never by the general region or nearby areas. In WHY, say honestly that it is documented, possible, or unlikely here — never promise it is there.\n' : ''}
 Write ONE hotspot record in EXACTLY this format (no markdown, no extra commentary):
 NAME: short catchy name for this contact
 ROAD: ${c.road}
@@ -963,12 +963,15 @@ async function runScout() {
     // What people come to each preset region for (same as the button hints).
     // Passed to the write-up so the AI lists these when the formations are
     // actually known to produce them, and says "uncertain" when not.
+    // v5.1: each target carries the host rock it actually comes from, so the AI
+    // can't mark it "possible" just because the contact is in the right region.
+    // Llanite is left out on purpose: it is one known dike (the curated Baby Head card).
     const presetTargets = {
-      llano: 'blue quartz, llanite, topaz',
-      threerivers: 'petrified palm wood',
-      edwards: 'flint, chert, fossils',
-      bigbend: 'agate, jasper, cinnabar',
-      cretaceous: 'ammonites, shark teeth'
+      llano: 'topaz (only in granite, pegmatite, or gravels/alluvium eroded from granite), blue quartz (only in granite or rhyolite porphyry, or gravels eroded from them)',
+      threerivers: 'petrified palm wood (only in the Catahoula, Oakville, Jackson or similar Tertiary sandstones/tuffs, or gravels eroded from them)',
+      edwards: 'flint and chert (in limestone or gravels eroded from it), fossils (in limestone, marl or shale)',
+      bigbend: 'agate and jasper (in volcanic rocks or gravels/conglomerate eroded from them), cinnabar (only in the Terlingua–Study Butte mercury district)',
+      cretaceous: 'ammonites (in Cretaceous limestone, marl or shale), shark teeth (in Cretaceous marl, chalk, shale or sand)'
     };
     const { allContacts, written } = await scanRoadsForHotspots(rd.roads, rd.label, rd.wazeTowns, presetTargets[region] || '');
 
