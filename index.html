@@ -115,7 +115,7 @@ footer p{margin-bottom:8px}
 <p>No stock photos here. These are the owner&rsquo;s found treasures, pulled straight out of the ground by chasing similar Hotspot cards all over the great state of Texas.</p>
 <div class="photo-grid">
 <figure><img src="gallery/llanite-closeup-1.jpg" alt="Close-up of llanite showing salmon-pink and blue-grey quartz phenocrysts, with a quarter for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite, up close</strong>Salmon-pink and storm-blue quartz phenocrysts locked in dark rock. This exact combination exists nowhere else on Earth.</figcaption></figure>
-<figure><img src="gallery/llanite-closeup-2.jpg" alt="The 300 lb llanite boulder from the Baby Head roadcut, with a quarter for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite, the 300 lb boulder</strong>One face is polished, exposing a window into this beautiful stone.</figcaption></figure>
+<figure><img src="gallery/llanite-closeup-2.jpg" alt="The 300 lb llanite boulder from the Baby Head roadcut." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite, the 300 lb boulder</strong>I am almost done polishing to expose a window into this beautiful stone.</figcaption></figure>
 <figure><img src="gallery/llanite-tumbled.jpg" alt="A group of llanite pieces, both river-tumbled and jewelry-grade rough." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite: river-tumbled and jewelry grade</strong>The rounded pieces are river-tumbled and weathered llanite. The sharper pieces, I call jewelry grade &mdash; a couple have been cut, revealing the hard, dark llanite underneath.</figcaption></figure>
 <figure><img src="gallery/granite-boulder.jpg" alt="A Town Mountain Granite boulder showing swirled gneissic banding." onclick="openLB(this.src,this.alt)"><figcaption><strong>Town Mountain Granite</strong>Those swirled bands are over a billion years of crushing pressure frozen in stone &mdash; the ancient basement the whole Llano Uplift sits on.</figcaption></figure>
 <figure><img src="gallery/granite-quartz-float.jpg" alt="A granite boulder with a quarter for scale, next to pieces of vein quartz." onclick="openLB(this.src,this.alt)"><figcaption><strong>Granite &amp; quartz specimens</strong>Vein quartz stained rust-red by iron bleeding through old fractures. Found in dry creek beds on the Llano Uplift.</figcaption></figure>
@@ -173,4 +173,17 @@ footer p{margin-bottom:8px}
 <footer><div class="wrap">
 <p>Rockhound Scout is operated by John Thompson dba Rockhound Scout, Texas. Questions or support: <a href="mailto:RockhoundScoutApp@gmail.com">RockhoundScoutApp@gmail.com</a></p>
 <p>Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>. Geologic unit data via <a href="https://macrostrat.org">Macrostrat</a>. Rockhound Scout is not affiliated with or endorsed by the U.S. Geological Survey, the Texas Bureau of Economic Geology, Macrostrat, or OpenStreetMap.</p>
-<p><a href="refund-policy.html">Refund &amp; Dispute Policy</a> &middot; <a href="privacy-policy.html">Privacy Policy</a> &middot; <a
+<p><a href="refund-policy.html">Refund &amp; Dispute Policy</a> &middot; <a href="privacy-policy.html">Privacy Policy</a> &middot; <a href="terms.html">Terms of Service</a></p>
+<p>&copy; 2026 John Thompson dba Rockhound Scout</p>
+</div></footer>
+<div id="lightbox" onclick="if(event.target===this)closeLB()">
+<span class="lb-close" onclick="closeLB()">&times;</span>
+<img id="lbImg" src="" alt="" onclick="this.classList.toggle('zoomed')">
+</div>
+<script>
+function openLB(src,alt){document.getElementById('lbImg').src=src;document.getElementById('lbImg').alt=alt;document.getElementById('lbImg').classList.remove('zoomed');document.getElementById('lightbox').classList.add('open');}
+function closeLB(){document.getElementById('lightbox').classList.remove('open');}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLB();});
+</script>
+</body>
+</html>
