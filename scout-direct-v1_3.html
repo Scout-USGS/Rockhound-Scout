@@ -19,7 +19,7 @@
   body { background:var(--stone); color:var(--cream); font-family:'Barlow',sans-serif; font-weight:300; min-height:100vh; overflow-x:hidden; }
   body::before { content:''; position:fixed; inset:0; background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(196,98,45,0.04) 39px,rgba(196,98,45,0.04) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(196,98,45,0.03) 39px,rgba(196,98,45,0.03) 40px); pointer-events:none; z-index:0; }
   .header { position:relative; z-index:10; padding:14px 16px; border-bottom:1px solid rgba(196,98,45,0.3); display:flex; align-items:center; gap:12px; background:rgba(26,22,18,0.98); }
-  .logo { width:38px; height:38px; flex-shrink:0; }
+  .logo { width:38px; height:38px; flex-shrink:0; display:block; border-radius:6px; }
   .title h1 { font-family:'Bebas Neue',sans-serif; font-size:1.7rem; letter-spacing:0.08em; color:var(--quartz); line-height:1; }
   .title .sub { font-family:'Share Tech Mono',monospace; font-size:0.55rem; color:var(--turquoise); letter-spacing:0.15em; margin-top:2px; }
   .status { margin-left:auto; font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); background:rgba(42,36,32,0.8); border:1px solid rgba(139,111,78,0.25); padding:4px 8px; border-radius:2px; white-space:nowrap; display:flex; align-items:center; gap:5px; }
@@ -95,7 +95,7 @@
 </head>
 <body>
 <header class="header">
-  <img class="logo" src="icon-192.png" alt="Rockhound Scout logo">
+  <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
     <h1>Rockhound Scout</h1>
     <div class="sub">▸ DIRECT USGS/BEG DATA — PROTOTYPE</div>
@@ -134,7 +134,7 @@
   </div>
   <div class="errbox" id="errbox"></div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v4.6-direct (prototype) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
+  <div class="verbadge">▸ v4.9-direct (prototype) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
 </div>
 
 <script>
@@ -477,11 +477,14 @@ const regionData = {
   },
   bigbend: {
     label: 'Big Bend',
-    wazeTowns: { 'FM 170': 'Presidio, TX', 'TX-118': 'Alpine, TX', 'US-385': 'Marathon, TX' },
+    wazeTowns: { 'FM 170': 'Presidio, TX', 'TX-118': 'Alpine, TX', 'US-90': 'Alpine, TX', 'TX-17': 'Fort Davis, TX' },
+    // v4.8: retargeted toward the Tertiary volcanic country (Alpine-Marfa-Fort Davis)
+    // where Big Bend agate actually weathers out. FM 170 kept (shortened) for river-road contacts.
     roads: [
-      { road: 'FM 170', pts: [[29.560,-104.370],[29.530,-104.290],[29.500,-104.210],[29.470,-104.130]] },
-      { road: 'TX-118', pts: [[30.158,-103.660],[30.080,-103.630],[30.000,-103.600]] },
-      { road: 'US-385', pts: [[30.210,-103.240],[30.150,-103.240],[30.090,-103.240]] }
+      { road: 'FM 170', pts: [[29.560,-104.370],[29.530,-104.290],[29.500,-104.210]] },
+      { road: 'TX-118', pts: [[30.300,-103.662],[30.230,-103.665],[30.158,-103.660],[30.080,-103.630],[30.000,-103.600]] },
+      { road: 'US-90', pts: [[30.357,-103.668],[30.330,-103.720],[30.300,-103.770],[30.271,-103.815],[30.280,-103.870]] },
+      { road: 'TX-17', pts: [[30.400,-103.975],[30.470,-103.945],[30.540,-103.915]] }
     ]
   },
   cretaceous: {
@@ -611,9 +614,423 @@ async function geocodeLocation(query) {
     const hit = arr[0];
     const addr = hit.address || {};
     const town = addr.city || addr.town || addr.village || addr.hamlet || addr.county || '';
-    // If the query is vague enough that it only resolves to the state itself
-    // (e.g. "gold in texas"), there's no town-level detail in the address at
-    // all -- that's too broad to scan meaningfully, so flag it instead of
-    // silently searching a random spot in the middle of Texas.
-    const tooBroad = !town;
-    return { lat: parseFloat(hit.lat),
+    // A vague query (e.g. "gold in texas") resolves to the state itself with no
+    // town/county -- too broad to scan, so flag it instead of searching a random spot.
+    return { lat: parseFloat(hit.lat), lon: parseFloat(hit.lon), label: hit.display_name, tooBroad: !town };
+  } catch (e) { return null; }
+}
+
+// AI step for Custom: reads a plain-English request like "find spots for
+// agatized pet wood in the Bryan tx area" and splits it into a clean place
+// (for the geocoder) and the thing being hunted (for the write-ups).
+// Tiny call: ~150 tokens in, ~30 out. Returns null if anything goes wrong,
+// and the caller falls back to using the raw text as the place.
+async function parseCustomRequest(text) {
+  const clean = text.replace(/[\r\n"]+/g, ' ').slice(0, 300);
+  const prompt = 'A rockhounder typed this into a search box: "' + clean + '"\n' +
+    'Extract two things and reply with ONLY a JSON object, no other text:\n' +
+    '{"place": "...", "target": "..."}\n' +
+    '- place: the location as a clean geocodable string, ideally "City, TX" (a Texas town, hotel, address, or landmark). Use "" if none is given.\n' +
+    '- target: what they want to find, with obvious typos corrected (e.g. "agatized petrified wood"). Use "" if none is given.';
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-App-Key': APP_KEY },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 150, messages: [{ role: 'user', content: prompt }] }),
+      signal: ctrl.signal
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (data.error) return null;
+    trackUsage(data);
+    const raw = data.content.map(b => b.text || '').join('');
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    const j = JSON.parse(m[0]);
+    return {
+      place: String(j.place || '').trim().slice(0, 120),
+      target: String(j.target || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 80)
+    };
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchNearbyHighways(lat, lon, radiusMiles) {
+  try {
+    const d = radiusMiles / 69;
+    const bbox = `${lat-d},${lon-d},${lat+d},${lon+d}`;
+    const q = `[out:json][timeout:20];(way["highway"~"trunk|primary"]["ref"](${bbox}););out tags geom;`;
+    const r = await fetchWithTimeout('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q), 15000);
+    const j = await r.json();
+    const byRef = {};
+    for (const el of (j.elements || [])) {
+      if (!el.tags || !el.tags.ref || !el.geometry || el.geometry.length < 2) continue;
+      const ref = el.tags.ref.split(';')[0].trim();
+      if (!byRef[ref]) byRef[ref] = [];
+      for (const g of el.geometry) byRef[ref].push([g.lat, g.lon]);
+    }
+    const refs = Object.keys(byRef).slice(0, 3); // SCOPE LIMIT: at most 3 highways, matches preset cost profile
+    const roads = [];
+    for (const ref of refs) {
+      let pts = byRef[ref];
+      if (pts.length > 5) {
+        const step = Math.max(1, Math.floor(pts.length / 5));
+        pts = pts.filter((_, i) => i % step === 0).slice(0, 5);
+      }
+      if (pts.length < 2) continue;
+      roads.push({ road: ref, pts });
+    }
+    return roads;
+  } catch (e) { return []; }
+}
+
+async function findContactsForRoad(road, town) {
+  const dense = densify(road.pts, 0.012);
+  const seq = [];
+  for (let i = 0; i < dense.length; i++) {
+    const [lat, lon] = dense[i];
+    setProgress('Checking ' + road.road + ' — point ' + (i + 1) + ' of ' + dense.length + '...');
+    const unit = await fetchGeoUnit(lat, lon);
+    seq.push({ lat, lon, unit });
+    await new Promise(r => setTimeout(r, 260));
+  }
+  const contacts = [];
+  for (let i = 1; i < seq.length; i++) {
+    const a = seq[i - 1], b = seq[i];
+    if (a.unit && b.unit && a.unit.name && b.unit.name && a.unit.name !== b.unit.name) {
+      contacts.push({
+        road: road.road, town,
+        lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2,
+        from: a.unit.name, fromLith: a.unit.lith,
+        to: b.unit.name, toLith: b.unit.lith,
+        spanMiles: (Math.hypot(b.lat - a.lat, b.lon - a.lon) * 69)
+      });
+    }
+  }
+  return contacts;
+}
+
+function parseRecord(raw) {
+  const lines = raw.replace('---RECORD---', '').trim().split('\n');
+  const obj = {};
+  for (const line of lines) {
+    const colon = line.indexOf(':');
+    if (colon === -1) continue;
+    const key = line.slice(0, colon).trim().toUpperCase();
+    const val = line.slice(colon + 1).trim();
+    obj[key] = val;
+  }
+  if (!obj.NAME) return null;
+  return {
+    name: obj.NAME || '', road: obj.ROAD || '', town: obj.TOWN || '',
+    score: (obj.SCORE || 'warm').toLowerCase().includes('hot') ? 'hot' : 'warm',
+    from_formation: obj.FROM || '', to_formation: obj.TO || '',
+    contact_location: obj.WHERE || '',
+    drainages: obj.DRAINAGES ? obj.DRAINAGES.split(',').map(s => s.trim()).filter(Boolean) : [],
+    minerals: obj.MINERALS ? obj.MINERALS.split(',').map(s => s.trim()).filter(Boolean) : [],
+    directions: obj.DIRECTIONS || '', from_the_truck: obj.TRUCK || '', why: obj.WHY || ''
+  };
+}
+
+async function writeUpContact(c, target) {
+  const drains = await fetchDrainageNearby(c.lat, c.lon);
+  const span = c.spanMiles.toFixed(1);
+  const prompt = `You are writing a rockhounding field-guide entry. Below are VERIFIED facts from the real USGS/Texas Bureau of Economic Geology geologic map (not a guess) — use ONLY these facts, do not invent additional precision beyond them.
+
+VERIFIED CONTACT:
+Road: ${c.road}, Texas
+Nearest town for directions: ${c.town}
+Formation A: ${c.from} (${c.fromLith})
+Formation B: ${c.to} (${c.toLith})
+The contact falls somewhere within a ~${span}-mile stretch centered near lat ${c.lat.toFixed(4)}, lon ${c.lon.toFixed(4)} — the exact contact line is not resolved at this map's scale, so describe it as a general stretch, not an exact spot.
+${drains.length ? 'Named waterways within ~1.5 miles: ' + drains.join(', ') : 'No named waterway found nearby.'}
+${target ? '\nThe hunter is specifically looking for: ' + target + '. In WHY, say honestly whether these two formations are known to produce it, or that it is uncertain — never promise it is there. Only list it in MINERALS if these formations are known to produce it.\n' : ''}
+Write ONE hotspot record in EXACTLY this format (no markdown, no extra commentary):
+NAME: short catchy name for this contact
+ROAD: ${c.road}
+TOWN: ${c.town}
+SCORE: ${drains.length ? 'hot' : 'warm'}
+FROM: ${c.from}
+TO: ${c.to}
+WHERE: general stretch description, not an exact mile marker
+DRAINAGES: ${drains.join(', ')}
+MINERALS: 3-4 plausible minerals typically found at a contact like this between these two rock types
+DIRECTIONS: plain english driving directions from ${c.town}, describing the general stretch and telling the reader to check both shoulders since exact side is not verified
+TRUCK: what to watch for from the truck window
+WHY: one sentence why this contact is geologically interesting
+---RECORD---`;
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 25000);
+  let resp;
+  try {
+    resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-App-Key': APP_KEY },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, messages: [{ role: 'user', content: prompt }] }),
+      signal: ctrl.signal
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!resp.ok) throw new Error('API error ' + resp.status);
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message);
+  trackUsage(data);
+  const raw = data.content.map(b => b.text || '').join('').trim();
+  return parseRecord(raw);
+}
+
+// Shared by both preset regions and Custom: samples every road for contacts,
+// then writes up the best few. Same cost profile either way.
+async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target) {
+  let allContacts = [];
+  for (const road of roads) {
+    setProgress('Checking ' + road.road + ' for formation contacts...');
+    const town = (wazeTowns && wazeTowns[road.road]) || defaultTown;
+    const contacts = await findContactsForRoad(road, town);
+    allContacts = allContacts.concat(contacts);
+  }
+  let written = [];
+  if (allContacts.length > 0) {
+    allContacts.sort((a, b) => b.spanMiles - a.spanMiles);
+    // v4.9: pick for variety. Skip repeats of the same two formations (a road
+    // that zig-zags across one contact would otherwise fill every card), then
+    // take one contact per road before doubling up on any road.
+    const seenPair = {};
+    const unique = allContacts.filter(c => {
+      const key = [c.from, c.to].map(x => String(x).toLowerCase()).sort().join('|');
+      if (seenPair[key]) return false;
+      seenPair[key] = true;
+      return true;
+    });
+    const toWrite = [];
+    const usedRoad = {};
+    for (const c of unique) {
+      if (toWrite.length >= 4) break;
+      if (!usedRoad[c.road]) { usedRoad[c.road] = true; toWrite.push(c); }
+    }
+    for (const c of unique) {
+      if (toWrite.length >= 4) break;
+      if (!toWrite.includes(c)) toWrite.push(c);
+    }
+    setProgress('Writing up ' + toWrite.length + ' verified contact(s)...');
+    for (const c of toWrite) {
+      try {
+        const h = await writeUpContact(c, target);
+        if (h) { h.verified_by = 'map'; written.push(h); }
+      } catch (e) { /* skip a failed write-up, keep the rest */ }
+    }
+  }
+  return { allContacts, written };
+}
+
+async function runScout() {
+  const btn = document.getElementById('scoutBtn');
+  btn.disabled = true;
+  setStatus('SCANNING...');
+  resetUsage();
+  lastArea = null;
+
+  // Overall safety net: even if something upstream hangs in a way the
+  // per-request timeouts don't catch, this guarantees the button re-enables
+  // and an error shows instead of spinning forever.
+  const watchdog = setTimeout(() => {
+    hideLoading();
+    showError('This is taking much longer than it should — something likely stalled. Please try again.');
+    setStatus('TIMEOUT');
+    document.getElementById('scoutBtn').disabled = false;
+  }, 150000);
+
+  try {
+    if (region === 'custom') {
+      const query = document.getElementById('customLoc').value.trim();
+      if (!query) {
+        clearTimeout(watchdog);
+        showError('Describe your area first — a town, a hotel, or an address.');
+        setStatus('READY');
+        btn.disabled = false;
+        return;
+      }
+      showLoading('READING YOUR REQUEST...', 'Working out where you want to search and what you are hunting for...');
+      const parsed = await parseCustomRequest(query);
+      // If the AI step fails for any reason, fall back to the raw text as before.
+      const place = (parsed && parsed.place) ? parsed.place : query;
+      const target = parsed ? parsed.target : '';
+      if (parsed && !parsed.place) {
+        clearTimeout(watchdog);
+        hideLoading();
+        showError('I could not find a place in that. Try something like "agatized petrified wood near Bryan, TX".');
+        setStatus('NOT FOUND');
+        btn.disabled = false;
+        return;
+      }
+      showLoading('LOCATING YOUR AREA...', 'Finding coordinates for "' + place + '" and nearby highways...');
+      const loc = await geocodeLocation(place);
+      if (loc && loc.tooBroad) {
+        clearTimeout(watchdog);
+        hideLoading();
+        showError('That area is too broad to scan. Name a town, landmark or address — for example "agate near Alpine, TX".');
+        setStatus('TOO BROAD');
+        btn.disabled = false;
+        return;
+      }
+      if (!loc) {
+        clearTimeout(watchdog);
+        hideLoading();
+        showError('Could not find that location. Try a nearby town name, or be more specific.');
+        setStatus('NOT FOUND');
+        btn.disabled = false;
+        return;
+      }
+      setProgress('Found it — searching for highways within 20 miles...');
+      const roads = await fetchNearbyHighways(loc.lat, loc.lon, 20);
+      if (roads.length === 0) {
+        clearTimeout(watchdog);
+        hideLoading();
+        showError('No major state/US highways found within 20 miles of that area. Try a different description.');
+        setStatus('NO ROADS');
+        btn.disabled = false;
+        return;
+      }
+      showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling ' + roads.length + ' highway(s) near "' + place + '" — 20-40 seconds');
+      const { allContacts, written } = await scanRoadsForHotspots(roads, place, {}, target);
+
+      clearTimeout(watchdog);
+      hideLoading();
+      if (written.length === 0) {
+        showError(allContacts.length === 0
+          ? 'No formation contacts found along highways near that area this pass. Try again, or a different area.'
+          : 'Found real formation contacts but the write-up step failed. Try again.');
+        setStatus(allContacts.length === 0 ? 'NO DATA' : 'ERROR');
+      } else {
+        renderHotspots(written);
+        showCostLine();
+        addClubButton(place, target);
+        setStatus(written.length + ' HOTSPOTS');
+        try { sessionStorage.setItem('lastHotspotsDirect', JSON.stringify(written)); } catch (ex) {}
+      }
+      btn.disabled = false;
+      return;
+    }
+
+    // --- Preset region path ---
+    const rd = regionData[region];
+    showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling road corridors against verified map data — 20-40 seconds');
+
+    // What people come to each preset region for (same as the button hints).
+    // Passed to the write-up so the AI lists these when the formations are
+    // actually known to produce them, and says "uncertain" when not.
+    const presetTargets = {
+      llano: 'blue quartz, llanite, topaz',
+      threerivers: 'petrified palm wood',
+      edwards: 'flint, chert, fossils',
+      bigbend: 'agate, jasper, cinnabar',
+      cretaceous: 'ammonites, shark teeth'
+    };
+    const { allContacts, written } = await scanRoadsForHotspots(rd.roads, rd.label, rd.wazeTowns, presetTargets[region] || '');
+
+    // Curated, hand-confirmed spots always show for this region, regardless
+    // of what the live map scan finds this particular click.
+    const curated = (curatedSpots[region] || []).map(s => ({ ...s }));
+    const hotspots = curated.concat(written);
+
+    clearTimeout(watchdog);
+    hideLoading();
+    if (hotspots.length === 0) {
+      showError(allContacts.length === 0
+        ? 'No formation contacts found along the sampled roads this pass. Try again, or use the original app.'
+        : 'Found real formation contacts but the write-up step failed. Try again.');
+      setStatus(allContacts.length === 0 ? 'NO DATA' : 'ERROR');
+    } else {
+      renderHotspots(hotspots);
+      showCostLine();
+      addClubButton(rd.label + ', TX', '');
+      setStatus(hotspots.length + ' HOTSPOTS');
+      try { sessionStorage.setItem('lastHotspotsDirect', JSON.stringify(hotspots)); } catch (ex) {}
+    }
+  } catch (err) {
+    clearTimeout(watchdog);
+    hideLoading();
+    showError('Error: ' + err.message);
+    setStatus('ERROR');
+  }
+  btn.disabled = false;
+}
+
+window.addEventListener('pageshow', () => {
+  try {
+    const saved = sessionStorage.getItem('lastHotspotsDirect');
+    if (saved && !document.getElementById('results').children.length) {
+      const spots = JSON.parse(saved);
+      renderHotspots(spots);
+      setStatus('RESTORED');
+      // Bring the club button back too, for the same area as the restored cards.
+      // (Older saved results have no saved area, so fall back to the cards' town.)
+      try {
+        const a = JSON.parse(sessionStorage.getItem('lastAreaDirect') || 'null');
+        if (a && a.area) addClubButton(a.area, a.target || '');
+        else if (spots[0] && spots[0].town) addClubButton(spots[0].town, '');
+      } catch (e2) {}
+    }
+  } catch (e) {}
+});
+
+function renderHotspots(spots) {
+  const c = document.getElementById('results');
+  c.innerHTML = '';
+  spots.forEach((h, i) => {
+    const isHot = h.score === 'hot';
+    const drains = h.drainages || [];
+    const isOwnerConfirmed = h.verified_by === 'owner';
+    const card = document.createElement('div');
+    card.className = 'hcard';
+    card.style.animationDelay = (i * 0.1) + 's';
+    card.innerHTML =
+      '<div class="htop">' +
+        '<span class="' + (isHot ? 'score-hot' : 'score-warm') + '">' + (isHot ? '🔥 HOTSPOT' : '◉ WARM') + '</span>' +
+        '<span class="hname">' + h.name + '</span>' +
+      '</div>' +
+      '<div class="hbody">' +
+        (isOwnerConfirmed ?
+          '<div style="font-family:\'Share Tech Mono\',monospace; font-size:0.56rem; letter-spacing:0.1em; color:#f4b87a; background:rgba(196,98,45,0.12); border:1px solid rgba(196,98,45,0.35); border-radius:2px; padding:5px 10px; margin-bottom:2px; display:inline-block;">📍 KNOWN PRODUCTIVE SITE — CONFIRMED ON-SITE</div>'
+          : '') +
+        '<div class="contact-strip">' +
+          '<span class="clabel">' + (isOwnerConfirmed ? 'Formation (published sources + owner-confirmed location)' : '✓ Verified Formation Contact — USGS/BEG Geologic Map') + '</span>' +
+          '<span class="cval">' + h.from_formation + ' ▸ ' + h.to_formation + '</span>' +
+          (h.contact_location ? '<span style="font-size:0.72rem;color:var(--feldspar);display:block;margin-top:3px;">' + h.contact_location + '</span>' : '') +
+        '</div>' +
+        (drains.length > 0 ?
+          '<div class="drain-strip">' +
+            '<span class="dlabel">Named Drainages Nearby (OpenStreetMap)</span>' +
+            '<span class="dval">〰 ' + drains.join('  〰 ') + '</span>' +
+          '</div>' : '') +
+        '<div class="dir-strip">' +
+          '<span class="dirlabel">Field Directions from ' + h.town + '</span>' +
+          '<span class="dirval">' + h.directions + '</span>' +
+        '</div>' +
+        '<div class="field"><label>Watch for from the truck</label><p>' + h.from_the_truck + '</p></div>' +
+        '<div class="field"><label>You may find</label>' +
+          '<div class="minerals">' + (h.minerals || []).map(m => '<span class="mtag">' + m + '</span>').join('') + '</div>' +
+        '</div>' +
+        '<div class="waze-box">' +
+          '<span class="wlabel">Waze Destination</span>' +
+          '<input type="text" readonly value="' + (h.town || '') + '" onclick="this.select()">' +
+          '<span class="winst">Tap to select — long press to copy — paste into Waze search</span>' +
+        '</div>' +
+        '<div class="why">' + h.why + '</div>' +
+        '<div class="src">' + (isOwnerConfirmed
+          ? '▸ Location and directions confirmed on-site by the app\'s owner; age and mineralogy from independently published geology sources — not AI-generated'
+          : '▸ Formation contact verified directly against USGS/BEG geologic map data — AI only wrote the description; check both shoulders near the marked stretch') + '</div>' +
+      '</div>';
+    c.appendChild(card);
+  });
+}
+</script>
+</body>
+</html>
