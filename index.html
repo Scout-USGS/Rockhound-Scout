@@ -181,8 +181,12 @@ footer p{margin-bottom:8px}
 <img id="lbImg" src="" alt="" onclick="this.classList.toggle('zoomed')">
 </div>
 <script>
-function openLB(src,alt){document.getElementById('lbImg').src=src;document.getElementById('lbImg').alt=alt;document.getElementById('lbImg').classList.remove('zoomed');document.getElementById('lightbox').classList.add('open');}
-function closeLB(){document.getElementById('lightbox').classList.remove('open');}
+function openLB(src,alt){document.getElementById('lbImg').src=src;document.getElementById('lbImg').alt=alt;document.getElementById('lbImg').classList.remove('zoomed');document.getElementById('lightbox').classList.add('open');if(!(history.state&&history.state.lb)){history.pushState({lb:true},'');}}
+function hideLB(){document.getElementById('lightbox').classList.remove('open');}
+// Back button closes an open picture instead of leaving the page:
+// opening a picture adds a history step; Back (or X / Escape / tap outside) removes it.
+function closeLB(){if(history.state&&history.state.lb){history.back();}else{hideLB();}}
+window.addEventListener('popstate',function(){hideLB();});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLB();});
 </script>
 </body>
