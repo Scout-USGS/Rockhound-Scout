@@ -69,6 +69,8 @@ footer p{margin-bottom:8px}
 .bg-fade{position:relative}
 .bg-fade::before{content:'';position:absolute;top:0;left:0;right:0;aspect-ratio:1100/2500;max-height:100%;background-image:url('gallery/llanite-bg.jpg');background-size:100% auto;background-repeat:no-repeat;background-position:top center;opacity:.6;-webkit-mask-image:linear-gradient(to bottom,#000 65%,transparent 100%);mask-image:linear-gradient(to bottom,#000 65%,transparent 100%);z-index:-2}
 .bg-fade::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(to bottom, transparent 0%, transparent 55%, var(--stone) 100%);z-index:-1}
+.bg-llanite{position:relative;isolation:isolate;padding:8px 0 24px}.bg-llanite::before{content:'';position:absolute;inset:0 -20px;background-image:url('gallery/llanite-tile.jpg');background-size:100% auto;background-repeat:repeat-y;background-position:top center;opacity:.55;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 120px,#000 calc(100% - 120px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 120px,#000 calc(100% - 120px),transparent 100%);z-index:-1}
+.bg-llanite .price{background:linear-gradient(rgba(196,98,45,.12),rgba(196,98,45,.12)),rgba(26,22,18,.9)}.bg-llanite details{background:rgba(26,22,18,.82);padding:12px 14px;border:1px solid rgba(139,111,78,.3);border-radius:3px;margin:6px 0}.bg-llanite h2{text-shadow:0 2px 8px rgba(0,0,0,.85)}
 #lightbox{display:none;position:fixed;inset:0;background:rgba(10,8,6,.94);z-index:999;align-items:center;justify-content:center;padding:24px}
 #lightbox.open{display:flex}
 #lightbox img{max-width:92vw;max-height:88vh;object-fit:contain;border-radius:4px;cursor:zoom-in;transition:transform .15s ease}
@@ -128,6 +130,7 @@ footer p{margin-bottom:8px}
 </div>
 <p class="note" style="text-align:center">Tap any photo to see it full size.</p>
 
+<div class="bg-llanite">
 <h2>Scans can take a minute to run &mdash; be patient.</h2>
 <div class="card">
 <p>Rockhound Scout doesn&rsquo;t pull from some pre-made list. Each time you press the button &ldquo;Find My Hotspots,&rdquo; the app is out there live: pulling real highway data, sampling the geologic map mile by mile along every road in your target area, and cross-referencing rock formations in real time. Scans can take a minute or so to run &mdash; be patient. There is a tremendous amount of data to query. If you&rsquo;re the type who finds that kind of thing impressive rather than annoying &mdash; welcome, you&rsquo;re among friends.</p>
@@ -168,6 +171,7 @@ footer p{margin-bottom:8px}
 &ldquo;I built this app to work the way I already hunt: pull up the geologic map for my target area, then picture it laid over satellite imagery, watching for the drainages that cut under public highways. I figured that process would make a good app. It turned out far better than I expected &mdash; I hope you enjoy using it as much as I&rsquo;ve enjoyed building it.&rdquo;
 <cite>&mdash; John Thompson, founder, Rockhound Scout</cite>
 </blockquote>
+</div>
 
 </div></main>
 <footer><div class="wrap">
