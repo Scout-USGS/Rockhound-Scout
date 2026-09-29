@@ -102,6 +102,8 @@
   .acctinfo { font-family:'Share Tech Mono',monospace; font-size:0.66rem; color:var(--cream); line-height:1.9; }
   .acctinfo b { color:var(--glow); font-weight:normal; }
   .acct a { color:var(--glow); }
+  .installbtn { display:none; width:100%; margin-top:10px; background:transparent; border:1px solid var(--turquoise); color:var(--glow); font-family:'Share Tech Mono',monospace; font-size:0.66rem; letter-spacing:0.12em; padding:9px; border-radius:3px; cursor:pointer; }
+  .installnote { display:none; font-family:'Share Tech Mono',monospace; font-size:0.62rem; color:var(--quartz); line-height:1.7; margin-top:8px; }
   .buybtn { display:inline-block; margin-top:10px; background:linear-gradient(135deg,var(--copper),#9e3e18); color:var(--cream); font-family:'Bebas Neue',sans-serif; letter-spacing:0.12em; font-size:1.1rem; padding:8px 16px; border-radius:3px; text-decoration:none; }
 </style>
 </head>
@@ -137,6 +139,8 @@
       <div class="acctmsg" id="acctMsg"></div>
       <div class="acctinfo">No scans yet? <a href="index.html#pricing">Get 200 scans for $25</a></div>
     </div>
+    <button class="installbtn" id="installBtn" onclick="installApp()">📲 PUT ROCKHOUND SCOUT ON YOUR HOME SCREEN</button>
+    <div class="installnote" id="installNote"></div>
     <div id="acctIn" style="display:none;">
       <div class="acctinfo">Signed in as <b id="acctWho"></b><br>Scans left: <b id="acctScans">…</b>
         &nbsp;·&nbsp; <a href="#" id="acctBuy" target="_blank" rel="noopener">Buy 200 more</a>
@@ -380,6 +384,40 @@ if (sb) {
   });
 }
 window.addEventListener('DOMContentLoaded', loadAccount);
+
+// --- Home-screen install ----------------------------------------------------
+// Android/Chrome offers a real "Install" prompt; iPhone Safari needs the
+// Share menu, so we show those steps instead. Hidden once installed.
+let installPrompt = null;
+function isInstalled() {
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+}
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
+window.addEventListener('appinstalled', () => {
+  installPrompt = null;
+  document.getElementById('installBtn').style.display = 'none';
+  const n = document.getElementById('installNote'); n.style.display = 'block';
+  n.textContent = 'Installed! Look for the Rockhound Scout icon on your home screen.';
+});
+window.addEventListener('DOMContentLoaded', () => {
+  if (!isInstalled()) document.getElementById('installBtn').style.display = 'block';
+});
+async function installApp() {
+  const n = document.getElementById('installNote');
+  if (installPrompt) {
+    installPrompt.prompt();
+    try { await installPrompt.userChoice; } catch (e) {}
+    installPrompt = null;
+    return;
+  }
+  n.style.display = 'block';
+  n.textContent = isIOS()
+    ? 'On iPhone: tap the Share button (the square with an arrow, at the bottom of Safari), scroll down, tap "Add to Home Screen", then tap "Add".'
+    : 'Open your browser menu (⋮ at the top right in Chrome) and tap "Add to Home screen" or "Install app", then tap "Install".';
+}
 
 
 // Running token count for the current scan, so the real cost of a Custom
@@ -952,6 +990,15 @@ async function fetchNearbyHighways(lat, lon, radiusMiles) {
   } catch (e) { return []; }
 }
 
+// "Glen Rose Formation" and "Glen Rose Limestone" are the same rock under two
+// names (a seam between map datasets), not a real contact. Compare names with
+// the rock-type words removed so those aren't reported as hotspots.
+function baseFormationName(n) {
+  return String(n || '').toLowerCase()
+    .replace(/\b(formation|fm|group|gp|member|mbr|limestone|ls|sandstone|ss|shale|sh|marl|chalk|clay|dolomite|conglomerate|granite|gneiss|schist|tuff|basalt|rhyolite|beds?|series|complex|undivided|and|of|the|upper|lower|middle)\b\.?/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
 async function findContactsForRoad(road, town) {
   const dense = densify(road.pts, 0.012);
   const seq = [];
@@ -965,7 +1012,8 @@ async function findContactsForRoad(road, town) {
   const contacts = [];
   for (let i = 1; i < seq.length; i++) {
     const a = seq[i - 1], b = seq[i];
-    if (a.unit && b.unit && a.unit.name && b.unit.name && a.unit.name !== b.unit.name) {
+    if (a.unit && b.unit && a.unit.name && b.unit.name && a.unit.name !== b.unit.name &&
+        baseFormationName(a.unit.name) !== baseFormationName(b.unit.name)) {
       contacts.push({
         road: road.road, town,
         lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2,
@@ -1060,7 +1108,7 @@ TO: ${c.to}
 WHERE: general stretch description, not an exact mile marker
 DRAINAGES: ${drains.join(', ')}
 MINERALS: 3-4 plausible minerals typically found at a contact like this between these two rock types
-DIRECTIONS: plain english driving directions from ${c.town}, describing the general stretch and telling the reader to check both shoulders since exact side is not verified
+DIRECTIONS: plain english driving directions from ${c.town}, describing the general stretch and telling the reader to check both shoulders since exact side is not verified. Name only ${c.road} and ${c.town} — never invent or name any other street, turn or landmark.
 TRUCK: what to watch for from the truck window
 WHY: one sentence why this contact is geologically interesting
 ---RECORD---`;
@@ -1206,7 +1254,7 @@ async function runScout() {
         return;
       }
       showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling ' + roads.length + ' highway(s) near "' + place + '" — 20-40 seconds');
-      const { allContacts, written } = await scanRoadsForHotspots(roads, place, {}, target);
+      const { allContacts, written } = await scanRoadsForHotspots(roads, (parsed && parsed.town) || place, {}, target);
 
       clearTimeout(watchdog);
       hideLoading();
