@@ -40,6 +40,7 @@
   .notes:focus { border-color:var(--copper); color:var(--cream); }
   .notes::placeholder { color:rgba(139,111,78,0.4); }
   input.notes { min-height:auto; }
+  .notes.armed { border:1px solid var(--copper); color:var(--cream); box-shadow:0 0 0 2px rgba(196,98,45,0.25), 0 0 14px rgba(196,98,45,0.35); }
   hr { border:none; border-top:1px solid rgba(139,111,78,0.2); }
   .scoutbtn { width:100%; background:linear-gradient(135deg,var(--copper),#9e3e18); border:none; color:var(--cream); font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.15em; padding:16px; cursor:pointer; transition:all 0.2s; border-radius:3px; }
   .scoutbtn:hover:not(:disabled) { filter:brightness(1.12); transform:translateY(-1px); }
@@ -166,7 +167,7 @@
   </div>
   <div class="errbox" id="errbox"></div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v6.0-direct (accounts) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
+  <div class="verbadge">▸ v6.1-direct (accounts) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -394,6 +395,9 @@ function trackUsage(data) {
     usageTotals.searches += (st && st.web_search_requests) || 0;
   }
 }
+// Set to true to show the AI cost of each scan under the results (owner testing).
+// Off for customers; the cost is always logged in the browser console.
+const SHOW_COST_LINE = false;
 function showCostLine(container, label) {
   // Estimate only: assumes $3 per million input tokens, $15 per million
   // output tokens, and $0.01 per web search. Update these numbers if the
@@ -405,7 +409,7 @@ function showCostLine(container, label) {
   el.textContent = '▸ ' + (label || 'This scan') + ': ' + usageTotals.calls + ' AI call(s), ' +
     (usageTotals.searches ? usageTotals.searches + ' web search(es), ' : '') +
     usageTotals.inp + ' in / ' + usageTotals.out + ' out tokens ≈ $' + cost.toFixed(3);
-  (container || document.getElementById('results')).appendChild(el);
+  if (SHOW_COST_LINE) (container || document.getElementById('results')).appendChild(el);
 }
 
 // --- Local rock clubs & tips (AI web search, on demand) --------------------
@@ -767,6 +771,7 @@ function pick(btn) {
   btn.classList.add('active');
   region = btn.dataset.region;
   document.getElementById('customLocWrap').style.display = (region === 'custom') ? 'block' : 'none';
+  document.getElementById('customLoc').classList.toggle('armed', region === 'custom');
 }
 function setStatus(t) { document.getElementById('statusTxt').textContent = t; }
 function showLoading(msg, prog) {
