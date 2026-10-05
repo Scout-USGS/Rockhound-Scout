@@ -105,6 +105,35 @@
   .installbtn { display:none; width:100%; margin-top:10px; background:transparent; border:1px solid var(--turquoise); color:var(--glow); font-family:'Share Tech Mono',monospace; font-size:0.66rem; letter-spacing:0.12em; padding:9px; border-radius:3px; cursor:pointer; }
   .installnote { display:none; font-family:'Share Tech Mono',monospace; font-size:0.62rem; color:var(--quartz); line-height:1.7; margin-top:8px; }
   .buybtn { display:inline-block; margin-top:10px; background:linear-gradient(135deg,var(--copper),#9e3e18); color:var(--cream); font-family:'Bebas Neue',sans-serif; letter-spacing:0.12em; font-size:1.1rem; padding:8px 16px; border-radius:3px; text-decoration:none; }
+
+  /* --- Print / Save as PDF ------------------------------------------------ */
+  .printbar { display:flex; justify-content:center; }
+  .printbtn { width:100%; background:transparent; border:1px solid rgba(232,213,163,0.45); color:var(--quartz); font-family:'Share Tech Mono',monospace; font-size:0.68rem; letter-spacing:0.12em; padding:10px; border-radius:3px; cursor:pointer; }
+  .printbtn:hover { background:rgba(232,213,163,0.08); }
+  .printonly { display:none; }
+  @media print {
+    @page { margin:0.5in; }
+    html, body { background:#fff !important; color:#111 !important; }
+    body::before { display:none !important; }
+    .header, .usgs-badge, .acct, .noprint, hr, .scoutbtn, .loading, .errbox, .verbadge, .printbar, #clubBox, #customLocWrap { display:none !important; }
+    .content { max-width:none; padding:0; gap:0; }
+    .printonly { display:block !important; font-family:Georgia, 'Times New Roman', serif; color:#111; border-bottom:2px solid #c4622d; padding-bottom:8px; margin-bottom:14px; }
+    .printonly .ph1 { font-size:20pt; font-weight:bold; letter-spacing:0.04em; }
+    .printonly .ph2 { font-size:10pt; color:#444; margin-top:3px; }
+    .printonly .ph3 { font-size:9pt; color:#7a3510; margin-top:4px; }
+    .results { gap:12px; }
+    .hcard { background:#fff !important; border:1px solid #999 !important; animation:none !important; opacity:1 !important; transform:none !important; break-inside:avoid; page-break-inside:avoid; }
+    .hcard, .hcard p, .hcard span, .hcard div { color:#111 !important; }
+    .htop { background:#f1ece2 !important; border-bottom:1px solid #bbb !important; }
+    .score-hot, .score-warm { background:#fff !important; color:#111 !important; border:1px solid #777 !important; }
+    .contact-strip, .drain-strip, .dir-strip, .waze-box { background:#f7f4ee !important; border:1px solid #c9c2b4 !important; border-left:3px solid #c4622d !important; }
+    .hcard .field label, .hcard .contact-strip .clabel, .hcard .drain-strip .dlabel, .hcard .dir-strip .dirlabel, .hcard .waze-box .wlabel { color:#7a3510 !important; }
+    .hcard .hbody > div[style] { color:#7a3510 !important; background:#fff !important; border:1px solid #c4622d !important; }
+    .hcard .mtag { background:#fff !important; color:#1d5f70 !important; border:1px solid #888 !important; }
+    .waze-box input { background:#fff !important; color:#111 !important; border:1px solid #999 !important; }
+    .waze-box .winst { display:none !important; }
+    .hcard .why, .hcard .src { color:#444 !important; }
+  }
 </style>
 </head>
 <body>
@@ -121,7 +150,7 @@
     Select one of the 5 preset areas, or describe your Custom search parameters in the space provided.<br>
     Then press &ldquo;Find My Hotspots&rdquo; once. Results can take a full minute to compile.
   </div>
-  <div style="font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
+  <div class="noprint" style="font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div class="acct" id="acctBox">
@@ -147,7 +176,7 @@
         &nbsp;·&nbsp; <a href="#" onclick="signOut(); return false;">Sign out</a></div>
     </div>
   </div>
-  <div>
+  <div class="noprint">
     <div class="slabel">▸ Pick your region</div>
     <div class="rgrid">
       <button class="rbtn active" data-region="llano" onclick="pick(this)"><span class="icon">⬡</span>Llano Uplift<span class="hint">Blue quartz · llanite · topaz</span></button>
@@ -170,8 +199,13 @@
     <div class="lprog" id="lprog">Sampling road corridors against verified map data — 20-40 seconds</div>
   </div>
   <div class="errbox" id="errbox"></div>
+  <div class="printonly" id="printHead">
+    <div class="ph1">ROCKHOUND SCOUT — HOTSPOT CARDS</div>
+    <div class="ph2" id="printSub"></div>
+    <div class="ph3">Always get the landowner&rsquo;s permission before collecting. Park off the highway shoulder. RockhoundScout.com</div>
+  </div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v6.1-direct (accounts) — verified geologic contacts + AI-read Custom search; AI only reads your request and writes descriptions</div>
+  <div class="verbadge">▸ v6.1-direct (accounts) — verified geologic contacts + AI-read Custom search</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -417,6 +451,17 @@ async function installApp() {
   n.textContent = isIOS()
     ? 'On iPhone: tap the Share button (the square with an arrow, at the bottom of Safari), scroll down, tap "Add to Home Screen", then tap "Add".'
     : 'Open your browser menu (⋮ at the top right in Chrome) and tap "Add to Home screen" or "Install app", then tap "Install".';
+}
+
+// --- Print / Save as PDF ----------------------------------------------------
+// Prints just the hotspot cards in a clean, ink-friendly layout (the print
+// styles live in the @media print block in the <style> section). The phone's
+// print screen also offers "Save as PDF", handy for areas with no signal.
+let printLabel = '';
+function printCards() {
+  const when = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('printSub').textContent = (printLabel ? printLabel + ' — ' : '') + 'printed ' + when;
+  window.print();
 }
 
 
@@ -1265,6 +1310,7 @@ async function runScout() {
           : 'Found real formation contacts but the write-up step failed. Try again.') + notCharged(ok));
         setStatus(allContacts.length === 0 ? 'NO DATA' : 'ERROR');
       } else {
+        printLabel = 'Custom search: ' + place + (target ? ' (' + target + ')' : '');
         renderHotspots(written);
         showCostLine();
         addClubButton(place, target);
@@ -1316,6 +1362,7 @@ async function runScout() {
         : 'Found real formation contacts but the write-up step failed. Try again.') + notCharged(freeScan));
       setStatus(allContacts.length === 0 ? 'NO DATA' : 'ERROR');
     } else {
+      printLabel = rd.label + ' region';
       renderHotspots(hotspots);
       showCostLine();
       if (freeScan) showError('The live map scan found no new contacts this pass, so only the saved spots are shown. This scan was not charged.');
@@ -1337,6 +1384,7 @@ window.addEventListener('pageshow', () => {
     const saved = sessionStorage.getItem('lastHotspotsDirect');
     if (saved && !document.getElementById('results').children.length) {
       const spots = JSON.parse(saved);
+      printLabel = 'Saved results';
       renderHotspots(spots);
       setStatus('RESTORED');
       // Bring the club button back too, for the same area as the restored cards.
@@ -1353,6 +1401,12 @@ window.addEventListener('pageshow', () => {
 function renderHotspots(spots) {
   const c = document.getElementById('results');
   c.innerHTML = '';
+  if (spots && spots.length) {
+    const bar = document.createElement('div');
+    bar.className = 'printbar';
+    bar.innerHTML = '<button class="printbtn" onclick="printCards()">🖨 PRINT THESE CARDS / SAVE AS PDF</button>';
+    c.appendChild(bar);
+  }
   spots.forEach((h, i) => {
     const isHot = h.score === 'hot';
     const drains = h.drainages || [];
