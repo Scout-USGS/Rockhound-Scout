@@ -31,6 +31,10 @@ ul,ol{padding-left:22px;margin-bottom:12px}
 .punch{border-left:3px solid var(--copper);background:rgba(26,22,18,.72);padding:14px 18px;margin:4px 0 18px;border-radius:2px}
 .punch .hook{font-size:1.35rem;line-height:1.35;font-weight:600;color:var(--quartz);margin-bottom:10px}
 .punch p:last-child{margin-bottom:0}
+.bigquote{font-size:clamp(1.55rem,5.2vw,2.2rem);line-height:1.25;font-weight:600;font-style:italic;color:var(--quartz);text-align:center;margin:6px 0 22px;padding:6px 10px;text-shadow:0 2px 10px rgba(0,0,0,.6)}
+.bigquote::before,.bigquote::after{font-family:Georgia,'Times New Roman',serif;font-style:normal;color:var(--copper);font-size:1.5em;line-height:0;vertical-align:-0.3em}
+.bigquote::before{content:'\201C';margin-right:4px}
+.bigquote::after{content:'\201D';margin-left:4px}
 .tag{display:inline-block;font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--glow);border:1px solid rgba(61,158,140,.5);background:rgba(61,158,140,.1);padding:4px 10px;border-radius:2px;margin-bottom:16px}
 .card{background:rgba(42,36,32,.8);border:1px solid rgba(139,111,78,.35);border-radius:3px;padding:18px 20px;margin:16px 0}
 .price{border-color:var(--copper);background:rgba(196,98,45,.12);text-align:center;padding:26px 20px}
@@ -90,12 +94,12 @@ footer p{margin-bottom:8px}
 <main><div class="wrap">
 
 <div class="bg-fade">
-<span class="tag">Launching soon</span>
 <h1>Find rockhounding hotspots along Texas highways</h1>
 <div class="punch">
 <p class="hook">Other apps show you where people have already been. Rockhound Scout shows you where the rocks actually are.</p>
 <p>The best spots aren&rsquo;t on anybody&rsquo;s list yet. They&rsquo;re in the geology, and Rockhound Scout reads it. We checked the Three Rivers&ndash;George West area for petrified wood: a leading rockhounding app didn&rsquo;t show a single stop. Rockhound Scout found 4.</p>
 </div>
+<p class="bigquote">No rockhound should be without this one-of-a-kind tool!!</p>
 <p class="lead">Rockhound Scout checks published geologic map data along state and U.S. highways, finds the stretches where one rock formation meets another, prioritizes drainage crossings, and writes you a field guide entry (Hotspot Card) for each one: where to look, what to watch for from the truck, and what you might find.</p>
 
 <div class="showcase">
