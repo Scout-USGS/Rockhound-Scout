@@ -107,7 +107,8 @@
   .buybtn { display:inline-block; margin-top:10px; background:linear-gradient(135deg,var(--copper),#9e3e18); color:var(--cream); font-family:'Bebas Neue',sans-serif; letter-spacing:0.12em; font-size:1.1rem; padding:8px 16px; border-radius:3px; text-decoration:none; }
 
   /* --- Print / Save as PDF ------------------------------------------------ */
-  .printbar { display:flex; justify-content:center; }
+  .printbar { display:flex; flex-direction:column; align-items:stretch; }
+  .printhint { font-family:'Share Tech Mono',monospace; font-size:0.58rem; color:var(--feldspar); line-height:1.6; text-align:center; margin-top:6px; }
   .printbtn { width:100%; background:transparent; border:1px solid rgba(232,213,163,0.45); color:var(--quartz); font-family:'Share Tech Mono',monospace; font-size:0.68rem; letter-spacing:0.12em; padding:10px; border-radius:3px; cursor:pointer; }
   .printbtn:hover { background:rgba(232,213,163,0.08); }
   .printonly { display:none; }
@@ -461,6 +462,14 @@ async function installApp() {
 // styles live in the @media print block in the <style> section). The phone's
 // print screen also offers "Save as PDF", handy for areas with no signal.
 let printLabel = '';
+// Short "how to save a PDF" tip, worded for the device in hand.
+function pdfHint() {
+  const ua = navigator.userAgent;
+  if (isIOS()) return 'To save a PDF: tap the button, then tap the Share icon at the top of the print screen and choose "Save to Files".';
+  if (/android/i.test(ua)) return 'To save a PDF: tap the button, then pick "Save as PDF" from the printer list at the top.';
+  if (/Macintosh/i.test(ua) && /Safari/i.test(ua) && !/Chrome|Chromium|Edg/i.test(ua)) return 'To save a PDF: click the button, then click the "PDF" menu at the bottom left and choose "Save as PDF".';
+  return 'To save a PDF: click the button, then set the Destination or Printer to "Save as PDF".';
+}
 function printCards() {
   const when = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
   document.getElementById('printSub').textContent = (printLabel ? printLabel + ' — ' : '') + 'printed ' + when;
@@ -1407,7 +1416,8 @@ function renderHotspots(spots) {
   if (spots && spots.length) {
     const bar = document.createElement('div');
     bar.className = 'printbar';
-    bar.innerHTML = '<button class="printbtn" onclick="printCards()">🖨 PRINT THESE CARDS / SAVE AS PDF</button>';
+    bar.innerHTML = '<button class="printbtn" onclick="printCards()">🖨 PRINT THESE CARDS / SAVE AS PDF</button>' +
+      '<div class="printhint">' + pdfHint() + '</div>';
     c.appendChild(bar);
   }
   spots.forEach((h, i) => {
