@@ -93,6 +93,13 @@ footer p{margin-bottom:8px}
 .brandbox img{width:32cqi;height:auto;flex-shrink:0;display:block}
 .brandbox span{font-family:'Bebas Neue',sans-serif;font-size:14cqi;line-height:.88;letter-spacing:.05em;color:var(--quartz);min-width:0}
 .showcase + .punch{margin-top:6px}
+.buybar{position:fixed;left:0;right:0;bottom:0;z-index:900;background:rgba(26,22,18,.96);border-top:1px solid rgba(196,98,45,.55);box-shadow:0 -4px 18px rgba(0,0,0,.6);padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:center;gap:14px;transition:transform .25s ease}
+.buybar.hide{transform:translateY(110%)}
+.buybar .bb-txt{font-family:'Share Tech Mono',monospace;font-size:.8rem;letter-spacing:.06em;color:var(--feld);line-height:1.3}
+.buybar .bb-txt b{color:var(--quartz);font-weight:400;display:block;font-size:.9rem}
+.buybar .btn{font-size:1.3rem;padding:9px 22px;white-space:nowrap}
+body{padding-bottom:84px}
+@media(max-width:420px){.buybar .bb-txt{font-size:.72rem}.buybar .btn{font-size:1.15rem;padding:8px 16px}}
 </style>
 <script data-goatcounter="https://rockhoundscout.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script></head>
 <body>
@@ -212,5 +219,7 @@ function closeLB(){if(history.state&&history.state.lb){history.back();}else{hide
 window.addEventListener('popstate',function(){hideLB();});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLB();});
 </script>
+<div class="buybar" id="buybar"><div class="bb-txt"><b>200 scans &middot; $25</b>One-time &middot; never expire</div><a class="btn" href="https://buy.stripe.com/14AcN65Al90YfxkcGfcMM00">BUY IT NOW</a></div>
+<script>(function(){var bar=document.getElementById('buybar'),main=document.querySelector('a.btn[href*="buy.stripe.com"]:not(#buybar a)');if(!bar||!main||!('IntersectionObserver' in window))return;new IntersectionObserver(function(e){bar.classList.toggle('hide',e[0].isIntersecting)}).observe(main);})();</script>
 </body>
 </html>
