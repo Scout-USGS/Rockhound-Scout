@@ -116,7 +116,9 @@ main>.wrap{background:var(--stone);isolation:isolate}
  footer{padding:0 0 110px}
  footer .wrap{padding-top:22px;padding-bottom:22px;box-shadow:0 6px 22px rgba(60,40,20,.22)}
 }
-.bq-sig{margin:-16px 0 22px;padding:0 14px;text-align:right;font-style:italic;font-weight:600;font-size:clamp(1.1rem,3.6vw,1.4rem);color:#ffffff;text-shadow:0 2px 3px #000,0 0 14px rgba(0,0,0,.9)}
+.bigquote::after{content:none}
+.bq-close{font-family:Georgia,'Times New Roman',serif;font-style:normal;color:#ffffff;font-size:1.5em;line-height:0;vertical-align:-0.3em;margin-left:4px}
+.bq-sig{margin:-30px 0 22px;padding:0 14px;text-align:right;font-style:italic;font-weight:600;font-size:clamp(1rem,3.4vw,1.3rem);color:#ffffff;text-shadow:0 2px 3px #000,0 0 14px rgba(0,0,0,.9)}
 </style>
 <script data-goatcounter="https://rockhoundscout.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script></head>
 <body>
@@ -129,8 +131,8 @@ main>.wrap{background:var(--stone);isolation:isolate}
 <div class="bg-fade">
 <h1>Find rockhounding hotspots along Texas highways</h1>
 <div class="brandbox"><div class="brandbox-in"><svg class="bb-logo" viewBox="0 0 100 100" role="img" aria-label="Rockhound Scout logo"><polygon points="50.00,5.50 88.54,27.75 88.54,72.25 50.00,94.50 11.46,72.25 11.46,27.75" fill="none" stroke="#c4622d" stroke-width="3.6" stroke-linejoin="miter"/><polygon points="50.00,21.00 75.11,35.50 50.00,50.00 24.89,35.50" fill="#407e6e"/><polygon points="24.89,35.50 50.00,50.00 50.00,79.00 24.89,64.50" fill="#255c50"/><polygon points="50.00,50.00 75.11,35.50 75.11,64.50 50.00,79.00" fill="#2d6055"/><g stroke="#a5b28e" stroke-width=".7" stroke-opacity=".85"><line x1="50" y1="50" x2="50.00" y2="21.00"/><line x1="50" y1="50" x2="75.11" y2="35.50"/><line x1="50" y1="50" x2="75.11" y2="64.50"/><line x1="50" y1="50" x2="50.00" y2="79.00"/><line x1="50" y1="50" x2="24.89" y2="64.50"/><line x1="50" y1="50" x2="24.89" y2="35.50"/></g></svg><span>ROCKHOUND SCOUT</span></div></div>
-<p class="bigquote">I built this app for myself and have used it in the field for quite a while now. I recently decided to share it. The powerful Custom search ability has earned a permanent spot in my rockhounding kit. It&rsquo;s a tool no serious rockhound should be without!!!</p>
-<p class="bq-sig">&mdash; JT</p>
+<p class="bigquote">I built this app for myself and have used it in the field for quite a while now. I recently decided to share it. The powerful Custom search ability has earned a permanent spot in my rockhounding kit. It&rsquo;s a tool no serious rockhound should be without!!!<span class="bq-close">&rdquo;</span></p>
+<p class="bq-sig">&mdash;&nbsp;JT</p>
 <ul class="perks">
 <li>No subscriptions or recurring charges &mdash; nothing to cancel</li>
 <li>Scans never expire</li>
@@ -239,5 +241,6 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLB();})
 </script>
 <div class="buybar" id="buybar"><div class="bb-txt"><b>200 scans &middot; $25</b>One-time &middot; never expire</div><a class="btn" href="https://buy.stripe.com/14AcN65Al90YfxkcGfcMM00">BUY IT NOW</a></div>
 <script>(function(){var bar=document.getElementById('buybar'),main=document.querySelector('a.btn[href*="buy.stripe.com"]:not(#buybar a)');if(!bar||!main||!('IntersectionObserver' in window))return;new IntersectionObserver(function(e){bar.classList.toggle('hide',e[0].isIntersecting)}).observe(main);})();</script>
+<script>(function(){function tuck(){var q=document.querySelector('.bq-close'),g=document.querySelector('.bq-sig');if(!q||!g)return;g.style.textAlign='left';g.style.paddingLeft='0';var r=q.getBoundingClientRect(),p=g.getBoundingClientRect(),t=document.createRange();t.selectNodeContents(g);var w=t.getBoundingClientRect().width;var x=Math.max(0,Math.min(r.right-p.left-w*0.35,p.width-w));g.style.paddingLeft=x+'px';}window.addEventListener('load',tuck);window.addEventListener('resize',tuck);if(document.fonts)document.fonts.ready.then(tuck);tuck();})();</script>
 </body>
 </html>
