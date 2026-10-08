@@ -209,7 +209,7 @@
     <div class="ph3">Always get the landowner&rsquo;s permission before collecting. Park off the highway shoulder. RockhoundScout.com</div>
   </div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v6.1-direct (accounts) — verified geologic contacts</div>
+  <div class="verbadge">▸ v6.2-direct (accounts) — verified geologic contacts</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -923,8 +923,8 @@ async function fetchDrainageNearby(lat, lon) {
   try {
     const d = 0.025;
     const q = `[out:json][timeout:10];way["waterway"~"river|stream|creek"](${lat-d},${lon-d},${lat+d},${lon+d});out tags;`;
-    const r = await fetchWithTimeout('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q), 12000);
-    const j = await r.json();
+    const j = await overpassQuery(q, 12000);
+    if (!j) return [];
     const names = (j.elements || []).map(e => e.tags && e.tags.name).filter(Boolean);
     return [...new Set(names)].slice(0, 3);
   } catch (e) { return []; }
@@ -1018,33 +1018,75 @@ async function parseCustomRequest(text) {
   }
 }
 
+// The free OpenStreetMap road server (Overpass) is often busy and answers
+// with an error page instead of data. Before v6.2 that error was silently
+// read as "no highways here" -- which is what happened on a Three Rivers /
+// George West search. Now we try up to three public mirrors and only report
+// "none found" when one of them actually answered.
+const OVERPASS_MIRRORS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter'
+];
+async function overpassQuery(q, ms) {
+  for (const base of OVERPASS_MIRRORS) {
+    try {
+      const r = await fetchWithTimeout(base + '?data=' + encodeURIComponent(q), ms);
+      if (!r.ok) continue;
+      const j = await r.json();
+      if (j && Array.isArray(j.elements)) return j;
+    } catch (e) { /* try the next mirror */ }
+  }
+  return null; // every mirror failed -- caller treats this as "lookup failed", not "no roads"
+}
+
+// Finds up to 3 roads to scan near the search point (SCOPE LIMIT: 3 roads
+// total, same cost profile as before -- the AI write-up cost depends on this).
+//   Tier 1: state/US highways (trunk/primary), closest first.
+//   Tier 2: only if fewer than 3 were found -- Farm-to-Market / Ranch-to-Market
+//           and other numbered secondary roads, closest first.
+// Returns { roads, failed } so a server outage isn't mistaken for "no roads".
 async function fetchNearbyHighways(lat, lon, radiusMiles) {
-  try {
-    const d = radiusMiles / 69;
-    const bbox = `${lat-d},${lon-d},${lat+d},${lon+d}`;
-    const q = `[out:json][timeout:20];(way["highway"~"trunk|primary"]["ref"](${bbox}););out tags geom;`;
-    const r = await fetchWithTimeout('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q), 15000);
-    const j = await r.json();
+  const MAX_ROADS = 3;
+  const d = radiusMiles / 69;
+  const dLon = d / Math.cos(lat * Math.PI / 180);
+  const bbox = `${lat-d},${lon-dLon},${lat+d},${lon+dLon}`;
+  const tiers = ['^(trunk|primary)$', '^(secondary|tertiary)$'];
+  const roads = [];
+  const used = new Set();
+  let answered = false;
+
+  for (const tier of tiers) {
+    if (roads.length >= MAX_ROADS) break;
+    const q = `[out:json][timeout:25];way["highway"~"${tier}"]["ref"](${bbox});out tags geom;`;
+    const j = await overpassQuery(q, 12000);
+    if (!j) continue;
+    answered = true;
     const byRef = {};
-    for (const el of (j.elements || [])) {
+    for (const el of j.elements) {
       if (!el.tags || !el.tags.ref || !el.geometry || el.geometry.length < 2) continue;
       const ref = el.tags.ref.split(';')[0].trim();
+      if (!ref || used.has(ref)) continue;
       if (!byRef[ref]) byRef[ref] = [];
       for (const g of el.geometry) byRef[ref].push([g.lat, g.lon]);
     }
-    const refs = Object.keys(byRef).slice(0, 3); // SCOPE LIMIT: at most 3 highways, matches preset cost profile
-    const roads = [];
+    // Closest road to the search point first, so the 3-road cap keeps the
+    // most relevant roads instead of whichever the server listed first.
+    const near = pts => Math.min(...pts.map(([a, b]) => Math.hypot(a - lat, (b - lon) * Math.cos(lat * Math.PI / 180))));
+    const refs = Object.keys(byRef).sort((a, b) => near(byRef[a]) - near(byRef[b]));
     for (const ref of refs) {
+      if (roads.length >= MAX_ROADS) break;
       let pts = byRef[ref];
       if (pts.length > 5) {
         const step = Math.max(1, Math.floor(pts.length / 5));
         pts = pts.filter((_, i) => i % step === 0).slice(0, 5);
       }
       if (pts.length < 2) continue;
+      used.add(ref);
       roads.push({ road: ref, pts });
     }
-    return roads;
-  } catch (e) { return []; }
+  }
+  return { roads, failed: !answered };
 }
 
 // "Glen Rose Formation" and "Glen Rose Limestone" are the same rock under two
@@ -1300,17 +1342,19 @@ async function runScout() {
         btn.disabled = false;
         return;
       }
-      setProgress('Found it' + (loc.usedQuery && loc.usedQuery !== place ? ' (near ' + loc.usedQuery + ')' : '') + ' — searching for highways within 20 miles...');
-      const roads = await fetchNearbyHighways(loc.lat, loc.lon, 20);
+      setProgress('Found it' + (loc.usedQuery && loc.usedQuery !== place ? ' (near ' + loc.usedQuery + ')' : '') + ' — searching for highways and FM/RM roads within 20 miles...');
+      const { roads, failed: roadLookupFailed } = await fetchNearbyHighways(loc.lat, loc.lon, 20);
       if (roads.length === 0) {
         clearTimeout(watchdog);
         hideLoading();
-        showError('No major state/US highways found within 20 miles of that area. Try a different description.' + notCharged(await refundScan()));
-        setStatus('NO ROADS');
+        showError((roadLookupFailed
+          ? 'The free road-map server is busy right now and did not answer. Please try again in a minute.'
+          : 'No numbered highways or FM/RM roads found within 20 miles of that area. Try a nearby town name.') + notCharged(await refundScan()));
+        setStatus(roadLookupFailed ? 'SERVER BUSY' : 'NO ROADS');
         btn.disabled = false;
         return;
       }
-      showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling ' + roads.length + ' highway(s) near "' + place + '" — 20-40 seconds');
+      showLoading('READING REAL USGS/BEG GEOLOGIC MAP...', 'Sampling ' + roads.length + ' road(s) near "' + place + '" — 20-40 seconds');
       const { allContacts, written } = await scanRoadsForHotspots(roads, (parsed && parsed.town) || place, {}, target);
 
       clearTimeout(watchdog);
