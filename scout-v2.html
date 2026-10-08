@@ -209,7 +209,7 @@
     <div class="ph3">Always get the landowner&rsquo;s permission before collecting. Park off the highway shoulder. RockhoundScout.com</div>
   </div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v6.1-direct (accounts) — verified geologic contacts + AI-read Custom search</div>
+  <div class="verbadge">▸ v6.1-direct (accounts) — verified geologic contacts</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -535,7 +535,7 @@ function addClubButton(area, target) {
   box.id = 'clubBox';
   box.style.cssText = 'margin-top:6px;';
   box.innerHTML = '<button class="clubbtn" id="clubBtn" onclick="findLocalClubs()">' + esc(CLUB_BTN_LABEL + area.toUpperCase()) + '</button>' +
-    '<div class="cnote" style="margin-top:6px;text-align:center;">Uses AI web search — clubs are found online, not map-verified.</div>' +
+    '<div class="cnote" style="margin-top:6px;text-align:center;">Clubs are found online, not map-verified.</div>' +
     '<div id="clubOut"></div>';
   document.getElementById('results').appendChild(box);
 }
@@ -760,7 +760,7 @@ function renderClubs(out, r, sources) {
     });
     out.appendChild(card);
   }
-  add(out, 'div', '▸ Found by AI web search — not verified against the geologic map. Meeting times and contacts change, so confirm with the club before you go, and always get landowner permission before collecting.', 'cnote');
+  add(out, 'div', '▸ Found online — not verified against the geologic map. Meeting times and contacts change, so confirm with the club before you go, and always get landowner permission before collecting.', 'cnote');
   if ((sources || []).length) {
     const s = document.createElement('div');
     s.className = 'cnote';
@@ -1461,8 +1461,8 @@ function renderHotspots(spots) {
         '</div>' +
         '<div class="why">' + h.why + '</div>' +
         '<div class="src">' + (isOwnerConfirmed
-          ? '▸ Location and directions confirmed on-site by the app\'s owner; age and mineralogy from independently published geology sources — not AI-generated'
-          : '▸ Formation contact verified directly against USGS/BEG geologic map data — AI only wrote the description; check both shoulders near the marked stretch') + '</div>' +
+          ? '▸ Location and directions confirmed on-site by the app\'s owner; age and mineralogy from independently published geology sources'
+          : '▸ Formation contact verified directly against USGS/BEG geologic map data; check both shoulders near the marked stretch') + '</div>' +
       '</div>';
     c.appendChild(card);
   });
