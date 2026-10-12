@@ -923,7 +923,7 @@ async function fetchDrainageNearby(lat, lon) {
   try {
     const d = 0.025;
     const q = `[out:json][timeout:10];way["waterway"~"river|stream|creek"](${lat-d},${lon-d},${lat+d},${lon+d});out tags;`;
-    const j = await overpassQuery(q, 12000);
+    const j = await overpassQuery(q, 9000, 1);
     if (!j) return [];
     const names = (j.elements || []).map(e => e.tags && e.tags.name).filter(Boolean);
     return [...new Set(names)].slice(0, 3);
@@ -1028,16 +1028,24 @@ const OVERPASS_MIRRORS = [
   'https://overpass.kumi.systems/api/interpreter',
   'https://overpass.private.coffee/api/interpreter'
 ];
-async function overpassQuery(q, ms) {
-  for (const base of OVERPASS_MIRRORS) {
-    try {
-      const r = await fetchWithTimeout(base + '?data=' + encodeURIComponent(q), ms);
-      if (!r.ok) continue;
-      const j = await r.json();
-      if (j && Array.isArray(j.elements)) return j;
-    } catch (e) { /* try the next mirror */ }
+async function overpassQuery(q, ms, passes = 2) {
+  // Two full passes over the mirrors, with a short pause between, before
+  // giving up -- the free servers are often busy for only a few seconds.
+  for (let pass = 0; pass < passes; pass++) {
+    if (pass > 0) {
+      try { setProgress('Road-map server is busy — trying again...'); } catch (e) {}
+      await new Promise(r => setTimeout(r, 3000));
+    }
+    for (const base of OVERPASS_MIRRORS) {
+      try {
+        const r = await fetchWithTimeout(base + '?data=' + encodeURIComponent(q), ms);
+        if (!r.ok) continue;
+        const j = await r.json();
+        if (j && Array.isArray(j.elements)) return j;
+      } catch (e) { /* try the next mirror */ }
+    }
   }
-  return null; // every mirror failed -- caller treats this as "lookup failed", not "no roads"
+  return null; // every mirror failed twice -- caller treats this as "lookup failed", not "no roads"
 }
 
 // Finds up to 3 roads to scan near the search point (SCOPE LIMIT: 3 roads
@@ -1059,8 +1067,8 @@ async function fetchNearbyHighways(lat, lon, radiusMiles) {
   for (const tier of tiers) {
     if (roads.length >= MAX_ROADS) break;
     const q = `[out:json][timeout:25];way["highway"~"${tier}"]["ref"](${bbox});out tags geom;`;
-    const j = await overpassQuery(q, 12000);
-    if (!j) continue;
+    const j = await overpassQuery(q, 9000);
+    if (!j) break; // no server answered -- don't spend more time on the FM-road pass
     answered = true;
     const byRef = {};
     for (const el of j.elements) {
