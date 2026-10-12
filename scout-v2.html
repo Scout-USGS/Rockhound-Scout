@@ -209,7 +209,7 @@
     <div class="ph3">Always get the landowner&rsquo;s permission before collecting. Park off the highway shoulder. RockhoundScout.com</div>
   </div>
   <div class="results" id="results"></div>
-  <div class="verbadge">▸ v6.3-direct (accounts) — verified geologic contacts</div>
+  <div class="verbadge">▸ v6.4-direct — verified geologic contacts</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -519,6 +519,18 @@ let lastArea = null;
 // true to bring the button back. Everything else stays as is.
 const ENABLE_CLUB_FINDER = false;
 
+// Splits "garnet, quartz (vein, abundant), calcite" on commas, but not the
+// commas inside parentheses, so a mineral's note stays in one tag.
+function splitOutsideParens(str) {
+  const out = []; let cur = '', depth = 0;
+  for (const ch of String(str || '')) {
+    if (ch === '(') depth++;
+    else if (ch === ')') depth = Math.max(0, depth - 1);
+    if (ch === ',' && depth === 0) { out.push(cur); cur = ''; } else cur += ch;
+  }
+  out.push(cur);
+  return out.map(x => x.trim()).filter(Boolean);
+}
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -1150,7 +1162,7 @@ function parseRecord(raw) {
     from_formation: obj.FROM || '', to_formation: obj.TO || '',
     contact_location: obj.WHERE || '',
     drainages: obj.DRAINAGES ? obj.DRAINAGES.split(',').map(s => s.trim()).filter(Boolean) : [],
-    minerals: obj.MINERALS ? obj.MINERALS.split(',').map(s => s.trim()).filter(Boolean) : [],
+    minerals: obj.MINERALS ? splitOutsideParens(obj.MINERALS) : [],
     directions: obj.DIRECTIONS || '', from_the_truck: obj.TRUCK || '', why: obj.WHY || ''
   };
 }
