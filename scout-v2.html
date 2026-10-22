@@ -135,6 +135,24 @@
     .why { padding-top:4px; }
   }
   @media screen and (min-width:560px) { .rgrid { grid-template-columns:repeat(3,1fr); } }
+  .topfold { display:flex; flex-direction:column; gap:10px; }
+  /* Desktop: widen the app and stretch the top section to fill the screen */
+  @media screen and (min-width:900px) and (min-height:600px) {
+    .content { max-width:1100px; padding:14px 28px; }
+    .topfold { min-height:calc(100vh - var(--hdrH, 60px) - 28px); gap:12px; }
+    .regionwrap { flex:1; display:flex; flex-direction:column; }
+    .regionwrap .rgrid { flex:1; grid-auto-rows:1fr; gap:12px; }
+    .rbtn { font-size:1.05rem; padding:12px 16px; display:flex; flex-wrap:wrap; align-content:center; align-items:center; }
+    .rbtn .hint { width:100%; }
+    .rbtn .icon { font-size:1.3rem; }
+    .rbtn .hint { font-size:0.82rem; margin-top:4px; }
+    .usgs-badge { font-size:0.95rem; }
+    .acctinfo { font-size:0.8rem; }
+    .scoutbtn { font-size:1.8rem; padding:14px; }
+    .hcard { font-size:1.1em; }
+    .hname { font-size:1.1rem; }
+    .field p, .contact-strip .cval, .dir-strip .dirval { font-size:0.92rem; }
+  }
   @media print {
     @page { margin:0.5in; }
     html, body { background:#fff !important; color:#111 !important; }
@@ -173,6 +191,7 @@
   <div class="status"><span class="dot"></span><span id="statusTxt">READY</span></div>
 </header>
 <div class="content">
+ <div class="topfold">
   <div class="usgs-badge">
     <div class="ihead">Instructions</div>
     <ul class="ilist">
@@ -204,7 +223,7 @@
         &nbsp;·&nbsp; <a href="#" onclick="signOut(); return false;">Sign out</a></div>
     </div>
   </div>
-  <div class="noprint">
+  <div class="noprint regionwrap">
     <div class="slabel">▸ Pick your region</div>
     <div class="rgrid">
       <button class="rbtn active" data-region="llano" onclick="pick(this)"><span class="icon">⬡</span>Llano Uplift<span class="hint">Blue quartz · llanite · topaz</span></button>
@@ -221,6 +240,7 @@
   </div>
   <hr>
   <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
+ </div>
   <div class="loading" id="loading">
     <div class="drill">⛏</div>
     <div class="lmsg" id="lmsg">READING REAL USGS/BEG GEOLOGIC MAP...</div>
@@ -1575,6 +1595,10 @@ function renderHotspots(spots) {
     c.appendChild(card);
   });
 }
+</script>
+<script>
+(function(){function h(){var e=document.querySelector('.header');if(e)document.documentElement.style.setProperty('--hdrH',e.offsetHeight+'px');}
+window.addEventListener('load',h);window.addEventListener('resize',h);document.addEventListener('DOMContentLoaded',h);})();
 </script>
 </body>
 </html>
