@@ -6,7 +6,7 @@
 <title>Rockhound Scout — Texas Rockhounding Hotspot Finder</title>
 <meta name="description" content="Rockhound Scout finds rockhounding hotspots along Texas highways using published geologic map data. $25 one-time for 200 scans.">
 <link rel="icon" href="icon-192.png">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{--stone:#2b221a;--granite:#3a2f26;--quartz:#e8d5a3;--copper:#c4622d;--turq:#3d9e8c;--feld:#a58a68;--cream:#f2e8d0;--glow:#5bbfa8;--head:#f2915a}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -19,12 +19,12 @@ header .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;paddin
 .brand{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.08em;color:var(--quartz);text-decoration:none;line-height:1;display:flex;align-items:center;gap:10px}
 .brand-logo{height:34px;width:34px;display:block}
 nav{display:flex;flex-wrap:wrap;gap:6px 18px;margin-left:auto}
-nav a{font-family:'Share Tech Mono',monospace;font-size:.78rem;letter-spacing:.08em;color:var(--feld);text-decoration:none;text-transform:uppercase}
+nav a{font-family:'Barlow',sans-serif;font-weight:600;font-size:.88rem;letter-spacing:.08em;color:var(--feld);text-decoration:none;text-transform:uppercase}
 nav a:hover,nav a[aria-current]{color:var(--cream)}
 main{padding:34px 0 50px}
 h1{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:clamp(2.2rem,7vw,3.4rem);letter-spacing:.05em;color:var(--head);line-height:1.05;margin-bottom:14px;text-shadow:0 2px 8px rgba(0,0,0,.85)}
 h2{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:1.75rem;letter-spacing:.06em;color:var(--head);margin:38px 0 10px;text-shadow:0 2px 8px rgba(0,0,0,.85)}
-h3{font-family:'Share Tech Mono',monospace;font-weight:400;font-size:.85rem;letter-spacing:.14em;text-transform:uppercase;color:var(--copper);margin:22px 0 6px}
+h3{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:1.2rem;letter-spacing:.08em;text-transform:uppercase;color:var(--copper);margin:22px 0 6px}
 p,li{margin-bottom:12px}
 ul,ol{padding-left:22px;margin-bottom:12px}
 .lead{font-size:1.15rem;color:var(--cream)}
@@ -39,11 +39,11 @@ ul,ol{padding-left:22px;margin-bottom:12px}
 .perks li:last-child{margin-bottom:0}
 .perks li::before{content:'\2713';position:absolute;left:4px;top:0;color:var(--glow);font-size:1.2rem;font-weight:600}
 .bigquote::after{content:'\201D';margin-left:4px}
-.tag{display:inline-block;font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--glow);border:1px solid rgba(61,158,140,.5);background:rgba(61,158,140,.1);padding:4px 10px;border-radius:2px;margin-bottom:16px}
+.tag{display:inline-block;font-family:'Barlow',sans-serif;font-weight:600;font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;color:var(--glow);border:1px solid rgba(61,158,140,.5);background:rgba(61,158,140,.1);padding:4px 10px;border-radius:2px;margin-bottom:16px}
 .card{background:rgba(42,36,32,.8);border:1px solid rgba(139,111,78,.35);border-radius:3px;padding:18px 20px;margin:16px 0}
 .price{border-color:var(--copper);background:rgba(196,98,45,.12);text-align:center;padding:26px 20px}
 .price .amt{font-family:'Bebas Neue',sans-serif;font-size:4rem;line-height:1;color:var(--quartz);letter-spacing:.04em}
-.price .sub{font-family:'Share Tech Mono',monospace;font-size:.85rem;letter-spacing:.1em;color:var(--feld);margin-bottom:14px}
+.price .sub{font-family:'Barlow',sans-serif;font-weight:600;font-size:.85rem;letter-spacing:.1em;color:var(--feld);margin-bottom:14px}
 .price ul{list-style:none;padding:0;text-align:left;max-width:420px;margin:14px auto}
 .price li{padding-left:24px;position:relative;margin-bottom:8px}
 .price li::before{content:'\2713';position:absolute;left:0;color:var(--glow)}
@@ -51,7 +51,7 @@ ul,ol{padding-left:22px;margin-bottom:12px}
 .btn.off{background:var(--granite);color:var(--feld);cursor:not-allowed;border:1px dashed rgba(139,111,78,.5)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid .card{margin:0}
-.grid h3{margin-top:0;font-size:1.05rem}
+.grid h3{margin-top:0;font-size:1.35rem}
 .note{font-size:.92rem;color:var(--cream)}
 .steps{counter-reset:s;list-style:none;padding:0}
 .steps li{counter-increment:s;position:relative;padding-left:46px;margin-bottom:16px}
@@ -71,7 +71,7 @@ footer p{margin-bottom:8px}
 .photo-grid figcaption strong{color:var(--cream);display:block;margin-bottom:3px;font-size:.92rem}
 @media(max-width:600px){.photo-grid{grid-template-columns:1fr}.photo-grid img{height:230px}}
 .quote{border-left:3px solid var(--copper);background:rgba(42,36,32,.6);padding:18px 22px;margin:22px 0;font-style:italic;font-size:1.05rem;color:var(--cream)}
-.quote cite{display:block;margin-top:10px;font-style:normal;font-family:'Share Tech Mono',monospace;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--feld)}
+.quote cite{display:block;margin-top:10px;font-style:normal;font-family:'Barlow',sans-serif;font-weight:600;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--feld)}
 .showcase{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}
 .showcase figure{margin:0;background:rgba(42,36,32,.8);border:1px solid rgba(139,111,78,.35);border-radius:4px;overflow:hidden;padding:8px;display:flex;flex-direction:column;align-items:center}
 .showcase h3{margin:0 0 8px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.08em;text-transform:none}
@@ -95,7 +95,7 @@ footer p{margin-bottom:8px}
 .showcase + .punch{margin-top:6px}
 .buybar{position:fixed;left:0;right:0;bottom:0;z-index:900;background:rgba(26,22,18,.96);border-top:1px solid rgba(196,98,45,.55);box-shadow:0 -4px 18px rgba(0,0,0,.6);padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:center;gap:14px;transition:transform .25s ease}
 .buybar.hide{transform:translateY(110%)}
-.buybar .bb-txt{font-family:'Share Tech Mono',monospace;font-size:.8rem;letter-spacing:.06em;color:var(--feld);line-height:1.3}
+.buybar .bb-txt{font-family:'Barlow',sans-serif;font-weight:600;font-size:.8rem;letter-spacing:.06em;color:var(--feld);line-height:1.3}
 .buybar .bb-txt b{color:var(--quartz);font-weight:400;display:block;font-size:.9rem}
 .buybar .btn{font-size:1.3rem;padding:9px 22px;white-space:nowrap}
 body{padding-bottom:84px}
