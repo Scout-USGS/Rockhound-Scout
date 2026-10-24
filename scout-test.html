@@ -1007,12 +1007,27 @@ function geoSourceLong() {
 // already used above for drainages. Capped at 3 highways, same "prioritize
 // state/US highways" cost discipline as the AI-search version -- this keeps
 // a Custom scan the same size/cost as a preset scan, no open-ended guessing.
+// A whole county, state or region -- too big to center a scan on.
+function isAreaWide(hit) {
+  const t = String(hit.addresstype || '').toLowerCase();
+  if (['county', 'state', 'state_district', 'region', 'country', 'continent'].includes(t)) return true;
+  if (!t && hit.class === 'boundary' && /\b(county|parish|borough)\b/i.test(String(hit.display_name || '').split(',')[0])) return true;
+  return false;
+}
+// Asks for the top 5 matches and prefers a real place (town, city, address,
+// landmark) over a county that happens to share its name -- "Oswego, NY"
+// should mean the city, not the middle of Oswego County.
 async function nominatimSearch(q) {
-  const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&addressdetails=1'
+  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=us&addressdetails=1'
     + '&q=' + encodeURIComponent(q);
   const r = await fetchWithTimeout(url, 8000);
   const arr = await r.json();
-  return (arr && arr.length) ? arr[0] : null;
+  if (!arr || !arr.length) return null;
+  const place = arr.find(h => !isAreaWide(h));
+  if (place) return place;
+  const area = arr[0];
+  area._areaWide = true; // only a county/state matched -- caller flags it too broad
+  return area;
 }
 // preferState: if the text names no state, try this state first (keeps
 // "Bryan" meaning Bryan, TX), then fall back to a nationwide lookup.
@@ -1030,7 +1045,7 @@ async function geocodeLocation(query, preferState) {
     const town = addr.city || addr.town || addr.village || addr.hamlet || addr.county || '';
     // A vague query (e.g. "gold in texas") resolves to the state itself with no
     // town/county -- too broad to scan, so flag it instead of searching a random spot.
-    return { lat: parseFloat(hit.lat), lon: parseFloat(hit.lon), label: hit.display_name, tooBroad: !town, state: addr.state || '' };
+    return { lat: parseFloat(hit.lat), lon: parseFloat(hit.lon), label: hit.display_name, tooBroad: !town || !!hit._areaWide, state: addr.state || '' };
   } catch (e) { return null; }
 }
 
