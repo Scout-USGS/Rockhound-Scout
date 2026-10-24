@@ -1124,7 +1124,11 @@ const OVERPASS_MIRRORS = [
   'https://overpass.kumi.systems/api/interpreter',
   'https://overpass.private.coffee/api/interpreter'
 ];
+// TEST: records what each road server actually said, so a "busy" error can
+// show whether it was a rate limit, a server error, or no answer in time.
+let overpassReport = [];
 async function overpassQuery(q, ms, passes = 2) {
+  overpassReport = [];
   // Two full passes over the mirrors, with a short pause between, before
   // giving up -- the free servers are often busy for only a few seconds.
   for (let pass = 0; pass < passes; pass++) {
@@ -1133,12 +1137,19 @@ async function overpassQuery(q, ms, passes = 2) {
       await new Promise(r => setTimeout(r, 3000));
     }
     for (const base of OVERPASS_MIRRORS) {
+      const host = base.replace(/^https:\/\//, '').split('/')[0];
+      const t0 = Date.now();
       try {
         const r = await fetchWithTimeout(base + '?data=' + encodeURIComponent(q), ms);
-        if (!r.ok) continue;
+        const secs = ((Date.now() - t0) / 1000).toFixed(1);
+        if (!r.ok) { overpassReport.push(host + ': HTTP ' + r.status + ' after ' + secs + 's'); continue; }
         const j = await r.json();
         if (j && Array.isArray(j.elements)) return j;
-      } catch (e) { /* try the next mirror */ }
+        overpassReport.push(host + ': bad reply after ' + secs + 's');
+      } catch (e) {
+        const secs = ((Date.now() - t0) / 1000).toFixed(1);
+        overpassReport.push(host + ': ' + (e && e.name === 'AbortError' ? 'no answer in ' + secs + 's' : 'blocked/unreachable after ' + secs + 's'));
+      }
     }
   }
   return null; // every mirror failed twice -- caller treats this as "lookup failed", not "no roads"
@@ -1561,7 +1572,7 @@ async function runScout() {
         clearTimeout(watchdog);
         hideLoading();
         showError((roadLookupFailed
-          ? 'The free road-map server is busy right now and did not answer. Please try again in a minute.'
+          ? 'The free road-map server is busy right now and did not answer. Please try again in a minute. [TEST details — ' + overpassReport.join(' | ') + ']'
           : 'No numbered highways' + (scanState === 'Texas' ? ' or FM/RM roads' : ' or roads') + ' found within ' + radius + ' miles of that area. Try a larger distance or a nearby town name.') + notCharged(await refundScan()));
         setStatus(roadLookupFailed ? 'SERVER BUSY' : 'NO ROADS');
         btn.disabled = false;
