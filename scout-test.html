@@ -946,13 +946,14 @@ async function fetchWithTimeout(url, ms) {
 
 async function fetchGeoUnit(lat, lon) {
   try {
-    const r = await fetchWithTimeout(`https://macrostrat.org/api/v2/geologic_units/map?lat=${lat}&lng=${lon}&format=json`, 8000);
+    const r = await fetchWithTimeout(`https://macrostrat.org/api/v2/geologic_units/map?lat=${lat}&lng=${lon}&format=json`, 10000);
+    if (!r.ok) return { error: true };
     const d = await r.json();
     const units = (d.success && d.success.data) ? d.success.data : [];
     const named = units.find(u => u.strat_name) || units[0] || null;
     if (!named) return null;
     return { name: (named.strat_name || named.name || '').trim(), lith: named.lith || '' };
-  } catch (e) { return null; }
+  } catch (e) { return { error: true }; } // timeout / no answer -- counted as a server failure
 }
 
 function densify(pts, stepDeg) {
@@ -973,7 +974,7 @@ async function fetchDrainageNearby(lat, lon) {
   try {
     const d = 0.025;
     const q = `[out:json][timeout:10];way["waterway"~"river|stream|creek"](${lat-d},${lon-d},${lat+d},${lon+d});out tags;`;
-    const j = await overpassQuery(q, 9000, 1);
+    const j = await overpassQuery(q, 15000, 1);
     if (!j) return [];
     const names = (j.elements || []).map(e => e.tags && e.tags.name).filter(Boolean);
     return [...new Set(names)].slice(0, 3);
@@ -1134,6 +1135,46 @@ async function overpassQuery(q, ms, passes = 2) {
 //   Tier 2: only if fewer than 3 were found -- Farm-to-Market / Ranch-to-Market
 //           and other numbered secondary roads, closest first.
 // Returns { roads, failed } so a server outage isn't mistaken for "no roads".
+// Joins the separate OpenStreetMap pieces of one highway end-to-end where
+// they share an end point, so sampling follows the road in driving order.
+function chainSegments(segs) {
+  const key = p => p[0].toFixed(6) + ',' + p[1].toFixed(6);
+  const pool = segs.filter(s => s.length >= 2).map(s => s.slice());
+  const out = [];
+  while (pool.length) {
+    let line = pool.shift();
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (let i = 0; i < pool.length; i++) {
+        const s = pool[i], head = key(line[0]), tail = key(line[line.length - 1]);
+        const sh = key(s[0]), st = key(s[s.length - 1]);
+        if (tail === sh) line = line.concat(s.slice(1));
+        else if (tail === st) line = line.concat(s.slice().reverse().slice(1));
+        else if (head === st) line = s.concat(line.slice(1));
+        else if (head === sh) line = s.slice().reverse().concat(line.slice(1));
+        else continue;
+        pool.splice(i, 1); grew = true; break;
+      }
+    }
+    out.push(line);
+  }
+  return out;
+}
+function lineMiles(line) {
+  let m = 0;
+  for (let i = 1; i < line.length; i++) m += milesBetween(line[i-1][0], line[i-1][1], line[i][0], line[i][1]);
+  return m;
+}
+
+// Finds up to 3 roads to scan near the search point (SCOPE LIMIT: 3 roads
+// total -- the AI write-up cost depends on this).
+//   Tier 1: state/US highways (trunk/primary), closest first.
+//   Tier 2: only if fewer than 3 were found -- Farm-to-Market / Ranch-to-Market
+//           and other numbered secondary roads, closest first.
+// Each road comes back as its real mapped path ("segs"), clipped to the
+// requested distance, so every geology check point sits on the pavement.
+// Returns { roads, failed } so a server outage isn't mistaken for "no roads".
 async function fetchNearbyHighways(lat, lon, radiusMiles) {
   const MAX_ROADS = 3;
   const d = radiusMiles / 69;
@@ -1156,29 +1197,58 @@ async function fetchNearbyHighways(lat, lon, radiusMiles) {
       const ref = el.tags.ref.split(';')[0].trim();
       if (!ref || used.has(ref)) continue;
       if (!byRef[ref]) byRef[ref] = [];
-      // Only keep road points actually inside the requested distance.
+      // Keep only the parts of this piece inside the requested distance;
+      // a piece that leaves and re-enters the circle becomes two runs.
+      let run = [];
       for (const g of el.geometry) {
-        if (g && milesBetween(lat, lon, g.lat, g.lon) <= radiusMiles) byRef[ref].push([g.lat, g.lon]);
+        if (g && milesBetween(lat, lon, g.lat, g.lon) <= radiusMiles) run.push([g.lat, g.lon]);
+        else { if (run.length >= 2) byRef[ref].push(run); run = []; }
       }
+      if (run.length >= 2) byRef[ref].push(run);
     }
-    // Closest road to the search point first, so the 3-road cap keeps the
-    // most relevant roads instead of whichever the server listed first.
-    const near = pts => Math.min(...pts.map(([a, b]) => Math.hypot(a - lat, (b - lon) * Math.cos(lat * Math.PI / 180))));
-    const refs = Object.keys(byRef).sort((a, b) => near(byRef[a]) - near(byRef[b]));
+    const closest = segs => Math.min(...segs.flat().map(([a, b]) => milesBetween(lat, lon, a, b)));
+    const refs = Object.keys(byRef).filter(r => byRef[r].length).sort((a, b) => closest(byRef[a]) - closest(byRef[b]));
     for (const ref of refs) {
       if (roads.length >= MAX_ROADS) break;
-      let pts = byRef[ref];
-      if (pts.length < 2) continue;
-      if (pts.length > 5) {
-        const step = Math.max(1, Math.floor(pts.length / 5));
-        pts = pts.filter((_, i) => i % step === 0).slice(0, 5);
-      }
-      if (pts.length < 2) continue;
+      // Drop tiny scraps (under half a mile) -- not enough road to sample.
+      const segs = chainSegments(byRef[ref]).filter(l => lineMiles(l) >= 0.5);
+      if (!segs.length) continue;
       used.add(ref);
-      roads.push({ road: ref, pts });
+      roads.push({ road: ref, segs });
     }
   }
   return { roads, failed: !answered };
+}
+
+// Picks geology check points ALONG the real road path (not straight lines
+// between far-apart points), about every 0.8 mile, capped at MAX_CHECKS per
+// road so a long road can't blow up the scan time. Returns one list of
+// points per continuous stretch of road.
+const MAX_CHECKS_PER_ROAD = 40;
+function samplesAlongRoad(road) {
+  const lines = road.segs || [densify(road.pts, 0.012)]; // presets still use hand-drawn pts
+  const total = lines.reduce((m, l) => m + lineMiles(l), 0);
+  const spacing = Math.max(0.8, total / MAX_CHECKS_PER_ROAD);
+  const runs = [];
+  for (const line of lines) {
+    const pts = [line[0]];
+    let carry = 0;
+    for (let i = 1; i < line.length; i++) {
+      const [lat1, lon1] = line[i-1], [lat2, lon2] = line[i];
+      const segLen = milesBetween(lat1, lon1, lat2, lon2);
+      let pos = spacing - carry;
+      while (pos <= segLen) {
+        const f = pos / segLen;
+        pts.push([lat1 + (lat2 - lat1) * f, lon1 + (lon2 - lon1) * f]);
+        pos += spacing;
+      }
+      carry = segLen - (pos - spacing);
+    }
+    const last = line[line.length - 1];
+    if (carry > spacing * 0.4) pts.push(last);
+    if (pts.length >= 2) runs.push(pts);
+  }
+  return runs;
 }
 
 // "Glen Rose Formation" and "Glen Rose Limestone" are the same rock under two
@@ -1190,31 +1260,45 @@ function baseFormationName(n) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-async function findContactsForRoad(road, town) {
-  const dense = densify(road.pts, 0.012);
-  const seq = [];
-  for (let i = 0; i < dense.length; i++) {
-    const [lat, lon] = dense[i];
-    setProgress('Checking ' + road.road + ' — point ' + (i + 1) + ' of ' + dense.length + '...');
-    const unit = await fetchGeoUnit(lat, lon);
-    seq.push({ lat, lon, unit });
-    await new Promise(r => setTimeout(r, 260));
-  }
-  const contacts = [];
-  for (let i = 1; i < seq.length; i++) {
-    const a = seq[i - 1], b = seq[i];
-    if (a.unit && b.unit && a.unit.name && b.unit.name && a.unit.name !== b.unit.name &&
-        baseFormationName(a.unit.name) !== baseFormationName(b.unit.name)) {
-      contacts.push({
-        road: road.road, town,
-        lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2,
-        from: a.unit.name, fromLith: a.unit.lith,
-        to: b.unit.name, toLith: b.unit.lith,
-        spanMiles: (Math.hypot(b.lat - a.lat, b.lon - a.lon) * 69)
-      });
+async function findContactsForRoad(road, town, scan) {
+  const runs = samplesAlongRoad(road);
+  const all = runs.flat();
+  const units = new Array(all.length);
+  let done = 0, failed = 0, next = 0;
+  // Up to 4 checks at once instead of one at a time.
+  async function worker() {
+    while (next < all.length) {
+      if (scan && scan.cancelled) return;
+      const i = next++;
+      const u = await fetchGeoUnit(all[i][0], all[i][1]);
+      if (u && u.error) { failed++; units[i] = null; } else units[i] = u;
+      done++;
+      setProgress('Checking ' + road.road + ' — point ' + done + ' of ' + all.length + '...');
+      await new Promise(r => setTimeout(r, 120));
     }
   }
-  return contacts;
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  const contacts = [];
+  let k = 0;
+  for (const run of runs) {
+    // Compare neighbors only within one continuous stretch of road.
+    for (let i = 1; i < run.length; i++) {
+      const a = { lat: run[i-1][0], lon: run[i-1][1], unit: units[k + i - 1] };
+      const b = { lat: run[i][0], lon: run[i][1], unit: units[k + i] };
+      if (a.unit && b.unit && a.unit.name && b.unit.name && a.unit.name !== b.unit.name &&
+          baseFormationName(a.unit.name) !== baseFormationName(b.unit.name)) {
+        contacts.push({
+          road: road.road, town,
+          lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2,
+          from: a.unit.name, fromLith: a.unit.lith,
+          to: b.unit.name, toLith: b.unit.lith,
+          spanMiles: milesBetween(a.lat, a.lon, b.lat, b.lon)
+        });
+      }
+    }
+    k += run.length;
+  }
+  return { contacts, checked: all.length, failed };
 }
 
 function parseRecord(raw) {
@@ -1327,14 +1411,20 @@ WHY: one sentence why this contact is geologically interesting
 
 // Shared by both preset regions and Custom: samples every road for contacts,
 // then writes up the best few. Same cost profile either way.
-async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target) {
+async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target, scan) {
   let allContacts = [];
+  let geoChecked = 0, geoFailed = 0;
   for (const road of roads) {
+    if (scan && scan.cancelled) break;
+    // If the geology server is clearly down, don't keep hammering it.
+    if (geoChecked >= 8 && geoFailed / geoChecked > 0.8) break;
     setProgress('Checking ' + road.road + ' for formation contacts...');
     const town = (wazeTowns && wazeTowns[road.road]) || defaultTown;
-    const contacts = await findContactsForRoad(road, town);
-    allContacts = allContacts.concat(contacts);
+    const r = await findContactsForRoad(road, town, scan);
+    geoChecked += r.checked; geoFailed += r.failed;
+    allContacts = allContacts.concat(r.contacts);
   }
+  const geoDown = geoChecked > 0 && geoFailed / geoChecked > 0.5;
   let written = [];
   if (allContacts.length > 0) {
     allContacts.sort((a, b) => b.spanMiles - a.spanMiles);
@@ -1360,17 +1450,26 @@ async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target) {
     }
     setProgress('Writing up ' + toWrite.length + ' verified contact(s)...');
     for (const c of toWrite) {
+      if (scan && scan.cancelled) break;
       try {
         const h = await writeUpContact(c, target);
         if (h) { h.verified_by = 'map'; written.push(h); }
       } catch (e) { /* skip a failed write-up, keep the rest */ }
     }
   }
-  return { allContacts, written };
+  return { allContacts, written, geoDown };
 }
 
+// Each scan gets its own "scan" object. When the safety cutoff fires it marks
+// that scan cancelled, so its leftover work stops and can't show results,
+// spend the next scan's ticket, or re-enable the button mid-scan.
+let currentScan = null;
 async function runScout() {
   const btn = document.getElementById('scoutBtn');
+  if (currentScan) currentScan.cancelled = true;
+  const scan = { cancelled: false };
+  currentScan = scan;
+  const bail = () => { if (scan.cancelled) throw new Error('cancelled'); };
   btn.disabled = true;
   setStatus('SCANNING...');
   resetUsage();
@@ -1380,6 +1479,7 @@ async function runScout() {
   // per-request timeouts don't catch, this guarantees the button re-enables
   // and an error shows instead of spinning forever.
   const watchdog = setTimeout(async () => {
+    scan.cancelled = true;
     hideLoading();
     const ok = await refundScan();
     showError('This is taking much longer than it should — something likely stalled. Please try again.' + notCharged(ok));
@@ -1406,6 +1506,7 @@ async function runScout() {
       scanState = 'Texas';
       showLoading('READING YOUR REQUEST...', 'Working out where you want to search and what you are hunting for...');
       const parsed = await parseCustomRequest(query);
+      bail();
       // If the AI step fails for any reason, fall back to the raw text as before.
       const place = (parsed && parsed.place) ? parsed.place : query;
       const target = parsed ? parsed.target : '';
@@ -1419,6 +1520,7 @@ async function runScout() {
       }
       showLoading('LOCATING YOUR AREA...', 'Finding coordinates for "' + place + '" and nearby highways...');
       const loc = await geocodeWithFallback(place, parsed ? parsed.town : '');
+      bail();
       if (loc && loc.state) scanState = loc.state;
       if (loc && loc.tooBroad) {
         clearTimeout(watchdog);
@@ -1439,6 +1541,7 @@ async function runScout() {
       const radius = Math.min(30, Math.max(3, Math.round((parsed && parsed.miles) || 20)));
       setProgress('Found it' + (loc.usedQuery && loc.usedQuery !== place ? ' (near ' + loc.usedQuery + ')' : '') + ' — searching for highways and ' + (scanState === 'Texas' ? 'FM/RM roads' : 'numbered roads') + ' within ' + radius + ' miles...');
       const { roads, failed: roadLookupFailed } = await fetchNearbyHighways(loc.lat, loc.lon, radius);
+      bail();
       if (roads.length === 0) {
         clearTimeout(watchdog);
         hideLoading();
@@ -1450,16 +1553,19 @@ async function runScout() {
         return;
       }
       showLoading('READING REAL ' + geoSource() + ' GEOLOGIC MAP...', 'Sampling ' + roads.length + ' road(s) near "' + place + '" — 20-40 seconds');
-      const { allContacts, written } = await scanRoadsForHotspots(roads, (parsed && parsed.town) || place, {}, target);
+      const { allContacts, written, geoDown } = await scanRoadsForHotspots(roads, (parsed && parsed.town) || place, {}, target, scan);
+      bail();
 
       clearTimeout(watchdog);
       hideLoading();
       if (written.length === 0) {
         const ok = await refundScan();
-        showError((allContacts.length === 0
+        showError((geoDown
+          ? 'The free geology-map server is not responding right now. Please try again in a few minutes.'
+          : allContacts.length === 0
           ? 'No formation contacts found along highways near that area this pass. Try again, or a different area.'
           : 'Found real formation contacts but the write-up step failed. Try again.') + notCharged(ok));
-        setStatus(allContacts.length === 0 ? 'NO DATA' : 'ERROR');
+        setStatus(geoDown ? 'SERVER BUSY' : allContacts.length === 0 ? 'NO DATA' : 'ERROR');
       } else {
         printLabel = 'Custom search: ' + place + (target ? ' (' + target + ')' : '');
         renderHotspots(written);
@@ -1496,7 +1602,8 @@ async function runScout() {
       bigbend: 'agate and jasper (in volcanic rocks or gravels/conglomerate eroded from them), cinnabar (only in the Terlingua–Study Butte mercury district)',
       cretaceous: 'ammonites (in Cretaceous limestone, marl or shale), shark teeth (in Cretaceous marl, chalk, shale or sand)'
     };
-    const { allContacts, written } = await scanRoadsForHotspots(rd.roads, rd.label, rd.wazeTowns, presetTargets[region] || '');
+    const { allContacts, written } = await scanRoadsForHotspots(rd.roads, rd.label, rd.wazeTowns, presetTargets[region] || '', scan);
+    bail();
 
     // Curated, hand-confirmed spots always show for this region, regardless
     // of what the live map scan finds this particular click.
@@ -1524,6 +1631,7 @@ async function runScout() {
     }
   } catch (err) {
     clearTimeout(watchdog);
+    if (scan.cancelled) return; // the safety cutoff already handled this scan
     hideLoading();
     showError('Error: ' + err.message + notCharged(await refundScan()));
     setStatus('ERROR');
