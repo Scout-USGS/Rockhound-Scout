@@ -184,7 +184,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 7 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 8 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1357,9 +1357,9 @@ const townCoordCache = {};
 async function townCoords(town) {
   const key = String(town || '').toLowerCase();
   if (!key) return null;
-  if (key in townCoordCache) return townCoordCache[key];
-  const loc = await geocodeLocation(town, scanState);
-  townCoordCache[key] = loc ? { lat: loc.lat, lon: loc.lon } : null;
+  if (!(key in townCoordCache)) {
+    townCoordCache[key] = geocodeLocation(town, scanState).then(loc => loc ? { lat: loc.lat, lon: loc.lon } : null);
+  }
   return townCoordCache[key];
 }
 function milesBetween(lat1, lon1, lat2, lon2) {
@@ -1452,6 +1452,7 @@ WHY: one or two sentences: why this contact is geologically interesting and, fol
     let lv = p.includes('high') ? 2 : p.includes('possible') ? 1 : 0;
     if (drains.length && lv < 2) lv++;
     rec.score = levels[lv];
+    rec.source = geoSource();
     // "nothing notable" means no mineral chips on the card
     rec.minerals = (rec.minerals || []).filter(m => !/^nothing notable\.?$/i.test(String(m).trim()));
   }
@@ -1467,9 +1468,13 @@ async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target, scan)
     if (scan && scan.cancelled) break;
     // If the geology server is clearly down, don't keep hammering it.
     if (geoChecked >= 8 && geoFailed / geoChecked > 0.8) break;
+    // Leave at least ~60s for the write-ups; better fewer roads than no cards.
+    if (timeLeft(scan) < 60000) { scanLog.push('skipped ' + road.road + ' (out of time)'); continue; }
     setProgress('Checking ' + road.road + ' for formation contacts...');
     const town = (wazeTowns && wazeTowns[road.road]) || defaultTown;
+    const tg = Date.now();
     const r = await findContactsForRoad(road, town, scan);
+    logStage('geology ' + road.road + ' (' + r.checked + ' checks, ' + r.failed + ' failed)', tg);
     geoChecked += r.checked; geoFailed += r.failed;
     allContacts = allContacts.concat(r.contacts);
   }
@@ -1498,13 +1503,23 @@ async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target, scan)
       if (!toWrite.includes(c)) toWrite.push(c);
     }
     setProgress('Writing up ' + toWrite.length + ' verified contact(s)...');
-    for (const c of toWrite) {
-      if (scan && scan.cancelled) break;
+    // All write-ups at once instead of one after another. Whatever is done
+    // when time runs out is shown; slower ones are dropped, not waited on.
+    const tw = Date.now();
+    let closed = false, finished = 0;
+    const jobs = toWrite.map(c => (async () => {
+      if (scan && scan.cancelled) return;
       try {
         const h = await writeUpContact(c, target);
-        if (h) { h.verified_by = 'map'; written.push(h); }
+        if (h && !closed) { h.verified_by = 'map'; written.push(h); }
       } catch (e) { /* skip a failed write-up, keep the rest */ }
-    }
+      finished++;
+      if (!closed) setProgress('Writing up verified contacts — ' + finished + ' of ' + toWrite.length + ' done...');
+    })());
+    const wait = Math.max(5000, timeLeft(scan));
+    await Promise.race([Promise.all(jobs), new Promise(r => setTimeout(r, wait))]);
+    closed = true;
+    logStage('write-ups (' + written.length + ' of ' + toWrite.length + ' done)', tw);
   }
   const rank = { hot: 0, warm: 1, cool: 2 };
   written.sort((a, b) => (rank[a.score] ?? 1) - (rank[b.score] ?? 1));
@@ -1515,11 +1530,17 @@ async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target, scan)
 // that scan cancelled, so its leftover work stops and can't show results,
 // spend the next scan's ticket, or re-enable the button mid-scan.
 let currentScan = null;
+// TEST: how long each stage of the scan took, shown if a scan times out.
+let scanLog = [];
+function logStage(label, t0) { scanLog.push(label + ' ' + ((Date.now() - t0) / 1000).toFixed(0) + 's'); }
+function timeLeft(scan) { return scan && scan.deadline ? scan.deadline - Date.now() : Infinity; }
 async function runScout() {
   const btn = document.getElementById('scoutBtn');
   if (currentScan) currentScan.cancelled = true;
-  const scan = { cancelled: false };
+  // Results must be ready by ~150s; the 180s cutoff is only a last resort.
+  const scan = { cancelled: false, deadline: Date.now() + 150000 };
   currentScan = scan;
+  scanLog = [];
   const bail = () => { if (scan.cancelled) throw new Error('cancelled'); };
   btn.disabled = true;
   setStatus('SCANNING...');
@@ -1533,7 +1554,7 @@ async function runScout() {
     scan.cancelled = true;
     hideLoading();
     const ok = await refundScan();
-    showError('This is taking much longer than it should — something likely stalled. Please try again.' + notCharged(ok));
+    showError('This is taking much longer than it should — something likely stalled. Please try again.' + notCharged(ok) + ' [TEST timing — ' + scanLog.join(' | ') + ' | still running at cutoff]');
     setStatus('TIMEOUT');
     document.getElementById('scoutBtn').disabled = false;
   }, 180000);
@@ -1556,8 +1577,10 @@ async function runScout() {
       }
       scanState = 'Texas';
       showLoading('READING YOUR REQUEST...', 'Working out where you want to search and what you are hunting for...');
+      let t0 = Date.now();
       const parsed = await parseCustomRequest(query);
       bail();
+      logStage('read request', t0);
       // If the AI step fails for any reason, fall back to the raw text as before.
       const place = (parsed && parsed.place) ? parsed.place : query;
       const target = parsed ? parsed.target : '';
@@ -1570,8 +1593,10 @@ async function runScout() {
         return;
       }
       showLoading('LOCATING YOUR AREA...', 'Finding coordinates for "' + place + '" and nearby highways...');
+      t0 = Date.now();
       const loc = await geocodeWithFallback(place, parsed ? parsed.town : '');
       bail();
+      logStage('place lookup', t0);
       if (loc && loc.state) scanState = loc.state;
       if (loc && loc.tooBroad) {
         clearTimeout(watchdog);
@@ -1591,8 +1616,10 @@ async function runScout() {
       }
       const radius = Math.min(30, Math.max(3, Math.round((parsed && parsed.miles) || 20)));
       setProgress('Found it' + (loc.usedQuery && loc.usedQuery !== place ? ' (near ' + loc.usedQuery + ')' : '') + ' — searching for highways and ' + (scanState === 'Texas' ? 'FM/RM roads' : 'numbered roads') + ' within ' + radius + ' miles...');
+      t0 = Date.now();
       const { roads, failed: roadLookupFailed } = await fetchNearbyHighways(loc.lat, loc.lon, radius);
       bail();
+      logStage('road lookup (' + roads.length + ' roads)', t0);
       if (roads.length === 0) {
         clearTimeout(watchdog);
         hideLoading();
@@ -1700,6 +1727,7 @@ function restoreLastResults() {
   try {
     if (document.getElementById('results').children.length) return;
     if (document.getElementById('loading').classList.contains('show')) return;
+    if (document.getElementById('errbox').classList.contains('show')) return;
     let raw = null;
     try { raw = localStorage.getItem('lastHotspotsDirect'); } catch (e) {}
     if (!raw) { try { raw = sessionStorage.getItem('lastHotspotsDirect'); } catch (e) {} }
@@ -1755,7 +1783,7 @@ function renderHotspots(spots) {
           '<div style="font-family:\'Barlow\',sans-serif; font-weight:500; font-size:0.64rem; letter-spacing:0.1em; color:#f4b87a; background:rgba(196,98,45,0.12); border:1px solid rgba(196,98,45,0.35); border-radius:2px; padding:5px 10px; margin-bottom:2px; display:inline-block;">📍 KNOWN PRODUCTIVE SITE — CONFIRMED ON-SITE</div>'
           : '') +
         '<div class="contact-strip">' +
-          '<span class="clabel">' + (isOwnerConfirmed ? 'Formation (published sources + owner-confirmed location)' : '✓ Verified Formation Contact — ' + geoSource() + ' Geologic Map') + '</span>' +
+          '<span class="clabel">' + (isOwnerConfirmed ? 'Formation (published sources + owner-confirmed location)' : '✓ Verified Formation Contact — ' + (h.source || 'USGS') + ' Geologic Map') + '</span>' +
           '<span class="cval">' + h.from_formation + ' ▸ ' + h.to_formation + '</span>' +
           (h.contact_location ? '<span style="font-size:0.72rem;color:var(--feldspar);display:block;margin-top:3px;">' + h.contact_location + '</span>' : '') +
         '</div>' +
@@ -1780,7 +1808,7 @@ function renderHotspots(spots) {
         '<div class="why">' + h.why + '</div>' +
         '<div class="src">' + (isOwnerConfirmed
           ? '▸ Location and directions confirmed on-site by the app\'s owner; age and mineralogy from independently published geology sources'
-          : '▸ Formation contact verified directly against ' + geoSource() + ' geologic map data; check both shoulders near the marked stretch') + '</div>' +
+          : '▸ Formation contact verified directly against ' + (h.source || 'USGS') + ' geologic map data; check both shoulders near the marked stretch') + '</div>' +
       '</div>';
     c.appendChild(card);
   });
