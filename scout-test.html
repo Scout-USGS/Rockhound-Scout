@@ -227,7 +227,7 @@
   </div>
   <div id="customLocWrap">
     <div class="slabel">▸ Describe your area</div>
-    <input type="text" class="notes armed" id="customLoc" placeholder='e.g. "petrified wood near Bryan, TX" or "agate near Quartzsite, AZ" — a town, hotel or address works too; searches ~20 miles around it'>
+    <input type="text" class="notes armed" id="customLoc" placeholder='e.g. "petrified wood near Bryan, TX" or "agate near Quartzsite, AZ" — a town, hotel or address works too; searches ~20 miles around it unless you say otherwise (e.g. "within 10 miles")'>
   </div>
   <hr>
   <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
@@ -1063,10 +1063,11 @@ async function parseCustomRequest(text) {
   const clean = text.replace(/[\r\n"]+/g, ' ').slice(0, 300);
   const prompt = 'A rockhounder typed this into a search box: "' + clean + '"\n' +
     'Extract three things and reply with ONLY a JSON object, no other text:\n' +
-    '{"place": "...", "town": "...", "target": "..."}\n' +
+    '{"place": "...", "town": "...", "target": "...", "miles": 0}\n' +
     '- place: the location as a clean geocodable string, ideally "City, ST" with the two-letter US state (a town, hotel, address, or landmark). Include the state only if the user named it or the place is unmistakable; if no state is given, leave the state off rather than guessing. Use "" if no place is given.\n' +
     '- town: the nearest city or town to that place, as "Town, ST" using the same state rule (for an address, the town it is in or next to). Use "" if unknown.\n' +
-    '- target: what they want to find, with obvious typos corrected (e.g. "agatized petrified wood"). Use "" if none is given.';
+    '- target: what they want to find, with obvious typos corrected (e.g. "agatized petrified wood"). Use "" if none is given.\n' +
+    '- miles: the search distance in miles if the user asked for one (e.g. "within 10 miles" gives 10), otherwise 0.';
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 15000);
   try {
@@ -1087,7 +1088,8 @@ async function parseCustomRequest(text) {
     return {
       place: String(j.place || '').trim().slice(0, 120),
       town: String(j.town || '').trim().slice(0, 80),
-      target: String(j.target || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 80)
+      target: String(j.target || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 80),
+      miles: Number(j.miles) || 0
     };
   } catch (e) {
     return null;
@@ -1145,7 +1147,7 @@ async function fetchNearbyHighways(lat, lon, radiusMiles) {
   for (const tier of tiers) {
     if (roads.length >= MAX_ROADS) break;
     const q = `[out:json][timeout:25];way["highway"~"${tier}"]["ref"](${bbox});out tags geom;`;
-    const j = await overpassQuery(q, 9000);
+    const j = await overpassQuery(q, 18000);
     if (!j) break; // no server answered -- don't spend more time on the FM-road pass
     answered = true;
     const byRef = {};
@@ -1154,7 +1156,10 @@ async function fetchNearbyHighways(lat, lon, radiusMiles) {
       const ref = el.tags.ref.split(';')[0].trim();
       if (!ref || used.has(ref)) continue;
       if (!byRef[ref]) byRef[ref] = [];
-      for (const g of el.geometry) byRef[ref].push([g.lat, g.lon]);
+      // Only keep road points actually inside the requested distance.
+      for (const g of el.geometry) {
+        if (g && milesBetween(lat, lon, g.lat, g.lon) <= radiusMiles) byRef[ref].push([g.lat, g.lon]);
+      }
     }
     // Closest road to the search point first, so the 3-road cap keeps the
     // most relevant roads instead of whichever the server listed first.
@@ -1163,6 +1168,7 @@ async function fetchNearbyHighways(lat, lon, radiusMiles) {
     for (const ref of refs) {
       if (roads.length >= MAX_ROADS) break;
       let pts = byRef[ref];
+      if (pts.length < 2) continue;
       if (pts.length > 5) {
         const step = Math.max(1, Math.floor(pts.length / 5));
         pts = pts.filter((_, i) => i % step === 0).slice(0, 5);
@@ -1379,7 +1385,7 @@ async function runScout() {
     showError('This is taking much longer than it should — something likely stalled. Please try again.' + notCharged(ok));
     setStatus('TIMEOUT');
     document.getElementById('scoutBtn').disabled = false;
-  }, 150000);
+  }, 180000);
 
   try {
     if (region === 'custom') {
@@ -1430,14 +1436,15 @@ async function runScout() {
         btn.disabled = false;
         return;
       }
-      setProgress('Found it' + (loc.usedQuery && loc.usedQuery !== place ? ' (near ' + loc.usedQuery + ')' : '') + ' — searching for highways and ' + (scanState === 'Texas' ? 'FM/RM roads' : 'numbered roads') + ' within 20 miles...');
-      const { roads, failed: roadLookupFailed } = await fetchNearbyHighways(loc.lat, loc.lon, 20);
+      const radius = Math.min(30, Math.max(3, Math.round((parsed && parsed.miles) || 20)));
+      setProgress('Found it' + (loc.usedQuery && loc.usedQuery !== place ? ' (near ' + loc.usedQuery + ')' : '') + ' — searching for highways and ' + (scanState === 'Texas' ? 'FM/RM roads' : 'numbered roads') + ' within ' + radius + ' miles...');
+      const { roads, failed: roadLookupFailed } = await fetchNearbyHighways(loc.lat, loc.lon, radius);
       if (roads.length === 0) {
         clearTimeout(watchdog);
         hideLoading();
         showError((roadLookupFailed
           ? 'The free road-map server is busy right now and did not answer. Please try again in a minute.'
-          : 'No numbered highways' + (scanState === 'Texas' ? ' or FM/RM roads' : ' or roads') + ' found within 20 miles of that area. Try a nearby town name.') + notCharged(await refundScan()));
+          : 'No numbered highways' + (scanState === 'Texas' ? ' or FM/RM roads' : ' or roads') + ' found within ' + radius + ' miles of that area. Try a larger distance or a nearby town name.') + notCharged(await refundScan()));
         setStatus(roadLookupFailed ? 'SERVER BUSY' : 'NO ROADS');
         btn.disabled = false;
         return;
