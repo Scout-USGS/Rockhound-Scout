@@ -73,6 +73,7 @@
   @keyframes slideIn { to{opacity:1;transform:translateY(0)} from{opacity:0;transform:translateY(10px)} }
   .htop { padding:10px 14px; background:rgba(30,24,20,0.65); border-bottom:1px solid rgba(139,111,78,0.2); display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap; }
   .score-hot { font-family:'Barlow',sans-serif; font-weight:500; font-size:0.6rem; padding:3px 8px; border-radius:2px; background:rgba(196,98,45,0.4); color:#f4b87a; border:1px solid rgba(196,98,45,0.6); }
+  .score-cool { font-family:'Barlow',sans-serif; font-weight:500; font-size:0.6rem; padding:3px 8px; border-radius:2px; background:rgba(140,140,140,0.15); color:#b9b2a8; border:1px solid rgba(140,140,140,0.4); }
   .score-warm { font-family:'Barlow',sans-serif; font-weight:500; font-size:0.6rem; padding:3px 8px; border-radius:2px; background:rgba(61,158,140,0.3); color:#7ec49a; border:1px solid rgba(61,158,140,0.5); }
   .hname { font-weight:600; font-size:0.9rem; color:var(--quartz); flex:1; min-width:0; line-height:1.3; }
   .hbody { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
@@ -171,7 +172,7 @@
     .hcard ~ .hcard { break-before:page; page-break-before:always; }
     .hcard, .hcard p, .hcard span, .hcard div { color:#111 !important; }
     .htop { background:#f1ece2 !important; border-bottom:1px solid #bbb !important; }
-    .score-hot, .score-warm { background:#fff !important; color:#111 !important; border:1px solid #777 !important; }
+    .score-hot, .score-warm, .score-cool { background:#fff !important; color:#111 !important; border:1px solid #777 !important; }
     .contact-strip, .drain-strip, .dir-strip, .waze-box { background:#f7f4ee !important; border:1px solid #c9c2b4 !important; border-left:3px solid #c4622d !important; }
     .hcard .field label, .hcard .contact-strip .clabel, .hcard .drain-strip .dlabel, .hcard .dir-strip .dirlabel, .hcard .waze-box .wlabel { color:#7a3510 !important; }
     .hcard .hbody > div[style] { color:#7a3510 !important; background:#fff !important; border:1px solid #c4622d !important; }
@@ -183,7 +184,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 7 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1341,6 +1342,7 @@ function parseRecord(raw) {
   return {
     name: obj.NAME || '', road: obj.ROAD || '', town: obj.TOWN || '',
     score: (obj.SCORE || 'warm').toLowerCase().includes('hot') ? 'hot' : 'warm',
+    potential: obj.POTENTIAL || '',
     from_formation: obj.FROM || '', to_formation: obj.TO || '',
     contact_location: obj.WHERE || '',
     drainages: obj.DRAINAGES ? obj.DRAINAGES.split(',').map(s => s.trim()).filter(Boolean) : [],
@@ -1398,20 +1400,28 @@ Formation A: ${c.from} (${c.fromLith})
 Formation B: ${c.to} (${c.toLith})
 The contact falls somewhere within a ~${span}-mile stretch centered near lat ${c.lat.toFixed(4)}, lon ${c.lon.toFixed(4)} — the exact contact line is not resolved at this map's scale, so describe it as a general stretch, not an exact spot.
 ${drains.length ? 'Named waterways within ~1.5 miles: ' + drains.join(', ') : 'No named waterway found nearby.'}
-${distFact ? distFact + '\n' : ''}${target ? '\nThe hunter is specifically looking for: ' + target + '. For each of these: if these formations are documented to produce it, list it in MINERALS. If not documented here but the rock type commonly hosts it (for example agate or jasper in volcanic rocks such as basalt, andesite, rhyolite or tuff, or in gravels/conglomerate/alluvium derived from volcanic rocks), list it in MINERALS with "(possible)" after the name. If the rock type does not normally host it (for example agate in plain limestone or shale), do not list it. Where a target has a rule in parentheses, follow that rule exactly — judge ONLY by the rock types of Formation A and Formation B above, never by the general region or nearby areas. In WHY, say honestly that it is documented, possible, or unlikely here — never promise it is there.\n' : ''}
+${distFact ? distFact + '\n' : ''}
+${target
+  ? 'The hunter is specifically looking for: ' + target + '. Where a target has a rule in parentheses, follow that rule exactly.'
+  : 'The hunter has no specific target — judge general collecting interest: agate, jasper, chert/flint, petrified wood, crystals, geodes, fossils, iron or other ore minerals, or gem gravels.'}
+HONESTY RULES (judge ONLY by Formation A and Formation B and their rock types above — never by the general region, nearby areas, or what is famous elsewhere in the state):
+- MINERALS: list ONLY minerals, rocks or fossils that these formations are documented to produce, or that their rock type commonly hosts. Mark anything not documented for these specific formations with "(possible)" after the name. Never pad the list with common filler minerals (calcite, quartz, pyrite, chlorite and the like) just to fill space. 0 to 4 items; if the hunter has a target and it qualifies, list it first. If nothing collectible is realistic, write exactly: nothing notable.
+- POTENTIAL: "high" only if at least one formation is documented to produce ${target ? 'the target' : 'collectible material'}; "possible" if the rock type commonly hosts it but it is not documented for these formations; "low" if the rock type does not normally host it. (Example: agate and jasper are commonly hosted by volcanic rocks such as basalt, andesite, rhyolite or tuff, or gravels eroded from them — but not by plain limestone or shale.)
+- WHY: say honestly whether it is documented, possible, or unlikely here — never promise it is there. State a geologic age (Ordovician, Silurian, Cretaceous, etc.) only for a formation you are confident of, and give each formation its own correct age; if unsure, leave ages out.
+
 Write ONE hotspot record in EXACTLY this format (no markdown, no extra commentary):
 NAME: short catchy name for this contact
 ROAD: ${c.road}
 TOWN: ${c.town}
-SCORE: ${drains.length ? 'hot' : 'warm'}
+POTENTIAL: high, possible, or low (one word)
 FROM: ${c.from}
 TO: ${c.to}
 WHERE: general stretch description, not an exact mile marker
 DRAINAGES: ${drains.join(', ')}
-MINERALS: 3-4 plausible minerals typically found at a contact like this between these two rock types
+MINERALS: follow the MINERALS rule above (comma-separated, or "nothing notable")
 DIRECTIONS: plain english driving directions from ${c.town}, describing the general stretch and telling the reader to check both shoulders since exact side is not verified. Name only ${c.road} and ${c.town} — never invent or name any other street, turn or landmark.
 TRUCK: what to watch for from the truck window
-WHY: one sentence why this contact is geologically interesting
+WHY: one or two sentences: why this contact is geologically interesting and, following the WHY rule above, how likely the hunter is to find something here
 ---RECORD---`;
 
   const ctrl = new AbortController();
@@ -1432,7 +1442,20 @@ WHY: one sentence why this contact is geologically interesting
   if (data.error) throw new Error(data.error.message);
   trackUsage(data);
   const raw = data.content.map(b => b.text || '').join('').trim();
-  return parseRecord(raw);
+  const rec = parseRecord(raw);
+  if (rec) {
+    // v7: score comes from the rock. A named creek nearby (gravel bars,
+    // washed-out material) bumps it up one level, but can't make a card
+    // HOT unless the rock itself is at least "possible".
+    const levels = ['cool', 'warm', 'hot'];
+    const p = String(rec.potential || '').toLowerCase();
+    let lv = p.includes('high') ? 2 : p.includes('possible') ? 1 : 0;
+    if (drains.length && lv < 2) lv++;
+    rec.score = levels[lv];
+    // "nothing notable" means no mineral chips on the card
+    rec.minerals = (rec.minerals || []).filter(m => !/^nothing notable\.?$/i.test(String(m).trim()));
+  }
+  return rec;
 }
 
 // Shared by both preset regions and Custom: samples every road for contacts,
@@ -1483,6 +1506,8 @@ async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target, scan)
       } catch (e) { /* skip a failed write-up, keep the rest */ }
     }
   }
+  const rank = { hot: 0, warm: 1, cool: 2 };
+  written.sort((a, b) => (rank[a.score] ?? 1) - (rank[b.score] ?? 1));
   return { allContacts, written, geoDown };
 }
 
@@ -1712,7 +1737,9 @@ function renderHotspots(spots) {
     c.appendChild(bar);
   }
   spots.forEach((h, i) => {
-    const isHot = h.score === 'hot';
+    const badge = h.score === 'hot' ? ['score-hot', '🔥 HOTSPOT']
+                : h.score === 'cool' ? ['score-cool', '◌ LONG SHOT']
+                : ['score-warm', '◉ WARM'];
     const drains = h.drainages || [];
     const isOwnerConfirmed = h.verified_by === 'owner';
     const card = document.createElement('div');
@@ -1720,7 +1747,7 @@ function renderHotspots(spots) {
     card.style.animationDelay = (i * 0.1) + 's';
     card.innerHTML =
       '<div class="htop">' +
-        '<span class="' + (isHot ? 'score-hot' : 'score-warm') + '">' + (isHot ? '🔥 HOTSPOT' : '◉ WARM') + '</span>' +
+        '<span class="' + badge[0] + '">' + badge[1] + '</span>' +
         '<span class="hname">' + h.name + '</span>' +
       '</div>' +
       '<div class="hbody">' +
