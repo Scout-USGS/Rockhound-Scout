@@ -184,7 +184,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 9 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 10 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1259,9 +1259,18 @@ async function tigerLayerIds() {
   const r = await fetchWithTimeout(TIGER_BASE + '?f=json', 12000);
   if (!r.ok) throw new Error('HTTP ' + r.status);
   const j = await r.json();
-  const find = rx => ((j.layers || []).find(l => rx.test(l.name || '') && !/label/i.test(l.name || '')) || {}).id;
-  tigerLayers = { primary: find(/^primary roads$/i), secondary: find(/^secondary roads$/i) };
-  if (tigerLayers.secondary == null) { tigerLayers = null; throw new Error('road layers not found'); }
+  // Real map layers only (not label layers or folder-style group layers).
+  const layers = (j.layers || []).filter(l => !/label|annotation/i.test(l.name || '') && !/group/i.test(l.type || ''));
+  const find = test => (layers.find(l => test(String(l.name || ''))) || {}).id;
+  let secondary = find(n => /secondary/i.test(n));
+  let primary = find(n => /primary/i.test(n) && !/secondary/i.test(n));
+  if (secondary == null && primary == null) {
+    // TEST: show what the Census service actually calls its layers
+    throw new Error('road layers not found; layers are: ' + (j.layers || []).map(l => l.id + '=' + l.name + (l.type ? ' (' + l.type + ')' : '')).slice(0, 25).join(', '));
+  }
+  if (secondary == null) { secondary = primary; primary = null; }
+  if (primary === secondary) primary = null;
+  tigerLayers = { primary, secondary };
   return tigerLayers;
 }
 async function tigerQuery(layerId, lat, lon, radiusMiles) {
