@@ -1,99 +1,484 @@
 {
-  "version": 1,
-  "about": "Rockhound Scout field list: which FORMATIONS produce which materials, by state. Not a list of spots. 'high' = documented producer; 'possible' = may contain it. Rows marked authoritative (JT's field knowledge) override the AI; researched rows can only raise the AI's rating. Patterns are case-insensitive text patterns; | means 'or'.",
-  "generalNote": "Public land rules (most BLM land): reasonable personal amounts of rocks, minerals and common invertebrate or plant fossils; petrified wood up to 25 lb plus 1 piece per day and 250 lb per year; no vertebrate fossils (bones, teeth, tracks); no collecting in national parks, developed recreation sites, or on mining claims without the claimholder's permission.",
-  "stateNotes": {
-    "Hawaii": "Hawaii is one of the most restrictive states for collecting. State rules prohibit taking sand, rocks, dead coral or other beach deposits from the shoreline (shells, driftwood and beach glass are allowed). Collecting is prohibited in Hawaii Volcanoes National Park and at Papakolea green-sand beach, and most zeolite outcrops are on private or military land. Many visitors photograph rather than collect."
+ "version": 2,
+ "about": "Rockhound Scout field list: which FORMATIONS produce which materials, by state. Not a list of spots. 'high' = documented producer; 'possible' = may contain it. Rows marked authoritative (JT's field knowledge) override the AI; researched rows can only raise the AI's rating. Patterns are case-insensitive text patterns; | means 'or'. Optional 'areas' = [[lat, lon, miles], ...] limits a row to searches near those places. 'review' marks rows that need a stronger source before launch.",
+ "generalNote": "Public land rules (most BLM land): reasonable personal amounts of rocks, minerals and common invertebrate or plant fossils; petrified wood up to 25 lb plus 1 piece per day and 250 lb per year; no vertebrate fossils (bones, teeth, tracks); no collecting in national parks, developed recreation sites, or on mining claims without the claimholder's permission.",
+ "stateNotes": {
+  "Hawaii": "Hawaii is one of the most restrictive states for collecting. State rules prohibit taking sand, rocks, dead coral or other beach deposits from the shoreline (shells, driftwood and beach glass are allowed). Collecting is prohibited in Hawaii Volcanoes National Park and at Papakolea green-sand beach, and most zeolite outcrops are on private or military land. Many visitors photograph rather than collect.",
+  "Alaska": "No rock, mineral or fossil collecting in national parks (the Kobuk jade country borders Gates of the Arctic). Alaska Native corporation land is private. Never pan or dig on an active mining claim without the claimholder's written permission; recreational panning is allowed on most open state and BLM land.",
+  "Nevada": "Much of Nevada is BLM land open to casual collecting, but mining claims are everywhere — you can't collect on an active claim without the claimant's permission. Most turquoise mines are closed to the public.",
+  "Colorado": "Much of the Pikes Peak crystal country is National Forest, but active mining claims are common and some areas (like Crystal Park) are largely private — never dig on a claim without permission."
+ },
+ "rows": [
+  {
+   "state": "Texas",
+   "authoritative": true,
+   "label": "petrified wood",
+   "target": "petrified|palm ?wood|pet ?wood|agati[sz]ed wood|opali[sz]ed wood|silicified wood|fossil(ized)? wood",
+   "high": "oakville|fleming",
+   "possible": "catahoula|jackson|whitsett|manning|wellborn|caddell",
+   "sources": [
+    "JT field knowledge"
+   ]
   },
-  "rows": [
-    { "state": "Texas", "authoritative": true, "label": "petrified wood",
-      "target": "petrified|palm ?wood|pet ?wood|agati[sz]ed wood|opali[sz]ed wood|silicified wood|fossil(ized)? wood",
-      "high": "oakville|fleming", "possible": "catahoula|jackson|whitsett|manning|wellborn|caddell",
-      "sources": ["JT field knowledge"] },
-    { "state": "Texas", "authoritative": true, "label": "fossils",
-      "target": "fossil(?!(ized)? wood)|ammonite|shark|teeth|tooth|echinoid|sea urchin|oyster|clam|shells?\\b|gastropod|snail|rudist|trilobite|crinoid|dinosaur",
-      "high": "glen rose|walnut|comanche peak|del rio|grayson|austin chalk|eagle ford|duck creek|kiamichi|fort worth|goodland|weno|pawpaw|main street|denton|corsicana|kemp|kincaid|cow creek",
-      "possible": "edwards|kainer|person|georgetown|buda|fredericksburg|washita|segovia|fort terrett|devils river|pecan gap|ozan|taylor|navarro|hensell",
-      "sources": ["JT field knowledge"] },
-    { "state": "Texas", "authoritative": true, "label": "chert/flint",
-      "target": "chert|flint", "high": "edwards|kainer|person|segovia|fort terrett|devils river", "possible": "georgetown|uvalde gravel|leona",
-      "sources": ["JT field knowledge"] },
-
-    { "state": "New York", "label": "Herkimer diamonds (quartz crystals)",
-      "target": "herkimer|double.?terminated|quartz crystals?", "high": "little falls", "possible": "galway|theresa|hoyt|beekmantown",
-      "sources": ["https://en.wikipedia.org/wiki/Little_Falls_Formation", "https://herkimerhistory.com/HostRock.html", "https://ngmdb.usgs.gov/Geolex/Units/LittleFalls_2495.html"] },
-
-    { "state": "Hawaii", "label": "olivine (peridot)",
-      "target": "olivine|peridot|green sand", "high": "picrit|ankaramite|oceanite",
-      "possible": "basalt|volcanics|lava|kau|puna|hilina|pahala|kilauea|mauna loa|mauna kea|hualalai|kohala|koolau|waianae|honolulu|napali|koloa|haleakala|kula|hana|honomanu",
-      "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-hawaii"] },
-    { "state": "Hawaii", "label": "zeolite crystals",
-      "target": "zeolite|chabazite|phillipsite|analcime|natrolite|crystals?", "possible": "koolau|waianae|napali|makaweli|olokele|haupu",
-      "note": "Zeolites fill gas pockets in weathered basalt on the older islands (mainly Oahu and Kauai); most known outcrops are on private or military land.",
-      "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-hawaii"] },
-
-    { "state": "Arizona", "label": "petrified wood",
-      "target": "petrified|pet ?wood|silicified wood|fossil(ized)? wood",
-      "high": "chinle|shinarump|sonsela|petrified forest member|blue mesa|owl rock|painted desert member",
-      "note": "No collecting in Petrified Forest National Park. On BLM land: up to 25 lb plus 1 piece per day, 250 lb per year.",
-      "sources": ["https://azgs.arizona.edu/petrified-wood-petrified-forest-national-park-arizona", "https://www.blm.gov/learn/can-i-keep-this"] },
-    { "state": "Arizona", "label": "Apache tears (obsidian)",
-      "target": "apache tear|obsidian", "high": "perlite", "possible": "apache leap|rhyolite|vitrophyre|obsidian",
-      "sources": ["https://en.wikipedia.org/wiki/Apache_tears"] },
-
-    { "state": "Oregon", "label": "thundereggs",
-      "target": "thunderegg|geode", "possible": "john day|clarno|rhyolite|ash-flow|tuff",
-      "note": "Many famous thunderegg beds are fee-dig ranches (e.g. Priday, Richardson's); some public sites need permits — check before digging.",
-      "sources": ["https://rockhounding.org/rockhounding-articles/what-are-thundereggs"] },
-
-    { "state": "Arkansas", "label": "quartz crystals",
-      "target": "quartz|crystals?", "high": "blakely|crystal mountain",
-      "possible": "mazarn|womble|bigfork|polk creek|missouri mountain|arkansas novaculite|stanley|atoka|jackfork|collier",
-      "note": "Many Ouachita crystal sites are pay-to-dig mines near Mount Ida and Jessieville — call ahead for fees.",
-      "sources": ["https://www.geology.arkansas.gov/docs/pdf/education/arkansas-quartz-crystals.pdf"] },
-    { "state": "Arkansas", "label": "diamonds",
-      "target": "diamond", "high": "lamproite|prairie creek",
-      "note": "Crater of Diamonds State Park: pay a small fee and keep what you find.",
-      "sources": ["https://en.wikipedia.org/wiki/Crater_of_Diamonds_State_Park"] },
-
-    { "state": "Minnesota", "label": "Lake Superior agates",
-      "target": "agate|lake superior", "high": "north shore volcanic|portage lake|keweenawan|chengwatana",
-      "possible": "till|outwash|glacial|drift|superior lobe|moraine|gravel",
-      "note": "Agates formed in the North Shore lava flows; glaciers spread them through gravels across NE and central Minnesota.",
-      "sources": ["https://dnr.state.mn.us/education/geology/digging/agate.html"] },
-
-    { "state": "Iowa", "label": "geodes", "target": "geode", "high": "warsaw", "possible": "keokuk",
-      "sources": ["https://en.wikipedia.org/wiki/Warsaw_Formation", "https://rockhounding.org/rockhounding-articles/where-to-find-geodes-in-iowa"] },
-    { "state": "Missouri", "label": "geodes", "target": "geode", "high": "warsaw", "possible": "keokuk",
-      "sources": ["https://en.wikipedia.org/wiki/Warsaw_Formation"] },
-    { "state": "Illinois", "label": "geodes", "target": "geode", "high": "warsaw", "possible": "keokuk",
-      "sources": ["https://en.wikipedia.org/wiki/Warsaw_Formation"] },
-    { "state": "Iowa", "label": "crinoid fossils", "target": "fossil|crinoid", "high": "burlington",
-      "sources": ["https://en.wikipedia.org/wiki/Burlington_Limestone"] },
-    { "state": "Missouri", "label": "crinoid fossils", "target": "fossil|crinoid", "high": "burlington",
-      "sources": ["https://en.wikipedia.org/wiki/Burlington_Limestone"] },
-    { "state": "Illinois", "label": "crinoid fossils", "target": "fossil|crinoid", "high": "burlington",
-      "sources": ["https://en.wikipedia.org/wiki/Burlington_Limestone"] },
-
-    { "state": "Utah", "label": "trilobites", "target": "trilobite|fossil", "high": "wheeler", "possible": "marjum",
-      "sources": ["https://en.wikipedia.org/wiki/Wheeler_Shale"] },
-    { "state": "Utah", "label": "topaz crystals", "target": "topaz|crystals?", "high": "topaz mountain", "possible": "rhyolite",
-      "note": "Topaz Mountain is a BLM rockhound area; topaz fades from amber to clear in sunlight.",
-      "sources": ["https://geology.utah.gov/popular/rocks-minerals/rock-mineral-collecting-sites/topaz-at-topaz-mountain/"] },
-    { "state": "Utah", "label": "dinosaur bone (look, don't take on public land)", "target": "dinosaur|bone", "high": "morrison",
-      "note": "Vertebrate fossils such as dinosaur bone can't be collected on federal land; only on private land with the owner's permission.",
-      "sources": ["https://www.blm.gov/learn/can-i-keep-this"] },
-
-    { "state": "New Mexico", "label": "thundereggs, agate and jasper", "target": "thunderegg|geode|agate|jasper|perlite|apache tear|obsidian",
-      "high": "little florida", "possible": "rhyolite|tuff",
-      "note": "Rockhound State Park (near Deming) allows collecting up to 15 lb per visitor; no collecting for resale.",
-      "sources": ["https://geoinfo.nmt.edu/tour/state/rockhound/home.html"] },
-    { "state": "New Mexico", "label": "petrified wood", "target": "petrified|pet ?wood|silicified wood|fossil(ized)? wood",
-      "high": "chinle|shinarump|petrified forest member",
-      "sources": ["https://azgs.arizona.edu/petrified-wood-petrified-forest-national-park-arizona", "https://www.blm.gov/learn/can-i-keep-this"] },
-
-    { "state": "Oklahoma", "label": "barite rose rocks", "target": "barite|rose rock|desert rose", "high": "garber",
-      "note": "Rose rocks occur mainly from just northeast of Lexington to north of Lake Stanley Draper, around Norman.",
-      "sources": ["https://ou.edu/ogs/generalinterest/rose_rocks"] }
-  ]
+  {
+   "state": "Texas",
+   "authoritative": true,
+   "label": "fossils",
+   "target": "fossil(?!(ized)? wood)|ammonite|shark|teeth|tooth|echinoid|sea urchin|oyster|clam|shells?\\b|gastropod|snail|rudist|trilobite|crinoid|dinosaur",
+   "high": "glen rose|walnut|comanche peak|del rio|grayson|austin chalk|eagle ford|duck creek|kiamichi|fort worth|goodland|weno|pawpaw|main street|denton|corsicana|kemp|kincaid|cow creek",
+   "possible": "edwards|kainer|person|georgetown|buda|fredericksburg|washita|segovia|fort terrett|devils river|pecan gap|ozan|taylor|navarro|hensell",
+   "sources": [
+    "JT field knowledge"
+   ]
+  },
+  {
+   "state": "Texas",
+   "authoritative": true,
+   "label": "chert/flint",
+   "target": "chert|flint",
+   "high": "edwards|kainer|person|segovia|fort terrett|devils river",
+   "possible": "georgetown|uvalde gravel|leona",
+   "sources": [
+    "JT field knowledge"
+   ]
+  },
+  {
+   "state": "New York",
+   "label": "Herkimer diamonds (quartz crystals)",
+   "target": "herkimer|double.?terminated|quartz crystals?",
+   "high": "little falls",
+   "possible": "galway|theresa|hoyt|beekmantown",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Little_Falls_Formation",
+    "https://herkimerhistory.com/HostRock.html",
+    "https://ngmdb.usgs.gov/Geolex/Units/LittleFalls_2495.html"
+   ]
+  },
+  {
+   "state": "Hawaii",
+   "label": "olivine (peridot)",
+   "target": "olivine|peridot|green sand",
+   "high": "picrit|ankaramite|oceanite",
+   "possible": "basalt|volcanics|lava|kau|puna|hilina|pahala|kilauea|mauna loa|mauna kea|hualalai|kohala|koolau|waianae|honolulu|napali|koloa|haleakala|kula|hana|honomanu",
+   "sources": [
+    "https://rockhounding.org/rockhounding-articles/gem-hunting-in-hawaii"
+   ]
+  },
+  {
+   "state": "Hawaii",
+   "label": "zeolite crystals",
+   "target": "zeolite|chabazite|phillipsite|analcime|natrolite|crystals?",
+   "possible": "koolau|waianae|napali|makaweli|olokele|haupu",
+   "note": "Zeolites fill gas pockets in weathered basalt on the older islands (mainly Oahu and Kauai); most known outcrops are on private or military land.",
+   "sources": [
+    "https://rockhounding.org/rockhounding-articles/gem-hunting-in-hawaii"
+   ]
+  },
+  {
+   "state": "Arizona",
+   "label": "petrified wood",
+   "target": "petrified|pet ?wood|silicified wood|fossil(ized)? wood",
+   "high": "chinle|shinarump|sonsela|petrified forest member|blue mesa|owl rock|painted desert member",
+   "note": "No collecting in Petrified Forest National Park. On BLM land: up to 25 lb plus 1 piece per day, 250 lb per year.",
+   "sources": [
+    "https://azgs.arizona.edu/petrified-wood-petrified-forest-national-park-arizona",
+    "https://www.blm.gov/learn/can-i-keep-this"
+   ]
+  },
+  {
+   "state": "Arizona",
+   "label": "Apache tears (obsidian)",
+   "target": "apache tear|obsidian",
+   "high": "perlite",
+   "possible": "apache leap|rhyolite|vitrophyre|obsidian",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Apache_tears"
+   ]
+  },
+  {
+   "state": "Oregon",
+   "label": "thundereggs",
+   "target": "thunderegg|geode",
+   "possible": "john day|clarno|rhyolite|ash-flow|tuff",
+   "note": "Many famous thunderegg beds are fee-dig ranches (e.g. Priday, Richardson's); some public sites need permits — check before digging.",
+   "sources": [
+    "https://rockhounding.org/rockhounding-articles/what-are-thundereggs"
+   ]
+  },
+  {
+   "state": "Arkansas",
+   "label": "quartz crystals",
+   "target": "quartz|crystals?",
+   "high": "blakely|crystal mountain",
+   "possible": "mazarn|womble|bigfork|polk creek|missouri mountain|arkansas novaculite|stanley|atoka|jackfork|collier",
+   "note": "Many Ouachita crystal sites are pay-to-dig mines near Mount Ida and Jessieville — call ahead for fees.",
+   "sources": [
+    "https://www.geology.arkansas.gov/docs/pdf/education/arkansas-quartz-crystals.pdf"
+   ]
+  },
+  {
+   "state": "Arkansas",
+   "label": "diamonds",
+   "target": "diamond",
+   "high": "lamproite|prairie creek",
+   "note": "Crater of Diamonds State Park: pay a small fee and keep what you find.",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Crater_of_Diamonds_State_Park"
+   ]
+  },
+  {
+   "state": "Minnesota",
+   "label": "Lake Superior agates",
+   "target": "agate|lake superior",
+   "high": "north shore volcanic|portage lake|keweenawan|chengwatana",
+   "possible": "till|outwash|glacial|drift|superior lobe|moraine|gravel",
+   "note": "Agates formed in the North Shore lava flows; glaciers spread them through gravels across NE and central Minnesota.",
+   "sources": [
+    "https://dnr.state.mn.us/education/geology/digging/agate.html"
+   ]
+  },
+  {
+   "state": "Iowa",
+   "label": "geodes",
+   "target": "geode",
+   "high": "warsaw",
+   "possible": "keokuk",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Warsaw_Formation",
+    "https://rockhounding.org/rockhounding-articles/where-to-find-geodes-in-iowa"
+   ]
+  },
+  {
+   "state": "Missouri",
+   "label": "geodes",
+   "target": "geode",
+   "high": "warsaw",
+   "possible": "keokuk",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Warsaw_Formation"
+   ]
+  },
+  {
+   "state": "Illinois",
+   "label": "geodes",
+   "target": "geode",
+   "high": "warsaw",
+   "possible": "keokuk",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Warsaw_Formation"
+   ]
+  },
+  {
+   "state": "Iowa",
+   "label": "crinoid fossils",
+   "target": "fossil|crinoid",
+   "high": "burlington",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Burlington_Limestone"
+   ]
+  },
+  {
+   "state": "Missouri",
+   "label": "crinoid fossils",
+   "target": "fossil|crinoid",
+   "high": "burlington",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Burlington_Limestone"
+   ]
+  },
+  {
+   "state": "Illinois",
+   "label": "crinoid fossils",
+   "target": "fossil|crinoid",
+   "high": "burlington",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Burlington_Limestone"
+   ]
+  },
+  {
+   "state": "Utah",
+   "label": "trilobites",
+   "target": "trilobite|fossil",
+   "high": "wheeler",
+   "possible": "marjum",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Wheeler_Shale"
+   ]
+  },
+  {
+   "state": "Utah",
+   "label": "topaz crystals",
+   "target": "topaz|crystals?",
+   "high": "topaz mountain",
+   "possible": "rhyolite",
+   "note": "Topaz Mountain is a BLM rockhound area; topaz fades from amber to clear in sunlight.",
+   "sources": [
+    "https://geology.utah.gov/popular/rocks-minerals/rock-mineral-collecting-sites/topaz-at-topaz-mountain/"
+   ]
+  },
+  {
+   "state": "Utah",
+   "label": "dinosaur bone (look, don't take on public land)",
+   "target": "dinosaur|bone",
+   "high": "morrison",
+   "note": "Vertebrate fossils such as dinosaur bone can't be collected on federal land; only on private land with the owner's permission.",
+   "sources": [
+    "https://www.blm.gov/learn/can-i-keep-this"
+   ]
+  },
+  {
+   "state": "New Mexico",
+   "label": "thundereggs, agate and jasper",
+   "target": "thunderegg|geode|agate|jasper|perlite|apache tear|obsidian",
+   "high": "little florida",
+   "possible": "rhyolite|tuff",
+   "note": "Rockhound State Park (near Deming) allows collecting up to 15 lb per visitor; no collecting for resale.",
+   "sources": [
+    "https://geoinfo.nmt.edu/tour/state/rockhound/home.html"
+   ]
+  },
+  {
+   "state": "New Mexico",
+   "label": "petrified wood",
+   "target": "petrified|pet ?wood|silicified wood|fossil(ized)? wood",
+   "high": "chinle|shinarump|petrified forest member",
+   "sources": [
+    "https://azgs.arizona.edu/petrified-wood-petrified-forest-national-park-arizona",
+    "https://www.blm.gov/learn/can-i-keep-this"
+   ]
+  },
+  {
+   "state": "Oklahoma",
+   "label": "barite rose rocks",
+   "target": "barite|rose rock|desert rose",
+   "high": "garber",
+   "note": "Rose rocks occur mainly from just northeast of Lexington to north of Lake Stanley Draper, around Norman.",
+   "sources": [
+    "https://ou.edu/ogs/generalinterest/rose_rocks"
+   ]
+  },
+  {
+   "state": "California",
+   "label": "nephrite jade",
+   "target": "jade|nephrite",
+   "possible": "serpentin|franciscan",
+   "areas": [
+    [
+     35.91,
+     -121.47,
+     20
+    ]
+   ],
+   "note": "Jade Cove area (Big Sur): loose jade may be collected only below mean high tide, by hand, and only what one person can carry; day use only.",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Jade_Cove"
+   ],
+   "review": "host rock not named in source; listed as possible only"
+  },
+  {
+   "state": "Nevada",
+   "label": "precious opal",
+   "target": "opal",
+   "high": "virgin valley",
+   "note": "Virgin Valley opal: private fee-dig mines (e.g. Royal Peacock, Bonanza) surrounded by BLM land.",
+   "sources": [
+    "https://rockhounding.org/rockhounding-articles/gem-hunting-in-nevada"
+   ]
+  },
+  {
+   "state": "Nevada",
+   "label": "trilobites",
+   "target": "trilobite|fossil",
+   "possible": "pioche",
+   "sources": [
+    "https://roadtripryan.com/go/t/nevada/southern-nevada/oak-springs-trilobite"
+   ],
+   "review": "Oak Springs trilobite area is BLM shale; formation name (Pioche Shale) not confirmed by source"
+  },
+  {
+   "state": "Idaho",
+   "label": "star garnets",
+   "target": "garnet",
+   "possible": "schist|gneiss|alluvium",
+   "areas": [
+    [
+     47.02,
+     -116.33,
+     25
+    ]
+   ],
+   "note": "Emerald Creek star garnet area (Idaho Panhandle National Forests): advance tickets required through recreation.gov.",
+   "sources": [
+    "https://fs.usda.gov/Internet/FSE_DOCUMENTS/fseprd1087093.pdf"
+   ],
+   "review": "source rock not named in source; possible only"
+  },
+  {
+   "state": "Montana",
+   "label": "sapphires",
+   "target": "sapphire|corundum",
+   "possible": "alluvium|terrace|gravel|colluvium|mudflow",
+   "areas": [
+    [
+     46.7,
+     -111.8,
+     25
+    ],
+    [
+     46.23,
+     -113.55,
+     25
+    ]
+   ],
+   "note": "Montana sapphires: fee digs on the Missouri River bars near Helena (e.g. Spokane Bar) and at Gem Mountain on Rock Creek, where you buy and wash gravel.",
+   "sources": [
+    "https://www.gia.edu/articles/summer-2017-montana-alluvial-deposits"
+   ]
+  },
+  {
+   "state": "Montana",
+   "label": "Montana moss agates",
+   "target": "agate|moss agate",
+   "possible": "alluvium|terrace|gravel",
+   "areas": [
+    [
+     45.83,
+     -109.95,
+     60
+    ],
+    [
+     45.78,
+     -108.5,
+     60
+    ],
+    [
+     46.41,
+     -105.84,
+     60
+    ],
+    [
+     47.11,
+     -104.71,
+     60
+    ]
+   ],
+   "note": "Montana moss agates are found along the Yellowstone River and its tributaries; best at low water (early spring, late fall). A Montana Conservation License is needed for most state land, including fishing access sites.",
+   "sources": [
+    "https://southeastmontana.com/blog/rockhounding-montana-moss-agates"
+   ]
+  },
+  {
+   "state": "Wyoming",
+   "label": "turritella (Elimia) agate",
+   "target": "agate|turritella|elimia",
+   "high": "laney",
+   "sources": [
+    "https://thefossilforum.com/topic/129464-turritellaelimia-agate-and-the-green-river-fm"
+   ],
+   "review": "forum source; confirm with a survey publication before launch"
+  },
+  {
+   "state": "Wyoming",
+   "label": "fossil fish (look, don't take on public land)",
+   "target": "fish|fossil",
+   "high": "fossil butte member",
+   "note": "Fossil fish: no collecting at Fossil Butte National Monument; private quarries near Kemmerer offer fee digs. Vertebrate fossils can't be collected on federal land.",
+   "sources": [
+    "https://thefossilforum.com/topic/129464-turritellaelimia-agate-and-the-green-river-fm",
+    "https://www.blm.gov/learn/can-i-keep-this"
+   ]
+  },
+  {
+   "state": "Colorado",
+   "label": "amazonite, smoky quartz and topaz",
+   "target": "amazonite|smoky quartz|quartz crystals?|topaz|fluorite|crystals?",
+   "high": "pikes peak",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Mineralogy_of_the_Pikes_Peak_Region"
+   ]
+  },
+  {
+   "state": "Washington",
+   "label": "petrified wood",
+   "target": "petrified|pet ?wood|silicified wood|fossil(ized)? wood",
+   "possible": "wanapum|columbia river basalt|grande ronde|ellensburg|vantage",
+   "note": "Ginkgo Petrified Forest State Park (Vantage) is for viewing; check state park rules before collecting anything.",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Ginkgo_Petrified_Forest_State_Park"
+   ],
+   "review": "source names only the Columbia basalt group; listed as possible"
+  },
+  {
+   "state": "Washington",
+   "label": "Eocene leaf and insect fossils",
+   "target": "fossil|leaf|leaves|insect",
+   "high": "klondike mountain",
+   "areas": [
+    [
+     48.65,
+     -118.74,
+     30
+    ]
+   ],
+   "note": "Stonerose Interpretive Center (Republic): dig for your own fossils and take some home, under the center's rules.",
+   "sources": [
+    "https://www.burkemuseum.org/news/where-see-fossils-washington-state"
+   ],
+   "review": "formation name (Klondike Mountain Fm) not in source"
+  },
+  {
+   "state": "Alaska",
+   "label": "nephrite jade",
+   "target": "jade|nephrite",
+   "possible": "serpentin|ultramafic",
+   "areas": [
+    [
+     66.9,
+     -157.0,
+     150
+    ]
+   ],
+   "sources": [
+    "https://rockhounding.org/rockhounding-articles/gem-hunting-in-alaska"
+   ]
+  },
+  {
+   "state": "Alaska",
+   "label": "placer gold",
+   "target": "gold",
+   "possible": "alluvium|gravel|placer|terrace|beach|schist",
+   "areas": [
+    [
+     64.84,
+     -147.72,
+     60
+    ],
+    [
+     64.5,
+     -165.41,
+     40
+    ]
+   ],
+   "sources": [
+    "https://rockhounding.org/rockhounding-articles/gem-hunting-in-alaska"
+   ]
+  },
+  {
+   "state": "Alaska",
+   "label": "almandine garnet",
+   "target": "garnet",
+   "possible": "schist",
+   "areas": [
+    [
+     56.53,
+     -132.0,
+     40
+    ]
+   ],
+   "note": "Wrangell Garnet Ledge is privately owned; ask locally about permission.",
+   "sources": [
+    "https://rockhounding.org/rockhounding-articles/gem-hunting-in-alaska"
+   ]
+  }
+ ]
 }
