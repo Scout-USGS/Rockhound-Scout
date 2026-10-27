@@ -198,7 +198,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 27 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 28 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1779,7 +1779,10 @@ async function fetchShoreRoads(lat, lon, radiusMiles) {
   const fields = await arcFields(TIGER_BASE, loc.id).catch(() => []);
   const nf = pickField(fields, ['NAME', 'FULLNAME', 'BASENAME']) || 'NAME';
   const words = ['BEACH', 'SHORE', 'LAKE', 'PARK', 'MARINA', 'LANDING', 'BAY', 'HARBOR', 'COVE', 'POINT', 'DAM', 'CAMP', 'BOAT', 'RAMP', 'PIER', 'OCEAN', 'GULF', 'COAST', 'BLUFF', 'SAND'];
-  const where = words.map(w => 'UPPER(' + nf + ") LIKE '%" + w + "%'").join(' OR ');
+  let where = '(' + words.map(w => 'UPPER(' + nf + ") LIKE '%" + w + "%'").join(' OR ') + ')';
+  // Leave out private drives, alleys, parking lots and walkways.
+  const tf = pickField(fields, ['MTFCC']);
+  if (tf) where += ' AND ' + tf + " NOT IN ('S1730','S1740','S1750','S1780','S1710','S1720','S1820','S1830')";
   const res = await arcQueryBox(TIGER_BASE, loc.id, lat, lon, radiusMiles, where, nf, 2);
   const byName = {};
   for (const f of res.features) {
@@ -2467,8 +2470,13 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
         try { c.pub = await publicLandAt(c.pt[0], c.pt[1], 250); } catch (e) { landErr = errText(e); }
       }));
       let made = 0;
+      const skippedPrivate = [];
       for (const c of close) {
         if (c.pub && c.pub.access === 'closed') continue;
+        // Unnamed-number lanes along a shore (cottage roads, private drives)
+        // only count when the shore there is public land.
+        const publicShore = c.pub && (c.pub.access === 'open' || c.pub.access === 'restricted');
+        if (c.other && !publicShore) { skippedPrivate.push(c.road); continue; }
         // Rock on land here: nearest road sample, else nearest survey point.
         let unit = null, ud = 0.6;
         for (const rr of roadRuns) rr.run.forEach((q, i) => { const d = milesBetween(c.p[0], c.p[1], q[0], q[1]); if (d < ud && rr.units[i] && !isWater(rr.units[i])) { ud = d; unit = rr.units[i]; } });
@@ -2480,6 +2488,9 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
         const best = uniq.reduce((m, u) => Math.max(m, base(rate(u))), 0);
         let sScore = best >= 1 ? 2 : 1;
         if (c.city) sScore = Math.max(0, sScore - 1);
+        // A numbered road with houses or lots between it and the water: the
+        // shore is likely private, so one level lower.
+        if (!publicShore && c.d > 0.08) sScore = Math.max(0, sScore - 1);
         const pri = (c.pub && c.pub.access === 'open' ? 0.2 : c.city ? 3 : c.other ? 1.0 : 0.6) + (c.body.type === 'river' ? 0.3 : 0);
         cands.push({ kind: 'shore', s: sScore, pri, lat: c.p[0], lon: c.p[1], dist: milesBetween(lat, lon, c.p[0], c.p[1]),
           road: c.road, unit, rating: rate(unit), waterName: prettyWater(c.body.name), waterType: c.body.type, shoreMi: c.d,
@@ -2492,7 +2503,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
       }
       shoreLog += ' | ' + close.length + ' road points within 0.3 mi of the water' +
         (close.length ? ' (' + close.map(c => c.road + ' by ' + prettyWater(c.body.name) + (c.city ? ' in ' + c.city : '') + (c.pub ? ' on ' + c.pub.name + ' [' + c.pub.access + ']' : '')).slice(0, 10).join('; ') + ')' : '') +
-        ', ' + made + ' shore spots' + parkLog + (cityErr ? ' | city lookup: ' + cityErr : '') + (landErr ? ' | public-land lookup: ' + landErr : '');
+        ', ' + made + ' shore spots' + (skippedPrivate.length ? ' (skipped, not public land: ' + [...new Set(skippedPrivate)].slice(0, 6).join(', ') + ')' : '') + parkLog + (cityErr ? ' | city lookup: ' + cityErr : '') + (landErr ? ' | public-land lookup: ' + landErr : '');
     }
     logStage(shoreLog, t0);
   } catch (e) {
