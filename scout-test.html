@@ -184,7 +184,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 11 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 12 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1294,13 +1294,17 @@ function tigerRoadRef(name) {
   const n = String(name || '').replace(/\s+/g, ' ').trim();
   const abbr = Object.keys(US_STATES).find(k => US_STATES[k] === scanState) || '';
   let m;
-  if (/^(I-|Interstate)/i.test(n)) return null; // no stopping on interstate shoulders
-  if ((m = n.match(/^US (?:Hwy|Highway|Rte|Route) (\d+[A-Z]?)/i))) return { ref: 'US-' + m[1], rank: 0 };
-  if ((m = n.match(/^(?:State|St) (?:Hwy|Highway|Rte|Route|Rd|Road) (\d+[A-Z]?)/i))) return { ref: (abbr || 'SH') + '-' + m[1], rank: 0 };
-  if ((m = n.match(/^(?:Fm|Farm to Market|Farm-to-Market) (?:Rd|Road)? ?(\d+)/i))) return { ref: 'FM ' + m[1], rank: 1 };
-  if ((m = n.match(/^(?:Rm|Ranch to Market|Ranch-to-Market|Ranch) (?:Rd|Road)? ?(\d+)/i))) return { ref: 'RM ' + m[1], rank: 1 };
-  if ((m = n.match(/^(?:Co|County) (?:Rd|Road|Hwy|Highway|Rte|Route) (\w+)/i))) return { ref: 'County Rd ' + m[1], rank: 2 };
-  if ((m = n.match(/^([A-Z]{2})[- ](\d+[A-Z]?)$/))) return { ref: m[1].toUpperCase() + '-' + m[2], rank: 0 };
+  if (/^(I-|I |IH[- ]?\d|Interstate)/i.test(n)) return null; // no stopping on interstate shoulders
+  if (/^(Bus|Business)\b/i.test(n)) return null; // business routes duplicate the main road
+  if ((m = n.match(/^US (?:Hwy|Highway|Rte|Route)? ?(\d+[A-Z]?)\b/i))) return { ref: 'US-' + m[1], rank: 0 };
+  if ((m = n.match(/^(?:State|St|SH|Texas|Tx)\.? (?:Hwy|Highway|Rte|Route|Rd|Road)? ?(\d+[A-Z]?)\b/i))) return { ref: (abbr || 'SH') + '-' + m[1], rank: 0 };
+  if ((m = n.match(/^(?:Fm|F M|Farm to Market|Farm-to-Market)(?: Rd| Road)?[- ]?(\d+)\b/i))) return { ref: 'FM ' + m[1], rank: 1 };
+  if ((m = n.match(/^(?:Rm|R M|Ranch to Market|Ranch-to-Market|Ranch)(?: Rd| Road)?[- ]?(\d+)\b/i))) return { ref: 'RM ' + m[1], rank: 1 };
+  if ((m = n.match(/^(?:State )?(Loop|Spur|Park Rd) (\d+[A-Z]?)\b/i))) return { ref: m[1].replace(/\b\w/g, x => x.toUpperCase()) + ' ' + m[2], rank: 1 };
+  if ((m = n.match(/^(?:Co|Co\.|Cnty|County)(?: Rd| Road| Hwy| Highway| Rte| Route)\.? (\w+)/i))) return { ref: 'County Rd ' + m[1].toUpperCase(), rank: 2 };
+  if ((m = n.match(/^CR[- ]?(\d+\w*)$/i))) return { ref: 'County Rd ' + m[1].toUpperCase(), rank: 2 };
+  if ((m = n.match(/^(?:Hwy|Highway) (\d+[A-Z]?)$/i))) return { ref: (abbr || 'SH') + '-' + m[1], rank: 0 };
+  if ((m = n.match(/^([A-Z]{2})[- ](\d+[A-Z]?)$/i))) return { ref: m[1].toUpperCase() + '-' + m[2], rank: 0 };
   return null;
 }
 async function fetchNearbyHighwaysTiger(lat, lon, radiusMiles) {
@@ -1360,15 +1364,616 @@ async function fetchNearbyHighways(lat, lon, radiusMiles) {
   return osm;
 }
 
+// =====================================================================
+// v12 CROSSING ENGINE (TEST) -- "creeks through the right rock"
+// Instead of only looking for formation boundaries on 3 highways, this:
+//   1. gets EVERY usable road in the circle (highways, FM/RM, county roads)
+//      from the Census map, and every NAMED creek/river from the USGS map
+//   2. finds every spot where a road crosses a creek or river (bridges and
+//      low-water crossings -- where a person can actually reach the creek)
+//   3. checks the rock at each crossing, along each creek, and along roads
+//   4. rates each rock for the target (Texas: JT's list; elsewhere: AI)
+//   5. HOTSPOT = crossing in producing rock, a creek that runs through
+//      producing rock, or a road through producing rock; boundaries are
+//      only a fallback.
+// =====================================================================
+const NHD_BASE = 'https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer';
+const CENSUS_HYDRO_BASE = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Hydro/MapServer';
+const arcInfoCache = {};
+function errText(e) { return e && e.name === 'AbortError' ? 'no answer' : String((e && e.message) || e || 'failed'); }
+
+// Real map layers of an ArcGIS map service (skips label/group layers).
+async function arcLayers(base) {
+  if (arcInfoCache[base]) return arcInfoCache[base];
+  const r = await fetchWithTimeout(base + '?f=json', 12000);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.message || 'service error');
+  arcInfoCache[base] = (j.layers || []).filter(l => !/label|annotation/i.test(l.name || '') && !/group/i.test(l.type || ''));
+  return arcInfoCache[base];
+}
+// Field names of one layer, so we use whatever the service calls "name".
+async function arcFields(base, id) {
+  const key = base + '/' + id;
+  if (arcInfoCache[key]) return arcInfoCache[key];
+  const r = await fetchWithTimeout(key + '?f=json', 12000);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  arcInfoCache[key] = (j.fields || []).map(f => f.name);
+  return arcInfoCache[key];
+}
+function pickField(fields, prefs) {
+  for (const p of prefs) {
+    const f = (fields || []).find(x => String(x).toLowerCase() === p.toLowerCase());
+    if (f) return f;
+  }
+  return null;
+}
+// Lines inside a box around the point; follows "more results" pages a few times.
+async function arcQueryBox(base, id, lat, lon, radiusMiles, where, outFields, maxPages) {
+  const d = radiusMiles / 69, dLon = d / Math.cos(lat * Math.PI / 180);
+  let features = [], truncated = false;
+  const pages = maxPages || 4;
+  for (let page = 0; page < pages; page++) {
+    const params = new URLSearchParams({
+      where: where || '1=1',
+      geometry: [lon - dLon, lat - d, lon + dLon, lat + d].join(','),
+      geometryType: 'esriGeometryEnvelope', inSR: '4326', outSR: '4326',
+      spatialRel: 'esriSpatialRelIntersects', outFields: outFields || '*', returnGeometry: 'true',
+      geometryPrecision: '5', maxAllowableOffset: '0.0001', f: 'json'
+    });
+    if (page > 0) params.set('resultOffset', String(features.length));
+    const r = await fetchWithTimeout(base + '/' + id + '/query?' + params.toString(), 25000);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if (j.error) {
+      if (page === 0) throw new Error(j.error.message || 'query error');
+      truncated = true; break;
+    }
+    const fs = j.features || [];
+    features = features.concat(fs);
+    if (!j.exceededTransferLimit || !fs.length) break;
+    if (page === pages - 1) truncated = true;
+  }
+  return { features, truncated };
+}
+// ArcGIS paths ([lon,lat]) -> runs of [lat,lon] kept inside the circle.
+// Long straight pieces get extra in-between points first, so a road whose
+// map points sit outside the circle still keeps the part that runs inside.
+function clipPaths(paths, lat, lon, radiusMiles) {
+  const out = [];
+  for (const path of paths || []) {
+    const pts = [];
+    for (let i = 0; i < path.length; i++) {
+      const [x, y] = path[i];
+      if (i > 0) {
+        const [px, py] = path[i - 1];
+        const steps = Math.ceil(Math.max(Math.abs(x - px), Math.abs(y - py)) / 0.004);
+        for (let k = 1; k < steps; k++) pts.push([py + (y - py) * k / steps, px + (x - px) * k / steps]);
+      }
+      pts.push([y, x]);
+    }
+    let run = [];
+    for (const p of pts) {
+      if (milesBetween(lat, lon, p[0], p[1]) <= radiusMiles) run.push(p);
+      else { if (run.length >= 2) out.push(run); run = []; }
+    }
+    if (run.length >= 2) out.push(run);
+  }
+  return out;
+}
+
+// --- roads: highways + FM/RM + county roads from the Census map ---------
+async function fetchCensusRoads(lat, lon, radiusMiles) {
+  const layers = await arcLayers(TIGER_BASE);
+  const sec = layers.find(l => /secondary/i.test(l.name || ''));
+  const pri = layers.find(l => /primary/i.test(l.name || '') && !/secondary/i.test(l.name || ''));
+  const loc = layers.find(l => /local/i.test(l.name || ''));
+  const report = [], byRef = {}, rankOf = {}, skipped = new Set();
+  const jobs = [['highways', sec, false], ['big highways', pri, false], ['county/FM roads', loc, true]];
+  await Promise.all(jobs.map(async ([label, layer, isLocal]) => {
+    if (!layer) { report.push(label + ': no layer'); return; }
+    try {
+      const fields = await arcFields(TIGER_BASE, layer.id).catch(() => []);
+      const nf = pickField(fields, ['NAME', 'FULLNAME', 'BASENAME']);
+      let where = '1=1';
+      if (isLocal && nf) {
+        // Only numbered rural roads -- not every city street.
+        where = ['CO %', 'CO. %', 'COUNTY %', 'CR %', 'CR-%', 'FM %', 'FARM%', 'RM %', 'RANCH%', 'STATE %', 'ST HWY%', 'SH %', 'US %', 'HWY %', 'LOOP %', 'SPUR %', 'PARK RD%']
+          .map(p => 'UPPER(' + nf + ") LIKE '" + p + "'").join(' OR ');
+      }
+      let res;
+      try {
+        res = await arcQueryBox(TIGER_BASE, layer.id, lat, lon, radiusMiles, where, nf || '*', isLocal ? 4 : 3);
+      } catch (e) {
+        if (where === '1=1') throw e;
+        res = await arcQueryBox(TIGER_BASE, layer.id, lat, lon, radiusMiles, '1=1', nf || '*', 4);
+        report.push(label + ': name filter refused, used all');
+      }
+      let used = 0;
+      for (const f of res.features) {
+        const a = f.attributes || {};
+        const raw = a[nf] || a.NAME || a.FULLNAME || a.BASENAME || '';
+        const info = tigerRoadRef(raw);
+        if (!info) { if (raw && skipped.size < 40) skipped.add(raw); continue; }
+        if (!f.geometry || !f.geometry.paths) continue;
+        if (!byRef[info.ref]) { byRef[info.ref] = []; rankOf[info.ref] = info.rank; }
+        rankOf[info.ref] = Math.min(rankOf[info.ref], info.rank);
+        for (const run of clipPaths(f.geometry.paths, lat, lon, radiusMiles)) byRef[info.ref].push(run);
+        used++;
+      }
+      report.push(label + ': ' + res.features.length + ' pieces, ' + used + ' used' + (res.truncated ? ' (truncated)' : ''));
+    } catch (e) { report.push(label + ': ' + errText(e)); }
+  }));
+  const roads = [];
+  for (const ref of Object.keys(byRef)) {
+    if (!byRef[ref].length) continue;
+    const allSegs = chainSegments(byRef[ref]);
+    const near = Math.min(...allSegs.flat().map(([a, b]) => milesBetween(lat, lon, a, b)));
+    roads.push({ road: ref, rank: rankOf[ref], allSegs, segs: allSegs.filter(l => lineMiles(l) >= 0.5), near });
+  }
+  roads.sort((a, b) => a.near - b.near);
+  return { roads, report, skipped: [...skipped] };
+}
+
+// --- named creeks and rivers: USGS stream map, Census water as backup ----
+async function fetchStreams(lat, lon, radiusMiles) {
+  const report = [];
+  const sources = [
+    { label: 'USGS stream map', base: NHD_BASE,
+      pick: ls => ls.find(l => /flowline/i.test(l.name || '') && /large/i.test(l.name || '')) || ls.find(l => /flowline/i.test(l.name || '')),
+      names: ['gnis_name', 'GNIS_NAME', 'name'] },
+    { label: 'Census water map', base: CENSUS_HYDRO_BASE,
+      pick: ls => ls.find(l => /linear/i.test(l.name || '')) || ls.find(l => /stream|river/i.test(l.name || '')),
+      names: ['NAME', 'FULLNAME', 'BASENAME'] }
+  ];
+  for (const src of sources) {
+    const t0 = Date.now();
+    try {
+      const layer = src.pick(await arcLayers(src.base));
+      if (!layer) throw new Error('no stream layer; layers are: ' + (arcInfoCache[src.base] || []).map(l => l.id + '=' + l.name).slice(0, 15).join(', '));
+      const fields = await arcFields(src.base, layer.id).catch(() => []);
+      const nf = pickField(fields, src.names);
+      if (!nf) throw new Error('no name field; fields are: ' + fields.slice(0, 20).join(', '));
+      const res = await arcQueryBox(src.base, layer.id, lat, lon, radiusMiles,
+        nf + ' IS NOT NULL AND ' + nf + " <> ''", nf, 5);
+      const byName = {};
+      for (const f of res.features) {
+        const name = String((f.attributes || {})[nf] || '').trim();
+        if (!name || /canal|ditch|pipeline|lateral|\bdrain\b|aqueduct/i.test(name)) continue;
+        if (!f.geometry || !f.geometry.paths) continue;
+        if (!byName[name]) byName[name] = [];
+        for (const run of clipPaths(f.geometry.paths, lat, lon, radiusMiles)) byName[name].push(run);
+      }
+      const streams = Object.keys(byName).filter(n => byName[n].length)
+        .map(n => ({ name: n, segs: chainSegments(byName[n]) }));
+      report.push(src.label + ': ' + res.features.length + ' pieces, ' + streams.length + ' named streams in ' +
+        ((Date.now() - t0) / 1000).toFixed(1) + 's' + (res.truncated ? ' (truncated)' : ''));
+      if (streams.length) return { streams, source: src.label, report };
+    } catch (e) {
+      report.push(src.label + ': ' + errText(e) + ' after ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
+    }
+  }
+  return { streams: [], source: '', report };
+}
+
+// --- where roads cross streams ------------------------------------------
+function segIntersect(p1, p2, p3, p4) {
+  const x1 = p1[1], y1 = p1[0], x2 = p2[1], y2 = p2[0], x3 = p3[1], y3 = p3[0], x4 = p4[1], y4 = p4[0];
+  const den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  if (Math.abs(den) < 1e-14) return null;
+  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den;
+  const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den;
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+  return [y1 + t * (y2 - y1), x1 + t * (x2 - x1)];
+}
+function findCrossings(roads, streams) {
+  const cell = 0.01, grid = new Map();
+  const cellsFor = (a, b, fn) => {
+    const i0 = Math.floor(Math.min(a[0], b[0]) / cell), i1 = Math.floor(Math.max(a[0], b[0]) / cell);
+    const j0 = Math.floor(Math.min(a[1], b[1]) / cell), j1 = Math.floor(Math.max(a[1], b[1]) / cell);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) fn(i + ',' + j);
+  };
+  const segs = [];
+  streams.forEach(s => s.segs.forEach(line => {
+    for (let k = 1; k < line.length; k++) {
+      const id = segs.length;
+      segs.push({ a: line[k - 1], b: line[k], name: s.name });
+      cellsFor(line[k - 1], line[k], key => { if (!grid.has(key)) grid.set(key, []); grid.get(key).push(id); });
+    }
+  }));
+  const raw = [];
+  for (const r of roads) {
+    for (const line of (r.allSegs || r.segs || [])) {
+      for (let k = 1; k < line.length; k++) {
+        const seen = new Set();
+        cellsFor(line[k - 1], line[k], key => {
+          for (const id of (grid.get(key) || [])) {
+            if (seen.has(id)) continue;
+            seen.add(id);
+            const s = segs[id];
+            const p = segIntersect(line[k - 1], line[k], s.a, s.b);
+            if (p) raw.push({ lat: p[0], lon: p[1], road: r.road, stream: s.name });
+          }
+        });
+      }
+    }
+  }
+  // One crossing per bridge: merge the two lanes of a divided highway and
+  // braided channels of the same creek.
+  const merged = [];
+  for (const c of raw) {
+    if (merged.some(m => m.stream === c.stream &&
+        milesBetween(m.lat, m.lon, c.lat, c.lon) < (m.road === c.road ? 0.4 : 0.15))) continue;
+    merged.push(c);
+  }
+  return merged;
+}
+
+// --- geology checks, several at a time, stopping if time runs short -------
+async function geoBatch(points, scan, label) {
+  const units = new Array(points.length).fill(null);
+  let next = 0, done = 0, failed = 0;
+  async function worker() {
+    while (next < points.length) {
+      if (scan && scan.cancelled) return;
+      if (timeLeft(scan) < 75000) return; // leave time for the write-ups
+      const i = next++;
+      const u = await fetchGeoUnit(points[i][0], points[i][1]);
+      if (u && u.error) failed++; else units[i] = u;
+      done++;
+      setProgress(label + ' — ' + done + ' of ' + points.length + '...');
+      await new Promise(r => setTimeout(r, 80));
+    }
+  }
+  await Promise.all([worker(), worker(), worker(), worker(), worker()]);
+  return { units, done, failed };
+}
+// Drop road check points that sit on top of ones already kept (the second
+// lane of a divided highway), keeping runs in order.
+function dedupeRuns(runs, minMi) {
+  const kept = [], out = [];
+  for (const run of runs) {
+    let cur = [];
+    for (const p of run) {
+      if (kept.some(k => milesBetween(k[0], k[1], p[0], p[1]) < minMi)) { if (cur.length) out.push(cur); cur = []; continue; }
+      kept.push(p); cur.push(p);
+    }
+    if (cur.length) out.push(cur);
+  }
+  return out;
+}
+
+// --- which rocks produce the target ---------------------------------------
+// Field-confirmed knowledge (JT's; edit here). This is NOT a list of spots --
+// it only says which FORMATIONS produce a target. The AI rates every rock
+// everywhere by the same rules; a matching row here just overrides the AI's
+// rating for the formations it names. Every state can get rows over time.
+const TX_PRODUCERS = [
+  { target: /petrified|palm ?wood|pet ?wood|agati[sz]ed wood|opali[sz]ed wood|silicified wood|fossil(ized)? wood/i,
+    high: /oakville|fleming/i,
+    possible: /catahoula|jackson|whitsett|manning|wellborn|caddell/i }
+];
+async function rateFormations(units, target) {
+  const ratings = {}, notes = [];
+  const rule = scanState === 'Texas' && TX_PRODUCERS.find(r => r.target.test(target || ''));
+  const todo = [];
+  let listed = 0;
+  for (const u of units) {
+    if (rule && rule.high.test(u.name)) { ratings[u.name] = 'high'; listed++; }
+    else if (rule && rule.possible.test(u.name)) { ratings[u.name] = 'possible'; listed++; }
+    else todo.push(u);
+  }
+  if (rule) notes.push('field list set ' + listed + ' rock(s)');
+  if (todo.length) {
+    const list = todo.slice(0, 30).map((u, i) => (i + 1) + '. ' + cleanForPrompt(u.name, 120) + (u.lith ? ' (' + cleanForPrompt(u.lith, 120) + ')' : '')).join('\n');
+    const prompt = 'A rockhound in ' + scanState + ' is hunting for: ' + (target ? cleanForPrompt(target, 80) : 'anything collectible (agate, jasper, chert, petrified wood, fossils, crystals, geodes, ore minerals, gem gravels)') + '.\n' +
+      'Rate each mapped rock unit below for how likely the hunter is to find that IN THIS ROCK UNIT ITSELF:\n' +
+      '"h" = this formation is documented to produce it; "p" = not documented, but this rock type commonly hosts it; "l" = this rock type does not normally host it.\n' +
+      'Rate modern alluvium, terrace deposits, sand, soil and other loose cover "l" unless they are themselves a documented source (creeks carrying material downstream are handled separately). Never rate "h" from the general region alone.\n\n' +
+      list + '\n\nReply with ONLY a JSON object mapping each number to its rating, e.g. {"1":"l","2":"h"}';
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 20000);
+      const resp = await fetch(WORKER_URL + '/', {
+        method: 'POST', headers: aiHeaders(), signal: ctrl.signal,
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
+      }).finally(() => clearTimeout(timer));
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error.message || 'AI error');
+      trackUsage(data);
+      const raw = data.content.map(b => b.text || '').join('');
+      const j = JSON.parse((raw.match(/\{[\s\S]*\}/) || ['{}'])[0]);
+      todo.slice(0, 30).forEach((u, i) => {
+        const v = String(j[String(i + 1)] || 'l').toLowerCase();
+        ratings[u.name] = v.startsWith('h') ? 'high' : v.startsWith('p') ? 'possible' : 'low';
+      });
+      notes.push('AI rated ' + Math.min(30, todo.length) + ' rocks');
+    } catch (e) {
+      notes.push('AI rating failed (' + errText(e) + ') — unlisted rocks counted low');
+    }
+    for (const u of todo) if (!ratings[u.name]) ratings[u.name] = 'low';
+  }
+  return { ratings, notes };
+}
+
+// --- the whole Custom scan -------------------------------------------------
+async function crossingScan(loc, radius, target, town, scan) {
+  const lat = loc.lat, lon = loc.lon;
+  const base = r => r === 'high' ? 2 : r === 'possible' ? 1 : 0;
+
+  // 1. Roads and creeks, at the same time.
+  let t0 = Date.now();
+  setProgress('Reading the road map and the USGS stream map...');
+  const [roadRes, streamRes] = await Promise.all([
+    fetchCensusRoads(lat, lon, radius).catch(e => ({ roads: [], report: ['Census roads: ' + errText(e)], skipped: [] })),
+    fetchStreams(lat, lon, radius + 4).catch(e => ({ streams: [], source: '', report: ['streams: ' + errText(e)] }))
+  ]);
+  if (scan.cancelled) return null;
+  let roads = roadRes.roads;
+  logStage('roads: ' + roads.length + ' (' + roads.slice(0, 12).map(r => r.road).join(', ') + ') [' + roadRes.report.join('; ') + ']', t0);
+  if (roadRes.skipped.length) scanLog.push('road names not used: ' + roadRes.skipped.slice(0, 15).join(', '));
+  scanLog.push('streams: ' + streamRes.streams.length + ' named (' + streamRes.streams.slice(0, 10).map(s => s.name).join(', ') + ') [' + streamRes.report.join('; ') + ']');
+  const streamSrc = streamRes.source || '';
+  if (!roads.length) {
+    setProgress('Trying the backup road map...');
+    const osm = await fetchNearbyHighwaysOSM(lat, lon, radius);
+    roads = osm.roads.map(r => ({ ...r, rank: 0, allSegs: r.segs, near: 0 }));
+    scanLog.push('backup road map: ' + roads.length + ' roads [' + overpassReport.join('; ') + ']');
+    if (!roads.length) return { written: [], noRoads: true, roadFailed: osm.failed };
+  }
+
+  // 2. Crossings.
+  const crossings = findCrossings(roads, streamRes.streams)
+    .map(c => ({ ...c, dist: milesBetween(lat, lon, c.lat, c.lon) }))
+    .filter(c => c.dist <= radius)
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, 40);
+  scanLog.push('crossings: ' + crossings.length + ' (' + crossings.slice(0, 8).map(c => c.stream + ' × ' + c.road + ' ' + c.dist.toFixed(1) + 'mi').join('; ') + ')');
+
+  // 3. Geology points: crossings first, then along the crossed creeks, then roads.
+  const streamOrder = [];
+  for (const c of crossings) if (!streamOrder.includes(c.stream)) streamOrder.push(c.stream);
+  const streamPts = [];
+  // Rivers are usually mapped as a strip of alluvium (river sand and gravel)
+  // their whole length, so we also check ~0.6 mile out on each side -- the
+  // valley walls -- to learn what bedrock the creek actually cuts through.
+  const cosLat = Math.cos(lat * Math.PI / 180), off = 0.6 / 69;
+  for (const name of streamOrder.slice(0, 6)) {
+    const s = streamRes.streams.find(x => x.name === name);
+    for (const run of samplesAlongRoad({ segs: s.segs.filter(l => lineMiles(l) >= 0.3) }, 8, 1.0)) {
+      for (let i = 0; i < run.length; i++) {
+        const a = run[Math.max(0, i - 1)], b = run[Math.min(run.length - 1, i + 1)];
+        const dy = b[0] - a[0], dx = (b[1] - a[1]) * cosLat, L = Math.hypot(dx, dy) || 1;
+        const ny = -dx / L * off, nx = dy / L * off / cosLat;
+        const p = run[i];
+        streamPts.push({ stream: name, p });
+        streamPts.push({ stream: name, p: [p[0] + ny, p[1] + nx] });
+        streamPts.push({ stream: name, p: [p[0] - ny, p[1] - nx] });
+      }
+    }
+  }
+  const roadRuns = [];
+  let roadPtCount = 0;
+  for (const r of roads) {
+    if (roadPtCount >= 150) break;
+    if (!r.segs.length) continue;
+    const runs = dedupeRuns(samplesAlongRoad(r, 20, 0.5), 0.2);
+    for (const run of runs) { roadRuns.push({ road: r.road, run }); roadPtCount += run.length; }
+  }
+  const points = crossings.map(c => [c.lat, c.lon])
+    .concat(streamPts.map(s => s.p))
+    .concat(roadRuns.flatMap(r => r.run));
+  t0 = Date.now();
+  const geo = await geoBatch(points, scan, 'Checking the geologic map');
+  if (scan.cancelled) return null;
+  const nC = crossings.length, nS = streamPts.length;
+  crossings.forEach((c, i) => { c.unit = geo.units[i]; });
+  const streamUnits = {};
+  streamPts.forEach((s, i) => {
+    const u = geo.units[nC + i];
+    if (!u || !u.name) return;
+    if (!streamUnits[s.stream]) streamUnits[s.stream] = {};
+    streamUnits[s.stream][u.name] = u;
+  });
+  let k = nC + nS;
+  for (const rr of roadRuns) { rr.units = rr.run.map(() => geo.units[k++]); }
+  const seenUnits = {};
+  geo.units.forEach(u => { if (u && u.name) seenUnits[u.name] = u; });
+  logStage('geology: ' + geo.done + ' of ' + points.length + ' checks, ' + geo.failed + ' failed; rocks seen: ' + Object.keys(seenUnits).slice(0, 12).join(' / '), t0);
+  const geoDown = geo.done > 0 && geo.failed / geo.done > 0.5;
+  if (!Object.keys(seenUnits).length) return { written: [], geoDown: geoDown || geo.done === 0 };
+
+  // 4. Rate the rocks.
+  t0 = Date.now();
+  setProgress('Matching rocks to what you are hunting...');
+  const { ratings, notes } = await rateFormations(Object.values(seenUnits), target);
+  const rate = u => (u && u.name && ratings[u.name]) || 'low';
+  logStage('ratings: ' + Object.keys(ratings).map(n => n + '=' + ratings[n]).slice(0, 14).join(' / ') + ' [' + notes.join('; ') + ']', t0);
+
+  // 5. Candidate spots.
+  const cands = [];
+  for (const c of crossings) {
+    if (!c.unit || !c.unit.name) continue;
+    const rb = base(rate(c.unit));
+    const along = Object.values(streamUnits[c.stream] || {});
+    const carry = along.reduce((m, u) => Math.max(m, base(rate(u))), 0);
+    const carryNames = along.filter(u => base(rate(u)) >= 1).sort((a, b) => base(rate(b)) - base(rate(a))).map(u => u.name);
+    const eff = Math.max(rb, carry >= 2 ? 1 : 0);
+    const s = eff >= 1 ? Math.min(2, eff + 1) : (carry >= 1 ? 1 : 0);
+    cands.push({ kind: 'crossing', s, pri: rb >= 1 ? 0 : carry >= 2 ? 1 : 3, lat: c.lat, lon: c.lon, dist: c.dist,
+      road: c.road, stream: c.stream, unit: c.unit, rating: rate(c.unit),
+      alongNames: along.map(u => u.name), carryNames });
+  }
+  for (const rr of roadRuns) {
+    // Stretches of road running through producing rock.
+    let i = 0;
+    while (i < rr.run.length) {
+      const u = rr.units[i];
+      if (!u || base(rate(u)) < 1) { i++; continue; }
+      let j = i;
+      while (j + 1 < rr.run.length && rr.units[j + 1] && rr.units[j + 1].name === u.name) j++;
+      const mid = rr.run[Math.floor((i + j) / 2)];
+      const miles = Math.max(0.5, (j - i + 1) * 0.5);
+      cands.push({ kind: 'through', s: base(rate(u)), pri: 2, lat: mid[0], lon: mid[1], dist: milesBetween(lat, lon, mid[0], mid[1]),
+        road: rr.road, unit: u, rating: rate(u), miles });
+      i = j + 1;
+    }
+    // Formation boundaries (the old kind of card) -- fallback only.
+    for (let m = 1; m < rr.run.length; m++) {
+      const a = rr.units[m - 1], b = rr.units[m];
+      if (!a || !b || !a.name || !b.name || a.name === b.name || baseFormationName(a.name) === baseFormationName(b.name)) continue;
+      const mlat = (rr.run[m - 1][0] + rr.run[m][0]) / 2, mlon = (rr.run[m - 1][1] + rr.run[m][1]) / 2;
+      // A boundary is only a fallback: one level below the better of its two rocks.
+    cands.push({ kind: 'boundary', s: Math.max(0, Math.max(base(rate(a)), base(rate(b))) - 1), pri: 4, lat: mlat, lon: mlon, rating: rate(a), rating2: rate(b),
+        dist: milesBetween(lat, lon, mlat, mlon), road: rr.road, unit: a, unit2: b,
+        spanMiles: milesBetween(rr.run[m - 1][0], rr.run[m - 1][1], rr.run[m][0], rr.run[m][1]) });
+    }
+  }
+  cands.sort((a, b) => (b.s - a.s) || (a.pri - b.pri) || (a.dist - b.dist));
+  const pick = [];
+  const perRoad = {};
+  for (const c of cands) {
+    if (pick.length >= 4) break;
+    if (pick.some(p => milesBetween(p.lat, p.lon, c.lat, c.lon) < 1.0)) continue;
+    if (c.kind !== 'crossing' && (perRoad[c.road] || 0) >= 2) continue;
+    perRoad[c.road] = (perRoad[c.road] || 0) + 1;
+    pick.push(c);
+  }
+  const levels = ['cool', 'warm', 'hot'];
+  scanLog.push('candidates: ' + cands.filter(c => c.kind === 'crossing').length + ' crossings, ' +
+    cands.filter(c => c.kind === 'through').length + ' road stretches, ' + cands.filter(c => c.kind === 'boundary').length +
+    ' boundaries; picked: ' + pick.map(c => levels[c.s].toUpperCase() + ' ' + c.kind + ' ' + (c.stream ? c.stream + ' × ' : '') + c.road + ' ' + c.dist.toFixed(1) + 'mi').join('; '));
+
+  // 6. Write-ups, all at once, stop waiting at the deadline.
+  t0 = Date.now();
+  setProgress('Writing up ' + pick.length + ' spot(s)...');
+  const written = [];
+  let closed = false, finished = 0;
+  const jobs = pick.map((c, idx) => (async () => {
+    if (scan.cancelled) return;
+    try {
+      const h = await writeUpSpot(c, target, town, streamSrc);
+      if (h && !closed) { h.score = levels[c.s]; h._order = idx; written.push(h); }
+    } catch (e) { scanLog.push('write-up failed: ' + errText(e)); }
+    finished++;
+    if (!closed) setProgress('Writing up spots — ' + finished + ' of ' + pick.length + ' done...');
+  })());
+  await Promise.race([Promise.all(jobs), new Promise(r => setTimeout(r, Math.max(5000, timeLeft(scan))))]);
+  closed = true;
+  written.sort((a, b) => a._order - b._order);
+  logStage('write-ups (' + written.length + ' of ' + pick.length + ' done)', t0);
+  return { written, candidates: cands.length, geoDown };
+}
+
+// One AI write-up for a spot. The app supplies the facts and the score; the
+// AI only writes the words, under the same honesty rules as before.
+async function writeUpSpot(c, target, town, streamSrc) {
+  let distFact = '';
+  try {
+    const tc = await townCoords(town);
+    if (tc) {
+      const mi = milesBetween(tc.lat, tc.lon, c.lat, c.lon);
+      const dir = compassFrom(tc.lat, tc.lon, c.lat, c.lon);
+      distFact = 'MEASURED LOCATION (computed from coordinates, not a guess): the spot is about ' + (mi < 1 ? 'under 1 mile' : Math.round(mi * 2) / 2 + ' miles') +
+        ' ' + dir + ' of ' + town + ' in a straight line (road miles may be a little longer). In DIRECTIONS you MUST use this distance and direction. Do not state any other compass direction or mileage.';
+    }
+  } catch (e) { /* no distance line */ }
+  const u = c.unit || {}, rk = r => r === 'high' ? 'documented producer' : r === 'possible' ? 'possible host rock' : 'not a likely source';
+  let kindText, facts, ratingText, names;
+  if (c.kind === 'crossing') {
+    kindText = 'road crossing of a creek or river (bridge or low-water crossing)';
+    facts = c.road + ' crosses ' + c.stream + ' near lat ' + c.lat.toFixed(4) + ', lon ' + c.lon.toFixed(4) + ' (computed from the Census road map and the ' + (streamSrc || 'stream map') + ').\n' +
+      'Rock mapped at the crossing: ' + u.name + (u.lith ? ' (' + u.lith + ')' : '') + '.\n' +
+      'Within the search area ' + c.stream + ' also runs through: ' + (c.alongNames.length ? c.alongNames.slice(0, 6).join('; ') : 'no other mapped units found') + '.';
+    ratingText = 'rock at the crossing: ' + rk(c.rating) + '; producing rock the stream runs through: ' + (c.carryNames.length ? c.carryNames.slice(0, 3).join('; ') : 'none found');
+    names = c.road + ', ' + c.stream + ' and ' + town;
+  } else if (c.kind === 'through') {
+    kindText = 'stretch of road running across a mapped rock unit';
+    facts = 'About ' + c.miles.toFixed(1) + ' miles of ' + c.road + ' cross ' + u.name + (u.lith ? ' (' + u.lith + ')' : '') + ', centered near lat ' + c.lat.toFixed(4) + ', lon ' + c.lon.toFixed(4) + '. The rock is mapped under the road; how much is exposed at the surface is not known.';
+    ratingText = rk(c.rating);
+    names = c.road + ' and ' + town;
+  } else {
+    const u2 = c.unit2 || {};
+    kindText = 'formation contact along a road';
+    facts = 'Along ' + c.road + ', the map changes from ' + u.name + (u.lith ? ' (' + u.lith + ')' : '') + ' to ' + u2.name + (u2.lith ? ' (' + u2.lith + ')' : '') +
+      ' somewhere within a ~' + (c.spanMiles || 0.5).toFixed(1) + '-mile stretch centered near lat ' + c.lat.toFixed(4) + ', lon ' + c.lon.toFixed(4) + '; the exact contact line is not resolved at this map scale.';
+    ratingText = u.name + ': ' + rk(c.rating) + '; ' + u2.name + ': ' + rk(c.rating2);
+    names = c.road + ' and ' + town;
+  }
+  const prompt = `You are writing a rockhounding field-guide entry. Use ONLY the verified facts below (from the ${geoSourceLong()} geologic map, the U.S. Census road map${c.kind === 'crossing' ? ' and the ' + (streamSrc || 'stream map') : ''}). Do not invent extra precision, roads, landmarks or history.
+
+SPOT TYPE: ${kindText}
+VERIFIED FACTS:
+${facts}
+Nearest town for directions: ${town}
+${distFact}
+Hunter's target: ${target || 'none given — general collecting'}
+The app's rating (from a collector reference list, not your guess): ${ratingText}
+
+HONESTY RULES:
+- MINERALS: list ONLY materials this rock is documented to produce or its rock type commonly hosts; for a creek crossing you may also list material documented in the producing rock the creek runs through, marked "(in creek gravels, possible)". Mark anything not documented with "(possible)". Never pad with filler minerals (calcite, quartz, pyrite, chlorite and the like). 0 to 4 items, target first if it qualifies; if nothing is realistic, write exactly: nothing notable.
+- WHY: say honestly whether finds are documented, possible or unlikely here and why (for a crossing, whether the creek runs through producing rock upstream). Never promise. State a geologic age only if you are confident of it for that exact formation.
+- ACCESS: tell the reader to park only where it is legal and safe, stay in the public road right-of-way, and never cross fences or enter private land without the landowner's permission.
+
+Write ONE record in EXACTLY this format (no markdown, no extra commentary):
+NAME: short catchy name for this spot
+WHERE: one sentence describing the spot in general terms
+MINERALS: comma-separated, per the rule above
+DIRECTIONS: plain-English directions from ${town} using the MEASURED LOCATION; name only ${names} — never invent any other road, turn or landmark; include the ACCESS rule
+TRUCK: what to watch for as you arrive
+WHY: one or two sentences per the WHY rule
+---RECORD---`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  let resp;
+  try {
+    resp = await fetch(WORKER_URL + '/', {
+      method: 'POST', headers: aiHeaders(), signal: ctrl.signal,
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, messages: [{ role: 'user', content: prompt }] })
+    });
+  } finally { clearTimeout(timer); }
+  if (!resp.ok) throw new Error('API error ' + resp.status);
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message);
+  trackUsage(data);
+  const rec = parseRecord(data.content.map(b => b.text || '').join('').trim());
+  if (!rec) return null;
+  rec.minerals = (rec.minerals || []).filter(m => !/^nothing notable\.?$/i.test(String(m).trim()));
+  rec.kind = c.kind;
+  rec.road = c.road;
+  rec.town = town;
+  rec.verified_by = 'map';
+  rec.source = geoSource();
+  rec.from_formation = u.name || '';
+  rec.to_formation = c.kind === 'boundary' ? ((c.unit2 || {}).name || '') : '';
+  rec.waze = c.lat.toFixed(5) + ', ' + c.lon.toFixed(5);
+  if (c.kind === 'crossing') {
+    rec.headline = c.stream + ' at ' + c.road;
+    rec.detail = 'Rock at the crossing: ' + u.name + '.' + (c.carryNames.length ? ' ' + c.stream + ' also runs through ' + c.carryNames.slice(0, 2).join(' and ') + '.' : '');
+    rec.drainages = [c.stream];
+    rec.drainSource = streamSrc || 'stream map';
+  } else if (c.kind === 'through') {
+    rec.headline = c.road + ' through ' + u.name;
+    rec.detail = 'About ' + c.miles.toFixed(1) + ' miles of ' + c.road + ' cross this formation.';
+    rec.drainages = [];
+  } else {
+    rec.drainages = [];
+  }
+  return rec;
+}
+
+
 // Picks geology check points ALONG the real road path (not straight lines
 // between far-apart points), about every 0.8 mile, capped at MAX_CHECKS per
 // road so a long road can't blow up the scan time. Returns one list of
 // points per continuous stretch of road.
 const MAX_CHECKS_PER_ROAD = 40;
-function samplesAlongRoad(road) {
+function samplesAlongRoad(road, maxChecks = MAX_CHECKS_PER_ROAD, minSpacing = 0.8) {
   const lines = road.segs || [densify(road.pts, 0.012)]; // presets still use hand-drawn pts
   const total = lines.reduce((m, l) => m + lineMiles(l), 0);
-  const spacing = Math.max(0.8, total / MAX_CHECKS_PER_ROAD);
+  const spacing = Math.max(minSpacing, total / maxChecks);
   const runs = [];
   for (const line of lines) {
     const pts = [line[0]];
@@ -1743,37 +2348,26 @@ async function runScout() {
         return;
       }
       const radius = Math.min(30, Math.max(3, Math.round((parsed && parsed.miles) || 20)));
-      setProgress('Found it' + (loc.usedQuery && loc.usedQuery !== place ? ' (near ' + loc.usedQuery + ')' : '') + ' — searching for highways and ' + (scanState === 'Texas' ? 'FM/RM roads' : 'numbered roads') + ' within ' + radius + ' miles...');
-      t0 = Date.now();
-      const { roads, failed: roadLookupFailed } = await fetchNearbyHighways(loc.lat, loc.lon, radius);
+      showLoading('READING THE MAPS...', 'Finding roads, creeks and crossings within ' + radius + ' miles of "' + place + '"...');
+      const res = await crossingScan(loc, radius, target, (parsed && parsed.town) || place, scan);
       bail();
-      logStage('road lookup (' + roads.length + ' roads) — ' + roadReport.join('; '), t0);
-      if (roads.length === 0) {
-        clearTimeout(watchdog);
-        hideLoading();
-        showError((roadLookupFailed
-          ? 'The free road-map server is busy right now and did not answer. Please try again in a minute. [TEST details — ' + roadReport.join(' | ') + ']'
-          : 'No numbered highways' + (scanState === 'Texas' ? ' or FM/RM roads' : ' or roads') + ' found within ' + radius + ' miles of that area. Try a larger distance or a nearby town name.') + notCharged(await refundScan()));
-        setStatus(roadLookupFailed ? 'SERVER BUSY' : 'NO ROADS');
-        btn.disabled = false;
-        return;
-      }
-      showLoading('READING REAL ' + geoSource() + ' GEOLOGIC MAP...', 'Sampling ' + roads.length + ' road(s) near "' + place + '" — 20-40 seconds');
-      const { allContacts, written, geoDown } = await scanRoadsForHotspots(roads, (parsed && parsed.town) || place, {}, target, scan);
-      bail();
-      scanLog.push('contacts found: ' + allContacts.length + ', cards written: ' + written.length);
+      const written = (res && res.written) || [];
+      scanLog.push('cards written: ' + written.length);
       showTestLog();
 
       clearTimeout(watchdog);
       hideLoading();
-      if (written.length === 0) {
+      if (res && res.noRoads) {
+        showError((res.roadFailed
+          ? 'The road map did not answer right now. Please try again in a minute.'
+          : 'No usable roads found within ' + radius + ' miles of that area. Try a larger distance or a nearby town name.') + notCharged(await refundScan()));
+        setStatus(res.roadFailed ? 'SERVER BUSY' : 'NO ROADS');
+      } else if (written.length === 0) {
         const ok = await refundScan();
-        showError((geoDown
+        showError((res && res.geoDown
           ? 'The free geology-map server is not responding right now. Please try again in a few minutes.'
-          : allContacts.length === 0
-          ? 'No formation contacts found along highways near that area this pass. Try again, or a different area.'
-          : 'Found real formation contacts but the write-up step failed. Try again.') + notCharged(ok));
-        setStatus(geoDown ? 'SERVER BUSY' : allContacts.length === 0 ? 'NO DATA' : 'ERROR');
+          : 'Could not build any spots for that area this pass. Try again, or a different area.') + notCharged(ok));
+        setStatus(res && res.geoDown ? 'SERVER BUSY' : 'NO DATA');
       } else {
         printLabel = 'Custom search: ' + place + (target ? ' (' + target + ')' : '');
         renderHotspots(written);
@@ -1913,13 +2507,17 @@ function renderHotspots(spots) {
           '<div style="font-family:\'Barlow\',sans-serif; font-weight:500; font-size:0.64rem; letter-spacing:0.1em; color:#f4b87a; background:rgba(196,98,45,0.12); border:1px solid rgba(196,98,45,0.35); border-radius:2px; padding:5px 10px; margin-bottom:2px; display:inline-block;">📍 KNOWN PRODUCTIVE SITE — CONFIRMED ON-SITE</div>'
           : '') +
         '<div class="contact-strip">' +
-          '<span class="clabel">' + (isOwnerConfirmed ? 'Formation (published sources + owner-confirmed location)' : '✓ Verified Formation Contact — ' + (h.source || 'USGS') + ' Geologic Map') + '</span>' +
-          '<span class="cval">' + h.from_formation + ' ▸ ' + h.to_formation + '</span>' +
+          '<span class="clabel">' + (isOwnerConfirmed ? 'Formation (published sources + owner-confirmed location)'
+            : h.kind === 'crossing' ? '✓ Mapped creek crossing — road, stream & ' + (h.source || 'USGS') + ' geologic maps'
+            : h.kind === 'through' ? '✓ Road across mapped formation — ' + (h.source || 'USGS') + ' Geologic Map'
+            : '✓ Verified Formation Contact — ' + (h.source || 'USGS') + ' Geologic Map') + '</span>' +
+          '<span class="cval">' + (h.headline || (h.from_formation + (h.to_formation ? ' ▸ ' + h.to_formation : ''))) + '</span>' +
+          (h.detail ? '<span style="font-size:0.78rem;color:var(--cream);display:block;margin-top:3px;">' + h.detail + '</span>' : '') +
           (h.contact_location ? '<span style="font-size:0.72rem;color:var(--feldspar);display:block;margin-top:3px;">' + h.contact_location + '</span>' : '') +
         '</div>' +
         (drains.length > 0 ?
           '<div class="drain-strip">' +
-            '<span class="dlabel">Named Drainages Nearby (OpenStreetMap)</span>' +
+            '<span class="dlabel">' + (h.kind === 'crossing' ? 'Creek / river crossed' : 'Named Drainages Nearby') + ' (' + (h.drainSource || 'OpenStreetMap') + ')</span>' +
             '<span class="dval">〰 ' + drains.join('  〰 ') + '</span>' +
           '</div>' : '') +
         '<div class="dir-strip">' +
@@ -1932,12 +2530,14 @@ function renderHotspots(spots) {
         '</div>' +
         '<div class="waze-box">' +
           '<span class="wlabel">Waze Destination</span>' +
-          '<input type="text" readonly value="' + (h.town || '') + '" onclick="this.select()">' +
-          '<span class="winst">Tap to select — long press to copy — paste into Waze search</span>' +
+          '<input type="text" readonly value="' + (h.waze || h.town || '') + '" onclick="this.select()">' +
+          '<span class="winst">' + (h.waze ? 'GPS point of the spot — tap to select, copy, paste into Waze or Google Maps' : 'Tap to select — long press to copy — paste into Waze search') + '</span>' +
         '</div>' +
         '<div class="why">' + h.why + '</div>' +
         '<div class="src">' + (isOwnerConfirmed
           ? '▸ Location and directions confirmed on-site by the app\'s owner; age and mineralogy from independently published geology sources'
+          : h.kind === 'crossing' ? '▸ Crossing computed from the Census road map and ' + (h.drainSource || 'stream map') + '; rock from ' + (h.source || 'USGS') + ' geologic map data. Public right-of-way only.'
+          : h.kind === 'through' ? '▸ Rock under the road from ' + (h.source || 'USGS') + ' geologic map data; exposure at the surface not verified. Public right-of-way only.'
           : '▸ Formation contact verified directly against ' + (h.source || 'USGS') + ' geologic map data; check both shoulders near the marked stretch') + '</div>' +
       '</div>';
     c.appendChild(card);
