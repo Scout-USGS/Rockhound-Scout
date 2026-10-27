@@ -198,7 +198,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 24 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 25 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1665,6 +1665,39 @@ async function fetchStreams(lat, lon, radiusMiles) {
   return { streams: [], source: '', report };
 }
 
+const PLACES_BASE = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer';
+// USGS Protected Areas Database (PAD-US) public-access layer: parks, wildlife
+// areas, forests etc., each marked Open / Restricted / Closed to the public.
+const PADUS_URL = 'https://services.arcgis.com/v01gqwM5QqNysAAi/ArcGIS/rest/services/Public_Access/FeatureServer/0';
+async function arcPointQuery(layerUrl, lat, lon, outFields, meters) {
+  const params = new URLSearchParams({ geometry: lon + ',' + lat, geometryType: 'esriGeometryPoint', inSR: '4326',
+    spatialRel: 'esriSpatialRelIntersects', outFields: outFields, returnGeometry: 'false', f: 'json' });
+  if (meters) { params.set('distance', String(meters)); params.set('units', 'esriSRUnit_Meter'); }
+  const r = await fetchWithTimeout(layerUrl + '/query?' + params.toString(), 8000);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.message || 'query error');
+  return j.features || [];
+}
+// Name of the city/village the point is inside, or ''.
+async function cityAt(lat, lon) {
+  const layers = await arcLayers(PLACES_BASE);
+  const layer = layers.find(l => /incorporated places/i.test(l.name || '') && !/label/i.test(l.name || ''));
+  if (!layer) throw new Error('no city layer');
+  const fs = await arcPointQuery(PLACES_BASE + '/' + layer.id, lat, lon, 'NAME');
+  return fs.length ? String(fs[0].attributes.NAME || 'a city') : '';
+}
+// Public land at/near the point: { name, access: 'open'|'restricted'|'closed'|'unknown' } or null.
+async function publicLandAt(lat, lon, meters) {
+  const fs = await arcPointQuery(PADUS_URL, lat, lon, 'Unit_Nm,Mang_Name,Pub_Access,Des_Tp', meters);
+  if (!fs.length) return null;
+  const acc = a => ({ OA: 'open', RA: 'restricted', XA: 'closed' })[String(a || '').toUpperCase()] || 'unknown';
+  const rank = { open: 0, restricted: 1, unknown: 2, closed: 3 };
+  const list = fs.map(f => ({ name: String(f.attributes.Unit_Nm || f.attributes.Mang_Name || 'public land').trim(), access: acc(f.attributes.Pub_Access) }))
+    .sort((a, b) => rank[a.access] - rank[b.access]);
+  return list[0];
+}
+
 async function nameWaterBody(lat, lon) {
   const layers = await arcLayers(CENSUS_HYDRO_BASE);
   const layer = layers.find(l => /area/i.test(l.name || '') && !/label/i.test(l.name || ''));
@@ -2227,52 +2260,71 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
       for (const w of waterCells) { const d = milesBetween(la, lo, w.lat, w.lon); if (d < bd) { bd = d; best = w; } }
       return { cell: best, d: bd };
     };
+    // Up to 3 points per road that come close to the water (0.5+ mile apart).
     const shoreTries = [];
     for (const rr of roadRuns) {
-      let best = null;
+      const pts = [];
       rr.run.forEach((pt, i) => {
         if (!rr.units[i] || isWater(rr.units[i])) return;
         const nw = nearestWater(pt[0], pt[1]);
-        if (nw.d <= gridSpacing * 1.2 && (!best || nw.d < best.nw.d)) best = { pt, unit: rr.units[i], nw };
+        if (nw.d <= gridSpacing * 1.2) pts.push({ road: rr.road, pt, unit: rr.units[i], nw });
       });
-      if (best) shoreTries.push({ road: rr.road, ...best });
+      pts.sort((x, y) => x.nw.d - y.nw.d);
+      const mine = [];
+      for (const x of pts) { if (mine.length >= 3) break; if (mine.some(m => milesBetween(m.pt[0], m.pt[1], x.pt[0], x.pt[1]) < 0.5)) continue; mine.push(x); }
+      shoreTries.push(...mine);
     }
     shoreTries.sort((a, b) => a.nw.d - b.nw.d);
-    const tries = [];
-    for (const t of shoreTries) {
-      if (tries.length >= 6) break;
-      if (tries.some(x => milesBetween(x.pt[0], x.pt[1], t.pt[0], t.pt[1]) < 2)) continue;
-      tries.push(t);
-    }
-    // Step from the road toward the water every ~0.15 mile.
+    const tries = shoreTries.slice(0, 12);
+    // Step from the road toward the water every ~0.1 mile to find the shore.
     const steps = [];
     tries.forEach((t, k) => {
-      const n = Math.max(1, Math.min(14, Math.ceil(t.nw.d / 0.15)));
+      const n = Math.max(1, Math.min(16, Math.ceil(t.nw.d / 0.1)));
       for (let q = 1; q <= n; q++) steps.push({ k, q, p: [t.pt[0] + (t.nw.cell.lat - t.pt[0]) * q / n, t.pt[1] + (t.nw.cell.lon - t.pt[1]) * q / n] });
     });
     const sg = steps.length ? await geoBatch(steps.map(x => x.p), scan, 'Finding the shoreline') : { units: [] };
     if (scan.cancelled) return null;
     let waterName = '';
     try { waterName = await nameWaterBody(waterCells[0].lat, waterCells[0].lon); } catch (e) {}
-    let made = 0;
+    // Keep only road points that run ALONG the water (shore within ~0.35 mile).
+    const close = [];
     tries.forEach((t, k) => {
       const mine = steps.map((x, i) => ({ ...x, u: sg.units[i] })).filter(x => x.k === k).sort((a, b) => a.q - b.q);
       const hit = mine.find(x => isWater(x.u));
       if (!hit) return;
       const shoreMi = milesBetween(t.pt[0], t.pt[1], hit.p[0], hit.p[1]);
-      if (shoreMi > 1.5) return;
+      if (shoreMi > 0.35) return;
+      if (close.some(c => milesBetween(c.t.pt[0], c.t.pt[1], t.pt[0], t.pt[1]) < 0.75)) return;
+      close.push({ t, hit, shoreMi });
+    });
+    // City or public land? (Census city limits; USGS PAD-US public land.)
+    let landErr = '', cityErr = '';
+    await Promise.all(close.map(async c => {
+      try { c.city = await cityAt(c.t.pt[0], c.t.pt[1]); } catch (e) { cityErr = errText(e); }
+      try { c.pub = await publicLandAt(c.hit.p[0], c.hit.p[1], 250); } catch (e) { landErr = errText(e); }
+    }));
+    let made = 0;
+    for (const { t, hit, shoreMi, city, pub } of close) {
       const landNear = cells.filter(c => !isWater(c.unit) && milesBetween(hit.p[0], hit.p[1], c.lat, c.lon) <= 1.6).map(c => c.unit);
       const uniq = [...new Map(landNear.concat([t.unit]).map(u => [u.name, u])).values()];
       const best = uniq.reduce((m, u) => Math.max(m, base(rate(u))), 0);
-      cands.push({ kind: 'shore', s: best >= 1 ? 2 : 1, pri: 0.5, lat: t.pt[0], lon: t.pt[1], dist: milesBetween(lat, lon, t.pt[0], t.pt[1]),
+      let sScore = best >= 1 ? 2 : 1;
+      if (city) sScore = Math.max(0, sScore - 1);                       // in town: drop a level
+      if (pub && pub.access === 'closed') continue;                     // closed to the public: skip
+      const pri = pub && pub.access === 'open' ? 0.2 : city ? 3 : 0.6;  // open public land first
+      cands.push({ kind: 'shore', s: sScore, pri, lat: t.pt[0], lon: t.pt[1], dist: milesBetween(lat, lon, t.pt[0], t.pt[1]),
         road: t.road, unit: t.unit, rating: rate(t.unit), waterName: waterName || 'the shore', shoreMi,
         shoreDir: compassFrom(t.pt[0], t.pt[1], hit.p[0], hit.p[1]), shoreLat: hit.p[0], shoreLon: hit.p[1],
+        city: city || '', pub: pub || null,
         landNames: uniqNames(uniq.map(u => u.name)),
         findsHere: [...new Set(uniq.flatMap(u => finds[u.name] || []))].slice(0, 5),
         rules: [...new Set(uniq.flatMap(u => ruleNotes[u.name] || []))] });
       made++;
-    });
-    logStage('shoreline: ' + waterCells.length + ' water survey points' + (waterName ? ' (' + waterName + ')' : '') + ', ' + tries.length + ' roads near the water, ' + made + ' shore spots', t0);
+    }
+    scanLog.push('shore checks: ' + close.length + ' road points within 0.35 mi of the water' +
+      (close.length ? ' (' + close.map(c => c.t.road + (c.city ? ' in ' + c.city : '') + (c.pub ? ' on ' + c.pub.name + ' [' + c.pub.access + ']' : '')).join('; ') + ')' : '') +
+      (cityErr ? ' | city lookup: ' + cityErr : '') + (landErr ? ' | public-land lookup: ' + landErr : ''));
+    logStage('shoreline: ' + waterCells.length + ' water survey points' + (waterName ? ' (' + waterName + ')' : '') + ', ' + tries.length + ' road points tried, ' + made + ' shore spots', t0);
   }
   if (side) {
     const before = cands.length;
@@ -2402,6 +2454,8 @@ async function writeUpSpot(c, target, town, streamSrc) {
     kindText = 'shoreline of a large body of water reached from a road';
     facts = 'The shore of ' + c.waterName + ' is about ' + (c.shoreMi < 0.2 ? 'right beside' : c.shoreMi.toFixed(1) + ' mile ' + c.shoreDir + ' of') + ' this point on ' + c.road +
       ' (lat ' + c.lat.toFixed(4) + ', lon ' + c.lon.toFixed(4) + '), located from the geologic map. Rock and deposits mapped on land near this shore: ' + c.landNames.slice(0, 5).join('; ') + '.\n' +
+      (c.pub ? 'Public land at the shore (USGS Protected Areas Database): ' + c.pub.name + ', access listed as ' + c.pub.access + '. Say the reader must check that land\'s collecting rules; do not say collecting is allowed.\n' : '') +
+      (c.city ? 'This point is inside ' + c.city + ' city limits.\n' : '') +
       'Shores and beaches sort and wash out cobbles from the nearby bedrock and glacial or river deposits, so beach gravel here can hold material from those units.';
     ratingText = 'best nearby land rock: ' + (c.landNames.length ? c.landNames[0] : u.name);
     names = c.road + ', ' + c.waterName + ' and ' + town;
@@ -2499,10 +2553,14 @@ WHY: one or two sentences per the WHY rule
     rec.drainSource = streamSrc || 'stream map';
   } else if (c.kind === 'shore') {
     rec.headline = c.waterName + ' shore off ' + c.road;
-    rec.detail = 'Shoreline about ' + (c.shoreMi < 0.2 ? 'right beside the road' : c.shoreMi.toFixed(1) + ' mile ' + c.shoreDir + ' of this point') + '. Nearby land rock: ' + c.landNames.slice(0, 3).join(', ') + '.';
+    rec.detail = 'Shoreline about ' + (c.shoreMi < 0.15 ? 'right beside the road' : c.shoreMi.toFixed(1) + ' mile ' + c.shoreDir + ' of this point') + '. Nearby land rock: ' + c.landNames.slice(0, 3).join(', ') + '.' +
+      (c.pub ? ' On or next to public land: ' + c.pub.name + (c.pub.access === 'open' ? ' (listed as open to the public)' : c.pub.access === 'restricted' ? ' (listed as restricted access)' : '') + '.' : '') +
+      (c.city ? ' Inside ' + c.city + ' city limits.' : '');
     rec.drainages = [c.waterName];
     rec.drainSource = 'geologic & Census water maps';
-    rec.rules = (rec.rules || []).concat(['Beaches and shorelines are often private, or part of parks and preserves with their own collecting rules — check before you collect.']);
+    rec.rules = (rec.rules || []).concat([c.pub
+      ? 'Public land status is from the USGS Protected Areas Database. Many parks and preserves do not allow rock or fossil collecting — check ' + c.pub.name + '\'s rules before you collect.'
+      : 'Beaches and shorelines are often private, or part of parks and preserves with their own collecting rules — check before you collect.']);
   } else if (c.kind === 'through') {
     rec.headline = c.road + ' through ' + u.name;
     rec.detail = 'About ' + c.miles.toFixed(1) + ' miles of ' + c.road + ' cross this formation.' +
