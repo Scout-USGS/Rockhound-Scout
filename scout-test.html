@@ -184,7 +184,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 15 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 16 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1083,7 +1083,7 @@ async function parseCustomRequest(text) {
     '{"place": "...", "town": "...", "target": "...", "miles": 0, "road": "...", "direction": ""}\n' +
     '- place: the location as a clean geocodable string, ideally "City, ST" with the two-letter US state (a town, hotel, address, or landmark). Include the state only if the user named it or the place is unmistakable; if no state is given, leave the state off rather than guessing. If the only location given is a road, use that road plus the state if given (e.g. "FM 306, TX"). Use "" if no place is given.\n' +
     '- town: the nearest city or town to that place, as "Town, ST" using the same state rule (for an address, the town it is in or next to). Use "" if unknown.\n' +
-    '- target: what they want to find, with obvious typos corrected (e.g. "agatized petrified wood"). Use "" if none is given.\n' +
+    '- target: what they want to find, with obvious typos corrected (e.g. "agatized petrified wood"). Use "" if none is given or if they only said something general like spots, rocks, hotspots or anything.\n' +
     '- miles: the search distance in miles if the user asked for one (e.g. "within 10 miles" gives 10), otherwise 0.\n' +
     '- road: if they asked to stay on or along one specific road (e.g. "on hwy 306", "along FM 1358", "off CR 312"), that road as written; otherwise "".\n' +
     '- direction: if they asked for one side of the place (e.g. "south of La Grange", "NE of Llano", "west side of Alpine"), one of N, NE, E, SE, S, SW, W, NW; otherwise "". The place is then the town itself (e.g. "La Grange, TX").';
@@ -1107,7 +1107,7 @@ async function parseCustomRequest(text) {
     return {
       place: String(j.place || '').trim().slice(0, 120),
       town: String(j.town || '').trim().slice(0, 80),
-      target: String(j.target || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 80),
+      target: (t => GENERIC_TARGET.test(t) ? '' : t)(String(j.target || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 80)),
       miles: Number(j.miles) || 0,
       road: String(j.road || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 40),
       direction: (String(j.direction || '').toUpperCase().match(/^(N|NE|E|SE|S|SW|W|NW)$/) || [''])[0]
@@ -1295,14 +1295,17 @@ async function tigerQuery(layerId, lat, lon, radiusMiles) {
 // "State Rte 104" -> "NY-104". Returns { ref, rank } (lower rank = scan first)
 // or null for roads we don't want (interstates, unnamed, plain streets).
 function tigerRoadRef(name) {
-  const n = String(name || '').replace(/\s+/g, ' ').trim();
+  let n = String(name || '').replace(/\s+/g, ' ').trim();
   const abbr = Object.keys(US_STATES).find(k => US_STATES[k] === scanState) || '';
   let m;
+  // Census spellings: drop a leading/trailing direction ("N US Hwy 281", "Fm 306 W").
+  n = n.replace(/^(N|S|E|W|NE|NW|SE|SW|North|South|East|West)\.? (?=(US|State|St|Sh|Fm|Farm|Rm|Ranch|Co|County|Cr|Hwy|Highway|Loop|Spur|Tx|Texas)\b)/i, '')
+       .replace(/ (N|S|E|W|North|South|East|West)$/i, '');
   if (/^(I-|I |IH[- ]?\d|Interstate)/i.test(n)) return null; // no stopping on interstate shoulders
   if (/^(Bus|Business)\b/i.test(n)) return null; // business routes duplicate the main road
   if ((m = n.match(/^US (?:Hwy|Highway|Rte|Route)? ?(\d+[A-Z]?)\b/i))) return { ref: 'US-' + m[1], rank: 0 };
   if ((m = n.match(/^(?:State|St|SH|Texas|Tx)\.? (?:Hwy|Highway|Rte|Route|Rd|Road)? ?(\d+[A-Z]?)\b/i))) return { ref: (abbr || 'SH') + '-' + m[1], rank: 0 };
-  if ((m = n.match(/^(?:Fm|F M|Farm to Market|Farm-to-Market)(?: Rd| Road)?[- ]?(\d+)\b/i))) return { ref: 'FM ' + m[1], rank: 1 };
+  if ((m = n.match(/^(?:Fm|F M|Farm to Market|Farm-to-Market|Farm)(?: Rd| Road)?[- ]?(\d+)\b/i))) return { ref: 'FM ' + m[1], rank: 1 };
   if ((m = n.match(/^(?:Rm|R M|Ranch to Market|Ranch-to-Market|Ranch)(?: Rd| Road)?[- ]?(\d+)\b/i))) return { ref: 'RM ' + m[1], rank: 1 };
   if ((m = n.match(/^(?:State )?(Loop|Spur|Park Rd) (\d+[A-Z]?)\b/i))) return { ref: m[1].replace(/\b\w/g, x => x.toUpperCase()) + ' ' + m[2], rank: 1 };
   if ((m = n.match(/^(?:Co|Co\.|Cnty|County)(?: Rd| Road| Hwy| Highway| Rte| Route)\.? (\w+)/i))) return { ref: 'County Rd ' + m[1].toUpperCase(), rank: 2 };
@@ -1483,7 +1486,8 @@ async function fetchCensusRoads(lat, lon, radiusMiles) {
       let where = '1=1';
       if (isLocal && nf) {
         // Only numbered rural roads -- not every city street.
-        where = ['CO %', 'CO. %', 'COUNTY %', 'CR %', 'CR-%', 'FM %', 'FARM%', 'RM %', 'RANCH%', 'STATE %', 'ST HWY%', 'SH %', 'US %', 'HWY %', 'LOOP %', 'SPUR %', 'PARK RD%']
+        where = ['CO %', 'CO. %', 'COUNTY %', 'CR %', 'CR-%', 'FM %', 'FARM%', 'RM %', 'RANCH%', 'STATE %', 'ST HWY%', 'SH %', 'US %', 'HWY %', 'LOOP %', 'SPUR %', 'PARK RD%',
+                 '_ FM %', '_ FARM RD%', '_ RANCH RD%', '_ CO RD%', '_ COUNTY RD%', '_ US HWY%', '_ STATE HWY%', '_ STATE %']
           .map(p => 'UPPER(' + nf + ") LIKE '" + p + "'").join(' OR ');
       }
       let res;
@@ -1650,65 +1654,104 @@ function dedupeRuns(runs, minMi) {
 
 // --- which rocks produce the target ---------------------------------------
 // Field-confirmed knowledge (JT's; edit here). This is NOT a list of spots --
-// it only says which FORMATIONS produce a target. The AI rates every rock
-// everywhere by the same rules; a matching row here just overrides the AI's
-// rating for the formations it names. Every state can get rows over time.
+// it says which FORMATIONS produce a material. The AI rates every rock
+// everywhere by the same rules; a matching row overrides the AI's rating for
+// the formations it names, and its label is always listed as a find there.
 const TX_PRODUCERS = [
   { label: 'petrified wood', target: /petrified|palm ?wood|pet ?wood|agati[sz]ed wood|opali[sz]ed wood|silicified wood|fossil(ized)? wood/i,
     high: /oakville|fleming/i,
-    possible: /catahoula|jackson|whitsett|manning|wellborn|caddell/i }
+    possible: /catahoula|jackson|whitsett|manning|wellborn|caddell/i },
+  { label: 'fossils', target: /fossil(?!(ized)? wood)|ammonite|shark|teeth|tooth|echinoid|sea urchin|oyster|clam|shells?\b|gastropod|snail|rudist|trilobite|crinoid|dinosaur/i,
+    high: /glen rose|walnut|comanche peak|del rio|grayson|austin chalk|eagle ford|duck creek|kiamichi|fort worth|goodland|weno|pawpaw|main street|denton|corsicana|kemp|kincaid|cow creek/i,
+    possible: /edwards|kainer|person|georgetown|buda|fredericksburg|washita|segovia|fort terrett|devils river|pecan gap|ozan|taylor|navarro|hensell/i },
+  { label: 'chert/flint', target: /chert|flint/i,
+    high: /edwards|kainer|person|segovia|fort terrett|devils river/i,
+    possible: /georgetown|uvalde gravel|leona/i }
 ];
+// Words that mean "anything", not a specific target.
+const GENERIC_TARGET = /^(any|anything|everything|stuff|things?|spots?|hot ?spots?|good spots?|places?|sites?|rocks?|rocks and minerals|minerals|rockhounding( spots| sites)?|collecting( spots| sites)?|anything collectible|collectibles?)$/i;
+
+// Rates each rock for the target (or for collecting in general) AND says what
+// a rockhound could actually find in it. Returns { ratings, finds, notes, failed }.
 async function rateFormations(units, target) {
-  const ratings = {}, notes = [];
-  // With a target, use the rows for that target. With no target, every row
-  // counts (anything on the list is collectible).
+  const ratings = {}, finds = {}, notes = [];
   const rows = scanState !== 'Texas' ? [] : (target ? TX_PRODUCERS.filter(r => r.target.test(target)) : TX_PRODUCERS);
-  const todo = [];
+  const rowRating = {}, rowFinds = {};
   let listed = 0;
   for (const u of units) {
-    if (rows.some(r => r.high.test(u.name))) { ratings[u.name] = 'high'; listed++; }
-    else if (rows.some(r => r.possible.test(u.name))) { ratings[u.name] = 'possible'; listed++; }
-    else todo.push(u);
+    const hi = rows.filter(r => r.high.test(u.name)), po = rows.filter(r => r.possible.test(u.name));
+    if (hi.length) { rowRating[u.name] = 'high'; listed++; } else if (po.length) { rowRating[u.name] = 'possible'; listed++; }
+    const labels = hi.concat(po).map(r => r.label);
+    if (labels.length) rowFinds[u.name] = labels;
   }
   if (rows.length) notes.push('field list (' + rows.map(r => r.label).join(', ') + ') set ' + listed + ' rock(s)');
-  if (todo.length) {
-    const list = todo.slice(0, 30).map((u, i) => (i + 1) + '. ' + cleanForPrompt(u.name, 120) + (u.lith ? ' (' + cleanForPrompt(u.lith, 120) + ')' : '')).join('\n');
-    const prompt = 'A rockhound in ' + scanState + ' is hunting for: ' + (target ? cleanForPrompt(target, 80) : 'anything collectible (agate, jasper, chert, petrified wood, fossils, crystals, geodes, ore minerals, gem gravels)') + '.\n' +
-      'Rate each mapped rock unit below for how likely the hunter is to find that IN THIS ROCK UNIT ITSELF:\n' +
-      '"h" = this formation is documented to produce it; "p" = not documented, but this rock type commonly hosts it; "l" = this rock type does not normally host it.\n' +
-      'Rate modern alluvium, terrace deposits, sand, soil and other loose cover "l" unless they are themselves a documented source (creeks carrying material downstream are handled separately). Never rate "h" from the general region alone.\n\n' +
-      list + '\n\nReply with ONLY a JSON array with one letter per unit, in the same order, e.g. ["l","h","p"]';
+
+  const list = units.slice(0, 25);
+  const lines = list.map((u, i) => (i + 1) + '. ' + cleanForPrompt(u.name, 120) + (u.lith ? ' (' + cleanForPrompt(u.lith, 120) + ')' : '')).join('\n');
+  const prompt = 'A rockhound in ' + scanState + ' is ' + (target ? 'hunting for: ' + cleanForPrompt(target, 80) : 'asking what they could find (anything collectible)') + '.\n' +
+    'For each mapped rock unit below give:\n' +
+    'FINDS: what a rockhound could realistically find in this unit and take home -- documented in this formation, or commonly found in this rock type. ' +
+    'Include fossils by type (e.g. oysters, echinoids, ammonites, rudists, shark teeth), agate, jasper, chert/flint, petrified wood, collectible crystals (calcite or quartz crystals in vugs and fractures, celestine, selenite), geodes, concretions, and ore minerals (e.g. hematite, pyrite or marcasite nodules). ' +
+    'Do NOT list a mineral just because the rock is made of it (limestone is calcite -- list "calcite crystals" only where crystals are found). Up to 4 items, most notable first; "none" if nothing collectible.\n' +
+    'RATING ' + (target ? 'for the target' : 'for collecting in general') + ': h = this formation is documented to produce it; p = this rock type commonly hosts it but it is not documented here; l = not expected. ' +
+    'Rate modern alluvium, terrace deposits, residuum, soil and water "l" unless they are themselves documented sources (creek gravels are handled separately). Never rate h from the general region alone.\n\n' +
+    lines + '\n\nReply with ONLY one line per unit in exactly this format and nothing else:\n1|h|fossils (oysters, echinoids); calcite crystals\n2|l|none';
+  const ask = async (p) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 25000);
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 20000);
       const resp = await fetch(WORKER_URL + '/', {
         method: 'POST', headers: aiHeaders(), signal: ctrl.signal,
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
-      }).finally(() => clearTimeout(timer));
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 900, messages: [{ role: 'user', content: p }] })
+      });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const data = await resp.json();
       if (data.error) throw new Error(data.error.message || 'AI error');
       trackUsage(data);
-      const raw = data.content.map(b => b.text || '').join('');
-      // Accept an array ["l","h"], an object {"1":"h"}, or plain "1. h" lines.
-      let vals = [];
-      const arr = raw.match(/\[[\s\S]*?\]/), obj = raw.match(/\{[\s\S]*\}/);
-      try { if (arr) vals = JSON.parse(arr[0]); } catch (e) {}
-      if (!vals.length && obj) { try { const o = JSON.parse(obj[0]); vals = todo.slice(0, 30).map((u, i) => o[String(i + 1)] || o[u.name] || ''); } catch (e) {} }
-      if (!vals.length) vals = todo.slice(0, 30).map((u, i) => ((raw.match(new RegExp('(?:^|\\n)\\s*' + (i + 1) + '[.):=\\s]+\"?(high|possible|low|h|p|l)\\b', 'i')) || [])[1] || ''));
-      let understood = 0;
-      todo.slice(0, 30).forEach((u, i) => {
-        const v = String(vals[i] || '').toLowerCase().trim();
-        if (v) understood++;
-        ratings[u.name] = v.startsWith('h') ? 'high' : v.startsWith('p') ? 'possible' : 'low';
-      });
-      notes.push('AI rated ' + understood + ' of ' + Math.min(30, todo.length) + ' rocks; AI said: ' + raw.replace(/\s+/g, ' ').slice(0, 120));
-    } catch (e) {
-      notes.push('AI rating failed (' + errText(e) + ') — unlisted rocks counted low');
+      return data.content.map(b => b.text || '').join('');
+    } finally { clearTimeout(timer); }
+  };
+  const read = raw => {
+    const got = {};
+    for (const line of String(raw).split('\n')) {
+      const m = line.match(/^\s*(\d+)\s*[|.:)]\s*(h|p|l)\w*\s*\|\s*(.*)$/i);
+      if (m) got[+m[1]] = { r: m[2].toLowerCase(), f: m[3].trim() };
     }
-    for (const u of todo) if (!ratings[u.name]) ratings[u.name] = 'low';
+    return got;
+  };
+  let got = {}, failed = false;
+  if (list.length) {
+    try {
+      let raw = await ask(prompt);
+      got = read(raw);
+      if (Object.keys(got).length < Math.ceil(list.length / 2)) {
+        notes.push('first AI reply unreadable (' + raw.replace(/\s+/g, ' ').slice(0, 80) + ') — retried');
+        raw = await ask(prompt + '\n\nIMPORTANT: output ONLY the numbered lines in the format shown. No other words.');
+        got = read(raw);
+      }
+      notes.push('AI rated ' + Object.keys(got).length + ' of ' + list.length + ' rocks');
+      if (Object.keys(got).length < Math.ceil(list.length / 2)) failed = true;
+    } catch (e) {
+      failed = true;
+      notes.push('AI rating failed (' + errText(e) + ')');
+    }
   }
-  return { ratings, notes };
+  units.forEach((u, i) => {
+    const a = got[i + 1];
+    const ai = a ? (a.r === 'h' ? 'high' : a.r === 'p' ? 'possible' : 'low') : 'low';
+    ratings[u.name] = rowRating[u.name] || ai;
+    const items = (rowFinds[u.name] || []).slice();
+    if (a && a.f && !/^none\.?$/i.test(a.f)) {
+      for (const f of a.f.split(/;(?![^()]*\))/).map(x => x.trim()).filter(Boolean)) {
+        const fk = f.toLowerCase().split(' (')[0];
+        const i = items.findIndex(x => x.toLowerCase().split(' (')[0] === fk);
+        if (i >= 0) { if (f.length > items[i].length) items[i] = f; } // keep the more detailed version
+        else if (!items.some(x => f.toLowerCase().includes(x.toLowerCase()))) items.push(f);
+      }
+    }
+    finds[u.name] = items.slice(0, 5);
+  });
+  return { ratings, finds, notes, failed };
 }
 
 // Even grid of points across the search circle (about maxPts of them).
@@ -1773,8 +1816,10 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
       focusLabel = [...focus].join(' / ');
       scanLog.push('staying on: ' + focusLabel + ' (asked for "' + roadWanted + '")');
     } else {
-      focusNote = 'No road matching "' + roadWanted + '" was found within ' + radius + ' miles, so these spots cover the whole area.';
-      scanLog.push('asked for road "' + roadWanted + '" — not found; whole area used');
+      const num = (String(roadWanted).match(/(\d+)/) || [])[1];
+      scanLog.push('asked for road "' + roadWanted + '" — not found; scan stopped');
+      return { written: [], roadNotFound: roadWanted, roadCount: roads.length,
+        similar: roads.filter(r => num && r.road.includes(num.slice(0, 2))).slice(0, 5).map(r => r.road) };
     }
   }
   const onFocus = name => !focus || focus.has(name);
@@ -1801,17 +1846,19 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
   logStage('area survey: ' + grid.done + ' of ' + gridPts.length + ' points every ' + gridSpacing.toFixed(1) + ' mi, ' + grid.failed + ' failed, ' + Object.keys(areaUnits).length + ' rock units', t0);
   t0 = Date.now();
   setProgress('Matching the rocks to what you are hunting...');
-  const ratings = {}, rateNotes = [];
+  const ratings = {}, finds = {}, rateNotes = [];
+  let ratingFailed = false;
   if (cells.length) {
     const r1 = await rateFormations(Object.values(areaUnits), target);
-    Object.assign(ratings, r1.ratings); rateNotes.push(...r1.notes);
+    Object.assign(ratings, r1.ratings); Object.assign(finds, r1.finds); rateNotes.push(...r1.notes);
+    ratingFailed = r1.failed;
   }
   const rate = u => (u && u.name && ratings[u.name]) || 'low';
   const counts = {};
   cells.forEach(c => { counts[c.unit.name] = (counts[c.unit.name] || 0) + 1; });
   const area = Object.keys(counts).sort((a, b) => counts[b] - counts[a])
-    .map(n => ({ name: n, pct: Math.round(100 * counts[n] / cells.length), rating: ratings[n] || 'low' }));
-  logStage('area rocks: ' + area.slice(0, 8).map(a => a.name + ' ' + a.pct + '% (' + a.rating + ')').join(' / ') + ' [' + rateNotes.join('; ') + ']', t0);
+    .map(n => ({ name: n, pct: Math.round(100 * counts[n] / cells.length), rating: ratings[n] || 'low', finds: finds[n] || [] }));
+  logStage('area rocks: ' + area.slice(0, 8).map(a => a.name + ' ' + a.pct + '% (' + a.rating + (a.finds.length ? ': ' + a.finds.join(', ') : '') + ')').join(' / ') + ' [' + rateNotes.join('; ') + ']', t0);
   // Rank roads by how much good rock they run through (from the survey grid).
   const cellNear = (la, lo) => {
     let best = null, bd = gridSpacing * 0.8;
@@ -1904,7 +1951,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
   const newUnits = Object.values(seenUnits).filter(u => !(u.name in ratings));
   if (newUnits.length) {
     const r2 = await rateFormations(newUnits, target);
-    Object.assign(ratings, r2.ratings); rateNotes.push(...r2.notes.map(n => 'extra rocks: ' + n));
+    Object.assign(ratings, r2.ratings); Object.assign(finds, r2.finds); rateNotes.push(...r2.notes.map(n => 'extra rocks: ' + n));
   }
   logStage('ratings: ' + Object.keys(ratings).map(n => n + '=' + ratings[n]).slice(0, 16).join(' / ') + ' [' + rateNotes.join('; ') + ']', t0);
 
@@ -1921,7 +1968,8 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
     const s = (rb >= 2 || carry >= 2) ? 2 : (rb >= 1 || carry >= 1) ? 1 : 0;
     cands.push({ kind: 'crossing', s, pri: rb >= 1 ? 0 : carry >= 2 ? 1 : 3, lat: c.lat, lon: c.lon, dist: c.dist,
       road: c.road, stream: c.stream, unit: c.unit, rating: rate(c.unit),
-      alongNames: along.map(u => u.name), carryNames });
+      alongNames: along.map(u => u.name), carryNames,
+      findsHere: finds[c.unit.name] || [], findsUp: [...new Set(carryNames.flatMap(n => finds[n] || []))] });
   }
   for (const rr of roadRuns) {
     if (!onFocus(rr.road)) continue; // side roads still get checked, just not carded
@@ -1939,7 +1987,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
       let miles = 0.75;
       for (let q = i + 1; q <= j; q++) miles += milesBetween(rr.run[q - 1][0], rr.run[q - 1][1], rr.run[q][0], rr.run[q][1]);
       cands.push({ kind: 'through', s: base(rate(u)), pri: 2, lat: mid[0], lon: mid[1], dist: milesBetween(lat, lon, mid[0], mid[1]),
-        road: rr.road, unit: u, rating: rate(u), miles });
+        road: rr.road, unit: u, rating: rate(u), miles, findsHere: finds[u.name] || [] });
       i = j + 1;
     }
     // Formation boundaries (the old kind of card) -- fallback only.
@@ -1950,6 +1998,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
       // A boundary is only a fallback: one level below the better of its two rocks.
     cands.push({ kind: 'boundary', s: Math.max(0, Math.max(base(rate(a)), base(rate(b))) - 1), pri: 4, lat: mlat, lon: mlon, rating: rate(a), rating2: rate(b),
         dist: milesBetween(lat, lon, mlat, mlon), road: rr.road, unit: a, unit2: b,
+        findsHere: [...new Set((finds[a.name] || []).concat(finds[b.name] || []))],
         spanMiles: milesBetween(rr.run[m - 1][0], rr.run[m - 1][1], rr.run[m][0], rr.run[m][1]) });
     }
   }
@@ -1977,6 +2026,23 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
         pick.push(c);
       }
     }
+  }
+  // Pins go ON the road: snap each card's point to the nearest spot on its road.
+  for (const c of pick) {
+    const r = roads.find(x => x.road === c.road);
+    if (!r) continue;
+    let best = null, bd = Infinity;
+    for (const line of (r.allSegs || r.segs || [])) for (let i = 1; i < line.length; i++) {
+      const [ay, ax] = line[i - 1], [by, bx] = line[i];
+      const k = Math.cos(c.lat * Math.PI / 180);
+      const dx = (bx - ax) * k, dy = by - ay, L2 = dx * dx + dy * dy;
+      let t = L2 ? (((c.lon - ax) * k) * dx + (c.lat - ay) * dy) / L2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      const p = [ay + t * (by - ay), ax + t * (bx - ax)];
+      const d = milesBetween(c.lat, c.lon, p[0], p[1]);
+      if (d < bd) { bd = d; best = p; }
+    }
+    if (best && bd < 1.5) { c.lat = best[0]; c.lon = best[1]; }
   }
   // For road-through cards: quieter side roads (FM/RM/county) within ~3 miles
   // that run through the SAME rock -- slower driving and safer stopping than
@@ -2033,7 +2099,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
   closed = true;
   written.sort((a, b) => a._order - b._order);
   logStage('write-ups (' + written.length + ' of ' + pick.length + ' done)', t0);
-  return { written, candidates: cands.length, geoDown, area, focusLabel, focusNote };
+  return { written, candidates: cands.length, geoDown, area, focusLabel, focusNote, ratingFailed };
 }
 
 // One AI write-up for a spot. The app supplies the facts and the score; the
@@ -2076,6 +2142,12 @@ async function writeUpSpot(c, target, town, streamSrc) {
     ratingText = u.name + ': ' + rk(c.rating) + '; ' + u2.name + ': ' + rk(c.rating2);
     names = c.road + ' and ' + town;
   }
+  const keyOf = f => String(f).toLowerCase().split(' (')[0].trim();
+  const here = c.findsHere || [];
+  const up = c.kind === 'crossing' ? (c.findsUp || []).filter(f => !here.some(h => keyOf(h) === keyOf(f)))
+    .map(f => /\(possible\)\s*$/i.test(f) ? f.replace(/\s*\(possible\)\s*$/i, '') + ' (in creek gravels, possible)'
+      : /\)\s*$/.test(f) ? f.replace(/\)\s*$/, '; in creek gravels)') : f + ' (in creek gravels)') : [];
+  const req = here.concat(up);
   const prompt = `You are writing a rockhounding field-guide entry. Use ONLY the verified facts below (from the ${geoSourceLong()} geologic map, the U.S. Census road map${c.kind === 'crossing' ? ' and the ' + (streamSrc || 'stream map') : ''}). Do not invent extra precision, roads, landmarks or history.
 
 SPOT TYPE: ${kindText}
@@ -2085,16 +2157,17 @@ Nearest town for directions: ${town}
 ${distFact}
 Hunter's target: ${target || 'none given — general collecting'}
 The app's rating (from a collector reference list, not your guess): ${ratingText}
+WHAT CAN BE FOUND HERE (from our reference ratings — you MUST include these in MINERALS): ${req.length ? req.join('; ') : 'none listed'}
 
 HONESTY RULES:
-- MINERALS: list ONLY materials this rock is documented to produce or its rock type commonly hosts; for a creek crossing you may also list material documented in the producing rock the creek runs through, marked "(in creek gravels, possible)". Mark anything not documented with "(possible)". Never pad with filler minerals (calcite, quartz, pyrite, chlorite and the like). 0 to 4 items, target first if it qualifies; if nothing is realistic, write exactly: nothing notable.
+- MINERALS: what a rockhound could realistically find here and take home. Start with every item under WHAT CAN BE FOUND HERE (target first if it qualifies). You may add other collectible items commonly found in this rock type: fossils by type, collectible crystals (calcite or quartz crystals in vugs and fractures, celestine, selenite), geodes, concretions, agate, jasper, chert, ore-mineral nodules. Do NOT list a mineral just because the rock is made of it (limestone is calcite; list "calcite crystals" only if crystals occur). Mark anything not documented for this formation "(possible)". Up to 6 items; write exactly "nothing notable" only if nothing collectible is realistic.
 - WHY: say honestly whether finds are documented, possible or unlikely here and why (for a crossing, whether the creek runs through producing rock upstream). Never promise. State a geologic age only if you are confident of it for that exact formation.
 - The app's rating describes the FORMATION, not this exact spot. Never say or imply that finds have been recorded, reported or documented at this particular spot or stretch — say the formation is known to produce it in general.
 - SIDE ROADS: if quieter side roads are listed, tell the reader to drive them slowly and check their bar ditches and wash crossings — stopping there is easier and safer than on a highway.
 - ACCESS: tell the reader to park only where it is legal and safe, stay in the public road right-of-way, and never cross fences or enter private land without the landowner's permission.
 
 Write ONE record in EXACTLY this format (no markdown, no extra commentary):
-NAME: short catchy name for this spot
+NAME: short catchy name for this spot${c.kind === 'through' ? ' that ends with the word "Stretch"' : c.kind === 'crossing' ? ' that ends with the word "Crossing"' : ''}
 WHERE: one sentence describing the spot in general terms
 MINERALS: comma-separated, per the rule above
 DIRECTIONS: plain-English directions from ${town} using the MEASURED LOCATION; name only ${names} — never invent any other road, turn or landmark; include the ACCESS rule
@@ -2117,6 +2190,18 @@ WHY: one or two sentences per the WHY rule
   const rec = parseRecord(data.content.map(b => b.text || '').join('').trim());
   if (!rec) return null;
   rec.minerals = (rec.minerals || []).filter(m => !/^nothing notable\.?$/i.test(String(m).trim()));
+  // Reference finds first (in order), then the AI's extras that aren't
+  // duplicates or bare rock-forming filler ("calcite" when it's just limestone).
+  const FILLER = /^(calcite|quartz|dolomite|feldspar|clay|clays|chlorite|mica|silica|sand|gravel|silt|limestone|sandstone|shale|marl|caliche)$/i;
+  const out = [];
+  for (const f of req) if (!out.some(o => keyOf(o) === keyOf(f))) out.push(f);
+  for (const m of rec.minerals) {
+    const k = keyOf(m);
+    if (!k || FILLER.test(k)) continue;
+    if (out.some(o => keyOf(o) === k || keyOf(o).includes(k) || k.includes(keyOf(o)))) continue;
+    out.push(m);
+  }
+  rec.minerals = out.slice(0, 7);
   rec.kind = c.kind;
   rec.road = c.road;
   rec.town = town;
@@ -2556,7 +2641,11 @@ async function runScout() {
 
       clearTimeout(watchdog);
       hideLoading();
-      if (res && res.noRoads) {
+      if (res && res.roadNotFound) {
+        showError('Could not find a road matching "' + res.roadNotFound + '" within ' + radius + ' miles of ' + place + '. Try writing it the way it appears on a map (for example "FM 306" or "County Rd 312")' +
+          (res.similar && res.similar.length ? ' — roads with similar numbers here: ' + res.similar.join(', ') : '') + '.' + notCharged(await refundScan()));
+        setStatus('ROAD NOT FOUND');
+      } else if (res && res.noRoads) {
         showError((res.roadFailed
           ? 'The road map did not answer right now. Please try again in a minute.'
           : 'No usable roads found within ' + radius + ' miles of that area. Try a larger distance or a nearby town name.') + notCharged(await refundScan()));
@@ -2570,7 +2659,7 @@ async function runScout() {
       } else {
         printLabel = 'Custom search: ' + (side ? side.word + ' of ' : '') + place + (res.focusLabel ? ', along ' + res.focusLabel : '') + (target ? ' (' + target + ')' : '');
         renderHotspots(written);
-        showAreaSummary(res.area, place, radius, target, res.focusLabel, res.focusNote, side);
+        showAreaSummary(res.area, place, radius, target, res.focusLabel, res.ratingFailed ? 'Rock ratings were not available this time, so these cards may undersell the area. Try the scan again later.' : res.focusNote, side);
         showCostLine();
         addClubButton(place, target);
         setStatus(written.length + ' HOTSPOTS');
@@ -2691,7 +2780,8 @@ function showAreaSummary(area, place, radius, target, focusLabel, focusNote, sid
     (focusNote ? '<div style="font-size:0.8rem;color:#f4b87a;margin-bottom:6px;">' + esc(focusNote) + '</div>' : '') +
     '<div style="font-size:0.7rem;letter-spacing:0.12em;color:var(--turquoise);margin-bottom:6px;">▸ ROCKS IN YOUR SEARCH AREA — ' + (side ? side.word.toUpperCase() + ' OF ' : 'WITHIN ' + radius + ' MILES OF ') + esc(place).toUpperCase() + '</div>' +
     area.filter(a => a.pct >= 3).slice(0, 6).map(a => '<div style="font-size:0.85rem;color:var(--cream);line-height:1.5;"><b>' + a.pct + '%</b> ' + esc(a.name) +
-      (label(a.rating) ? ' — <span style="color:' + (a.rating === 'high' ? '#f4b87a' : '#7ec49a') + ';">' + label(a.rating) + '</span>' : '') + '</div>').join('') +
+      (a.finds && a.finds.length ? ' — <span style="color:' + (a.rating === 'high' ? '#f4b87a' : a.rating === 'possible' ? '#7ec49a' : 'var(--feldspar)') + ';">' + esc(a.finds.join(', ')) + '</span>'
+        : (label(a.rating) ? ' — <span style="color:' + (a.rating === 'high' ? '#f4b87a' : '#7ec49a') + ';">' + label(a.rating) + '</span>' : '')) + '</div>').join('') +
     '<div style="font-size:0.7rem;color:var(--feldspar);margin-top:6px;">Share of the area, sampled from the geologic map. The cards below favor roads and creeks in the best-rated rock.</div>';
   const bar = c.querySelector('.printbar');
   if (bar && bar.nextSibling) c.insertBefore(box, bar.nextSibling); else c.prepend(box);
