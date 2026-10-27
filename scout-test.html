@@ -198,7 +198,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 28 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 29 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -2440,9 +2440,13 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
               p = [ay + t * (by - ay), ax + t * (bx - ax)];
             }
             const d = milesBetween(p[0], p[1], hit.pt[0], hit.pt[1]);
-            if (d <= 1.5 && (!best || d < best.d) && !inWater(p)) best = { road: tr.road, other: tr.other, p, d };
+            if (d > 1.5 || inWater(p)) continue;
+            const inside = u.rings.some(r => { let ins = false; for (let a = 0, b = r.length - 1; a < r.length; b = a++) {
+              if (((r[a][0] > p[0]) !== (r[b][0] > p[0])) && (p[1] < (r[b][1] - r[a][1]) * (p[0] - r[a][0]) / (r[b][0] - r[a][0]) + r[a][1])) ins = !ins; } return ins; });
+            const score = d - (inside ? 2 : 0);
+            if (!best || score < best.score) best = { road: tr.road, other: tr.other, p, d, score, inside };
           }
-          if (!best) { scanLog.push('shore park with no road within 1.5 mi: ' + u.name); continue; }
+          if (!best || (best.other && !best.inside)) { scanLog.push('shore park with no public road in reach: ' + u.name); continue; }
           found.push({ road: best.road, other: best.other, p: best.p, d: best.d, pt: hit.pt, body: hit.body, park: { name: u.name, access: u.access } });
           used++;
         }
@@ -2467,7 +2471,15 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
       await Promise.all(close.map(async c => {
         try { c.city = await cityAt(c.p[0], c.p[1]); } catch (e) { cityErr = errText(e); }
         if (c.park) { c.pub = c.park; return; }
-        try { c.pub = await publicLandAt(c.pt[0], c.pt[1], 250); } catch (e) { landErr = errText(e); }
+        try {
+          // The shore itself must be public land (a small margin for map offset),
+          // and for unnumbered lanes the place you'd park must be too.
+          c.pub = await publicLandAt(c.pt[0], c.pt[1], 40);
+          if (c.pub && c.other) {
+            const atRoad = await publicLandAt(c.p[0], c.p[1], 60);
+            if (!atRoad || atRoad.access === 'closed') { c.pubNear = c.pub; c.pub = null; }
+          }
+        } catch (e) { landErr = errText(e); }
       }));
       let made = 0;
       const skippedPrivate = [];
@@ -3469,7 +3481,7 @@ function renderHotspots(spots) {
           ? '▸ Location and directions confirmed on-site by the app\'s owner; age and mineralogy from independently published geology sources'
           : h.kind === 'crossing' ? '▸ Crossing computed from the Census road map and ' + (h.drainSource || 'stream map') + '; rock from ' + (h.source || 'USGS') + ' geologic map data.'
           : h.kind === 'through' ? '▸ Rock under the road from ' + (h.source || 'USGS') + ' geologic map data; exposure at the surface not verified.'
-          : h.kind === 'shore' ? '▸ Shoreline located from ' + (h.source || 'USGS') + ' geologic map data; GPS point is on the road nearest the shore.'
+          : h.kind === 'shore' ? '▸ Shoreline located from the Census water map; public land from the USGS Protected Areas Database; GPS point is on the road nearest the shore.'
           : '▸ Formation contact verified directly against ' + (h.source || 'USGS') + ' geologic map data; check both shoulders near the marked stretch') + '</div>' +
       '</div>';
     c.appendChild(card);
