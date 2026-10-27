@@ -184,7 +184,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 14 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 15 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -228,7 +228,7 @@
   </div>
   <div id="customLocWrap">
     <div class="slabel">▸ Describe your area</div>
-    <input type="text" class="notes armed" id="customLoc" placeholder='e.g. "petrified wood near Bryan, TX" or "agate near Quartzsite, AZ" — a town, hotel or address works too; searches ~20 miles around it unless you say otherwise (e.g. "within 10 miles")'>
+    <input type="text" class="notes armed" id="customLoc" placeholder='e.g. "petrified wood near Bryan, TX" or "agate near Quartzsite, AZ" — a town, hotel or address works too; searches ~20 miles around it unless you say otherwise (e.g. "within 10 miles"); add "on FM 306" to stay on one road or "south of La Grange" for one side of town'>
   </div>
   <hr>
   <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
@@ -1079,12 +1079,14 @@ async function geocodeWithFallback(place, town) {
 async function parseCustomRequest(text) {
   const clean = text.replace(/[\r\n"]+/g, ' ').slice(0, 300);
   const prompt = 'A rockhounder typed this into a search box: "' + clean + '"\n' +
-    'Extract three things and reply with ONLY a JSON object, no other text:\n' +
-    '{"place": "...", "town": "...", "target": "...", "miles": 0}\n' +
-    '- place: the location as a clean geocodable string, ideally "City, ST" with the two-letter US state (a town, hotel, address, or landmark). Include the state only if the user named it or the place is unmistakable; if no state is given, leave the state off rather than guessing. Use "" if no place is given.\n' +
+    'Extract these things and reply with ONLY a JSON object, no other text:\n' +
+    '{"place": "...", "town": "...", "target": "...", "miles": 0, "road": "...", "direction": ""}\n' +
+    '- place: the location as a clean geocodable string, ideally "City, ST" with the two-letter US state (a town, hotel, address, or landmark). Include the state only if the user named it or the place is unmistakable; if no state is given, leave the state off rather than guessing. If the only location given is a road, use that road plus the state if given (e.g. "FM 306, TX"). Use "" if no place is given.\n' +
     '- town: the nearest city or town to that place, as "Town, ST" using the same state rule (for an address, the town it is in or next to). Use "" if unknown.\n' +
     '- target: what they want to find, with obvious typos corrected (e.g. "agatized petrified wood"). Use "" if none is given.\n' +
-    '- miles: the search distance in miles if the user asked for one (e.g. "within 10 miles" gives 10), otherwise 0.';
+    '- miles: the search distance in miles if the user asked for one (e.g. "within 10 miles" gives 10), otherwise 0.\n' +
+    '- road: if they asked to stay on or along one specific road (e.g. "on hwy 306", "along FM 1358", "off CR 312"), that road as written; otherwise "".\n' +
+    '- direction: if they asked for one side of the place (e.g. "south of La Grange", "NE of Llano", "west side of Alpine"), one of N, NE, E, SE, S, SW, W, NW; otherwise "". The place is then the town itself (e.g. "La Grange, TX").';
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 15000);
   try {
@@ -1106,7 +1108,9 @@ async function parseCustomRequest(text) {
       place: String(j.place || '').trim().slice(0, 120),
       town: String(j.town || '').trim().slice(0, 80),
       target: String(j.target || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 80),
-      miles: Number(j.miles) || 0
+      miles: Number(j.miles) || 0,
+      road: String(j.road || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 40),
+      direction: (String(j.direction || '').toUpperCase().match(/^(N|NE|E|SE|S|SW|W|NW)$/) || [''])[0]
     };
   } catch (e) {
     return null;
@@ -1720,7 +1724,21 @@ function areaGrid(lat, lon, radiusMiles, maxPts) {
 }
 
 // --- the whole Custom scan -------------------------------------------------
-async function crossingScan(loc, radius, target, town, scan) {
+// "Hwy 306" may be FM 306 or TX-306 -- match by number among the roads that
+// are actually there, and prefer the same road type if the user gave one.
+function matchRequestedRoad(roads, wanted) {
+  const w = String(wanted || '').trim();
+  const num = (w.match(/(\d+[A-Z]?)\b/i) || [])[1];
+  if (!num) return [];
+  const numOf = ref => (String(ref).match(/(\d+[A-Z]?)\b/i) || [])[1] || '';
+  const same = roads.filter(r => numOf(r.road).toUpperCase() === num.toUpperCase());
+  const type = /\b(fm|farm)/i.test(w) ? /^FM /i : /\b(rm|ranch)/i.test(w) ? /^RM /i : /\b(co|county|cr)\b/i.test(w) ? /^County Rd/i
+    : /\bus\b/i.test(w) ? /^US-/i : /\b(sh|state|tx)\b/i.test(w) ? /^[A-Z]{2}-/ : /\b(loop)\b/i.test(w) ? /^Loop/i : /\b(spur)\b/i.test(w) ? /^Spur/i : null;
+  const typed = type ? same.filter(r => type.test(r.road)) : [];
+  return typed.length ? typed : same;
+}
+
+async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
   const lat = loc.lat, lon = loc.lon;
   const base = r => r === 'high' ? 2 : r === 'possible' ? 1 : 0;
   scanLog.push('target: ' + (target || '(none — general collecting)') + ' | state: ' + scanState + ' | radius: ' + radius + ' mi');
@@ -1745,6 +1763,29 @@ async function crossingScan(loc, radius, target, town, scan) {
     scanLog.push('backup road map: ' + roads.length + ' roads [' + overpassReport.join('; ') + ']');
     if (!roads.length) return { written: [], noRoads: true, roadFailed: osm.failed };
   }
+
+  // 1a. Stay on one road, if the user asked for that.
+  let focus = null, focusLabel = '', focusNote = '';
+  if (roadWanted) {
+    const m = matchRequestedRoad(roads, roadWanted);
+    if (m.length) {
+      focus = new Set(m.map(r => r.road));
+      focusLabel = [...focus].join(' / ');
+      scanLog.push('staying on: ' + focusLabel + ' (asked for "' + roadWanted + '")');
+    } else {
+      focusNote = 'No road matching "' + roadWanted + '" was found within ' + radius + ' miles, so these spots cover the whole area.';
+      scanLog.push('asked for road "' + roadWanted + '" — not found; whole area used');
+    }
+  }
+  const onFocus = name => !focus || focus.has(name);
+  // Is a spot on the side of town the user asked for?
+  const onSide = (la, lo) => {
+    if (!side) return true;
+    if (milesBetween(side.lat, side.lon, la, lo) < 0.5) return false;
+    const diff = Math.abs(((bearingDeg(side.lat, side.lon, la, lo) - side.deg) + 540) % 360 - 180);
+    return diff <= 70;
+  };
+  if (side) scanLog.push('side: ' + side.word + ' of town (circle moved ' + (radius * 0.5).toFixed(1) + ' mi ' + side.word + ')');
 
   // 1b. AREA SURVEY: check the rock on an even grid across the whole circle,
   // so the app knows which formations are here and where -- before it
@@ -1789,13 +1830,13 @@ async function crossingScan(loc, radius, target, town, scan) {
     // A mile of documented-producer rock counts 5x a mile of "possible" rock.
     r.goodMiles = good; r.okMiles = ok; r.prio = good * 5 + ok;
   }
-  roads.sort((a, b) => (b.prio - a.prio) || (a.near - b.near));
+  roads.sort((a, b) => ((focus && focus.has(b.road) ? 1 : 0) - (focus && focus.has(a.road) ? 1 : 0)) || (b.prio - a.prio) || (a.near - b.near));
   scanLog.push('roads ranked by rock: ' + roads.slice(0, 8).map(r => r.road + ' (' + r.goodMiles.toFixed(1) + ' mi producer, ' + r.okMiles.toFixed(1) + ' mi possible)').join(', '));
 
   // 2. Crossings.
   const crossings = findCrossings(roads, streamRes.streams)
     .map(c => ({ ...c, dist: milesBetween(lat, lon, c.lat, c.lon) }))
-    .filter(c => c.dist <= radius)
+    .filter(c => c.dist <= radius && onFocus(c.road))
     .sort((a, b) => a.dist - b.dist)
     .slice(0, 40);
   scanLog.push('crossings: ' + crossings.length + ' (' + crossings.slice(0, 8).map(c => c.stream + ' × ' + c.road + ' ' + c.dist.toFixed(1) + 'mi').join('; ') + ')');
@@ -1830,7 +1871,9 @@ async function crossingScan(loc, radius, target, town, scan) {
   for (const r of roads) {
     if (roadPtCount >= 450) break;
     if (!r.segs.length) continue;
-    const runs = dedupeRuns(samplesAlongRoad(r, 12, 0.75), 0.2);
+    const runs = focus && focus.has(r.road)
+      ? dedupeRuns(samplesAlongRoad(r, 40, 0.5), 0.2)   // the requested road: closer checks
+      : dedupeRuns(samplesAlongRoad(r, 12, 0.75), 0.2);
     for (const run of runs) { roadRuns.push({ road: r.road, run }); roadPtCount += run.length; }
   }
   const points = crossings.map(c => [c.lat, c.lon])
@@ -1881,13 +1924,17 @@ async function crossingScan(loc, radius, target, town, scan) {
       alongNames: along.map(u => u.name), carryNames });
   }
   for (const rr of roadRuns) {
+    if (!onFocus(rr.road)) continue; // side roads still get checked, just not carded
     // Stretches of road running through producing rock.
     let i = 0;
     while (i < rr.run.length) {
       const u = rr.units[i];
       if (!u || base(rate(u)) < 1) { i++; continue; }
       let j = i;
-      while (j + 1 < rr.run.length && rr.units[j + 1] && rr.units[j + 1].name === u.name) j++;
+      // On a road the user asked for, break long good stretches into stops
+      // about 2 miles apart (checks there are ~1/2 mile apart).
+      const maxLen = focus ? 4 : Infinity;
+      while (j + 1 < rr.run.length && j - i + 1 < maxLen && rr.units[j + 1] && rr.units[j + 1].name === u.name) j++;
       const mid = rr.run[Math.floor((i + j) / 2)];
       let miles = 0.75;
       for (let q = i + 1; q <= j; q++) miles += milesBetween(rr.run[q - 1][0], rr.run[q - 1][1], rr.run[q][0], rr.run[q][1]);
@@ -1906,6 +1953,11 @@ async function crossingScan(loc, radius, target, town, scan) {
         spanMiles: milesBetween(rr.run[m - 1][0], rr.run[m - 1][1], rr.run[m][0], rr.run[m][1]) });
     }
   }
+  if (side) {
+    const before = cands.length;
+    for (let q = cands.length - 1; q >= 0; q--) if (!onSide(cands[q].lat, cands[q].lon)) cands.splice(q, 1);
+    scanLog.push('kept ' + cands.length + ' of ' + before + ' spots on the ' + side.word + ' side');
+  }
   cands.sort((a, b) => (b.s - a.s) || (a.pri - b.pri) || ((b.miles || 0) - (a.miles || 0)) || (a.dist - b.dist));
   // Mix the cards: at each level (HOT, then WARM...), up to 2 creek crossings
   // and up to 2 roads-through-good-rock first, then fill. One stretch card per road.
@@ -1917,21 +1969,51 @@ async function crossingScan(loc, radius, target, town, scan) {
       for (const c of tier) {
         if (pick.length >= 4) break;
         if (pick.includes(c)) continue;
-        if (strict && (perKind[c.kind] || 0) >= limits[c.kind]) continue;
+        if (strict && !focus && (perKind[c.kind] || 0) >= limits[c.kind]) continue;
         if (pick.some(p => milesBetween(p.lat, p.lon, c.lat, c.lon) < 1.0)) continue;
-        if (c.kind !== 'crossing' && (perRoad[c.road] || 0) >= 1) continue;
+        if (c.kind !== 'crossing' && (perRoad[c.road] || 0) >= (focus ? 4 : 1)) continue;
         if (c.kind !== 'crossing') perRoad[c.road] = (perRoad[c.road] || 0) + 1;
         perKind[c.kind] = (perKind[c.kind] || 0) + 1;
         pick.push(c);
       }
     }
   }
+  // For road-through cards: quieter side roads (FM/RM/county) within ~3 miles
+  // that run through the SAME rock -- slower driving and safer stopping than
+  // on a highway, and their bar ditches are where finds wash out.
+  const unitAtRoadPoint = (pt, roadName) => {
+    let best = null, bd = 0.5;
+    for (const rr of roadRuns) {
+      if (rr.road !== roadName) continue;
+      rr.run.forEach((q, i) => { const d = milesBetween(pt[0], pt[1], q[0], q[1]); if (d < bd && rr.units[i]) { bd = d; best = rr.units[i]; } });
+    }
+    if (best) return best;
+    const cell = cellNear(pt[0], pt[1]);
+    return cell ? cell.unit : null;
+  };
+  for (const c of pick) {
+    if (c.kind !== 'through') continue;
+    const side = [];
+    for (const r of roads) {
+      if (r.road === c.road || !(r.rank >= 1)) continue;
+      let bestPt = null, bd = 3.0;
+      for (const line of (r.allSegs || r.segs || [])) for (const q of line) {
+        const d = milesBetween(c.lat, c.lon, q[0], q[1]);
+        if (d < bd) { bd = d; bestPt = q; }
+      }
+      if (!bestPt) continue;
+      const u = unitAtRoadPoint(bestPt, r.road);
+      if (u && u.name === c.unit.name) side.push({ road: r.road, d: bd });
+    }
+    c.sideRoads = side.sort((a, b) => a.d - b.d).slice(0, 3);
+  }
   const levels = ['cool', 'warm', 'hot'];
   const sampledRoads = [...new Set(roadRuns.map(r => r.road))];
   scanLog.push('roads checked for rock: ' + sampledRoads.length + ' of ' + roads.length + (sampledRoads.some(r => /312/.test(r)) ? ' (incl. County Rd 312)' : ''));
   scanLog.push('candidates: ' + cands.filter(c => c.kind === 'crossing').length + ' crossings, ' +
     cands.filter(c => c.kind === 'through').length + ' road stretches, ' + cands.filter(c => c.kind === 'boundary').length +
-    ' boundaries; picked: ' + pick.map(c => levels[c.s].toUpperCase() + ' ' + c.kind + ' ' + (c.stream ? c.stream + ' × ' : '') + c.road + ' ' + c.dist.toFixed(1) + 'mi').join('; '));
+    ' boundaries; picked: ' + pick.map(c => levels[c.s].toUpperCase() + ' ' + c.kind + ' ' + (c.stream ? c.stream + ' × ' : '') + c.road + ' ' + c.dist.toFixed(1) + 'mi' +
+      (c.sideRoads && c.sideRoads.length ? ' [side roads: ' + c.sideRoads.map(x => x.road).join(', ') + ']' : '')).join('; '));
 
   // 6. Write-ups, all at once, stop waiting at the deadline.
   t0 = Date.now();
@@ -1951,7 +2033,7 @@ async function crossingScan(loc, radius, target, town, scan) {
   closed = true;
   written.sort((a, b) => a._order - b._order);
   logStage('write-ups (' + written.length + ' of ' + pick.length + ' done)', t0);
-  return { written, candidates: cands.length, geoDown, area };
+  return { written, candidates: cands.length, geoDown, area, focusLabel, focusNote };
 }
 
 // One AI write-up for a spot. The app supplies the facts and the score; the
@@ -1981,7 +2063,11 @@ async function writeUpSpot(c, target, town, streamSrc) {
     facts = 'About ' + c.miles.toFixed(1) + ' miles of ' + c.road + ' cross ' + u.name + (u.lith ? ' (' + u.lith + ')' : '') + ', centered near lat ' + c.lat.toFixed(4) + ', lon ' + c.lon.toFixed(4) + '. The rock is mapped under the road; how much is exposed at the surface is not known. ' +
       'Where the rock produces the target, the best places to look along a stretch like this are the bar ditches, road cuts and small washes that cross under the road, where rain exposes and collects loose material.';
     ratingText = rk(c.rating);
-    names = c.road + ' and ' + town;
+    const side = (c.sideRoads || []).map(x => x.road);
+    if (side.length) {
+      facts += '\nQuieter side roads that also cross this same rock within about 3 miles: ' + c.sideRoads.map(x => x.road + ' (' + (x.d < 0.3 ? 'right at the stretch' : x.d.toFixed(1) + ' mi away') + ')').join(', ') + '.';
+    }
+    names = c.road + (side.length ? ', ' + side.join(', ') : '') + ' and ' + town;
   } else {
     const u2 = c.unit2 || {};
     kindText = 'formation contact along a road';
@@ -2003,6 +2089,8 @@ The app's rating (from a collector reference list, not your guess): ${ratingText
 HONESTY RULES:
 - MINERALS: list ONLY materials this rock is documented to produce or its rock type commonly hosts; for a creek crossing you may also list material documented in the producing rock the creek runs through, marked "(in creek gravels, possible)". Mark anything not documented with "(possible)". Never pad with filler minerals (calcite, quartz, pyrite, chlorite and the like). 0 to 4 items, target first if it qualifies; if nothing is realistic, write exactly: nothing notable.
 - WHY: say honestly whether finds are documented, possible or unlikely here and why (for a crossing, whether the creek runs through producing rock upstream). Never promise. State a geologic age only if you are confident of it for that exact formation.
+- The app's rating describes the FORMATION, not this exact spot. Never say or imply that finds have been recorded, reported or documented at this particular spot or stretch — say the formation is known to produce it in general.
+- SIDE ROADS: if quieter side roads are listed, tell the reader to drive them slowly and check their bar ditches and wash crossings — stopping there is easier and safer than on a highway.
 - ACCESS: tell the reader to park only where it is legal and safe, stay in the public road right-of-way, and never cross fences or enter private land without the landowner's permission.
 
 Write ONE record in EXACTLY this format (no markdown, no extra commentary):
@@ -2044,7 +2132,8 @@ WHY: one or two sentences per the WHY rule
     rec.drainSource = streamSrc || 'stream map';
   } else if (c.kind === 'through') {
     rec.headline = c.road + ' through ' + u.name;
-    rec.detail = 'About ' + c.miles.toFixed(1) + ' miles of ' + c.road + ' cross this formation.';
+    rec.detail = 'About ' + c.miles.toFixed(1) + ' miles of ' + c.road + ' cross this formation.' +
+      ((c.sideRoads || []).length ? ' Quieter side roads in the same rock: ' + c.sideRoads.map(x => x.road).join(', ') + '.' : '');
     rec.drainages = [];
   } else {
     rec.drainages = [];
@@ -2176,6 +2265,18 @@ function milesBetween(lat1, lon1, lat2, lon2) {
   const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(a));
+}
+function bearingDeg(lat1, lon1, lat2, lon2) {
+  const toRad = d => d * Math.PI / 180;
+  const y = Math.sin(toRad(lon2 - lon1)) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2 - lon1));
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+const DIR_DEG = { N: 0, NE: 45, E: 90, SE: 135, S: 180, SW: 225, W: 270, NW: 315 };
+const DIR_WORD = { N: 'north', NE: 'northeast', E: 'east', SE: 'southeast', S: 'south', SW: 'southwest', W: 'west', NW: 'northwest' };
+function movePoint(lat, lon, deg, miles) {
+  const r = deg * Math.PI / 180;
+  return { lat: lat + Math.cos(r) * miles / 69, lon: lon + Math.sin(r) * miles / (69 * Math.cos(lat * Math.PI / 180)) };
 }
 function compassFrom(lat1, lon1, lat2, lon2) {
   const toRad = d => d * Math.PI / 180;
@@ -2437,7 +2538,17 @@ async function runScout() {
       }
       const radius = Math.min(30, Math.max(3, Math.round((parsed && parsed.miles) || 20)));
       showLoading('READING THE MAPS...', 'Finding roads, creeks and crossings within ' + radius + ' miles of "' + place + '"...');
-      const res = await crossingScan(loc, radius, target, (parsed && parsed.town) || place, scan);
+      const roadWanted = (parsed && parsed.road) || '';
+      // "South of La Grange": move the search circle so most of it lies south of
+      // town, and only keep spots that really are south (within ~70 degrees).
+      const dir = (parsed && parsed.direction) || '';
+      let scanLoc = loc, side = null;
+      if (dir) {
+        const moved = movePoint(loc.lat, loc.lon, DIR_DEG[dir], radius * 0.5);
+        scanLoc = { ...loc, lat: moved.lat, lon: moved.lon };
+        side = { lat: loc.lat, lon: loc.lon, deg: DIR_DEG[dir], word: DIR_WORD[dir] };
+      }
+      const res = await crossingScan(scanLoc, radius, target, (parsed && parsed.town) || place, scan, roadWanted, side);
       bail();
       const written = (res && res.written) || [];
       scanLog.push('cards written: ' + written.length);
@@ -2457,9 +2568,9 @@ async function runScout() {
           : 'Could not build any spots for that area this pass. Try again, or a different area.') + notCharged(ok));
         setStatus(res && res.geoDown ? 'SERVER BUSY' : 'NO DATA');
       } else {
-        printLabel = 'Custom search: ' + place + (target ? ' (' + target + ')' : '');
+        printLabel = 'Custom search: ' + (side ? side.word + ' of ' : '') + place + (res.focusLabel ? ', along ' + res.focusLabel : '') + (target ? ' (' + target + ')' : '');
         renderHotspots(written);
-        showAreaSummary(res.area, place, radius, target);
+        showAreaSummary(res.area, place, radius, target, res.focusLabel, res.focusNote, side);
         showCostLine();
         addClubButton(place, target);
         setStatus(written.length + ' HOTSPOTS');
@@ -2568,7 +2679,7 @@ window.addEventListener('DOMContentLoaded', restoreLastResults);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') restoreLastResults(); });
 
 // "What rocks are near me?" -- shown above the cards after a Custom scan.
-function showAreaSummary(area, place, radius, target) {
+function showAreaSummary(area, place, radius, target, focusLabel, focusNote, side) {
   if (!area || !area.length) return;
   const c = document.getElementById('results');
   const what = target || 'collectible material';
@@ -2576,7 +2687,9 @@ function showAreaSummary(area, place, radius, target) {
   const box = document.createElement('div');
   box.className = 'areabox';
   box.style.cssText = 'border:1px solid rgba(61,158,140,0.4);background:rgba(61,158,140,0.08);border-radius:3px;padding:10px 14px;margin:0 0 14px;font-family:Barlow,sans-serif;';
-  box.innerHTML = '<div style="font-size:0.7rem;letter-spacing:0.12em;color:var(--turquoise);margin-bottom:6px;">▸ ROCKS WITHIN ' + radius + ' MILES OF ' + esc(place).toUpperCase() + '</div>' +
+  box.innerHTML = (focusLabel ? '<div style="font-size:0.8rem;color:#f4b87a;margin-bottom:6px;">Spots shown are on ' + esc(focusLabel) + ' only (as you asked).</div>' : '') +
+    (focusNote ? '<div style="font-size:0.8rem;color:#f4b87a;margin-bottom:6px;">' + esc(focusNote) + '</div>' : '') +
+    '<div style="font-size:0.7rem;letter-spacing:0.12em;color:var(--turquoise);margin-bottom:6px;">▸ ROCKS IN YOUR SEARCH AREA — ' + (side ? side.word.toUpperCase() + ' OF ' : 'WITHIN ' + radius + ' MILES OF ') + esc(place).toUpperCase() + '</div>' +
     area.filter(a => a.pct >= 3).slice(0, 6).map(a => '<div style="font-size:0.85rem;color:var(--cream);line-height:1.5;"><b>' + a.pct + '%</b> ' + esc(a.name) +
       (label(a.rating) ? ' — <span style="color:' + (a.rating === 'high' ? '#f4b87a' : '#7ec49a') + ';">' + label(a.rating) + '</span>' : '') + '</div>').join('') +
     '<div style="font-size:0.7rem;color:var(--feldspar);margin-top:6px;">Share of the area, sampled from the geologic map. The cards below favor roads and creeks in the best-rated rock.</div>';
