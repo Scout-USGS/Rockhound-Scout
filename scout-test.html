@@ -198,7 +198,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 19 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 20 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1734,16 +1734,25 @@ function dedupeRuns(runs, minMi) {
 // it says which FORMATIONS produce a material. The AI rates every rock
 // everywhere by the same rules; a matching row overrides the AI's rating for
 // the formations it names, and its label is always listed as a find there.
-const TX_PRODUCERS = [
-  { label: 'petrified wood', target: /petrified|palm ?wood|pet ?wood|agati[sz]ed wood|opali[sz]ed wood|silicified wood|fossil(ized)? wood/i,
+const FIELD_LIST = [
+  // ---- Texas (JT's field knowledge) ----
+  { state: 'Texas', label: 'petrified wood', target: /petrified|palm ?wood|pet ?wood|agati[sz]ed wood|opali[sz]ed wood|silicified wood|fossil(ized)? wood/i,
     high: /oakville|fleming/i,
     possible: /catahoula|jackson|whitsett|manning|wellborn|caddell/i },
-  { label: 'fossils', target: /fossil(?!(ized)? wood)|ammonite|shark|teeth|tooth|echinoid|sea urchin|oyster|clam|shells?\b|gastropod|snail|rudist|trilobite|crinoid|dinosaur/i,
+  { state: 'Texas', label: 'fossils', target: /fossil(?!(ized)? wood)|ammonite|shark|teeth|tooth|echinoid|sea urchin|oyster|clam|shells?\b|gastropod|snail|rudist|trilobite|crinoid|dinosaur/i,
     high: /glen rose|walnut|comanche peak|del rio|grayson|austin chalk|eagle ford|duck creek|kiamichi|fort worth|goodland|weno|pawpaw|main street|denton|corsicana|kemp|kincaid|cow creek/i,
     possible: /edwards|kainer|person|georgetown|buda|fredericksburg|washita|segovia|fort terrett|devils river|pecan gap|ozan|taylor|navarro|hensell/i },
-  { label: 'chert/flint', target: /chert|flint/i,
+  { state: 'Texas', label: 'chert/flint', target: /chert|flint/i,
     high: /edwards|kainer|person|segovia|fort terrett|devils river/i,
-    possible: /georgetown|uvalde gravel|leona/i }
+    possible: /georgetown|uvalde gravel|leona/i },
+  // ---- New York ----
+  // Herkimer diamonds: the Little Falls Formation/Dolostone is the documented
+  // host (Wikipedia "Little Falls Formation"; herkimerhistory.com "Host Rock";
+  // USGS Geolex "Little Falls"). Coarse state maps can lump it into broader
+  // carbonate units, so those are only "possible".
+  { state: 'New York', label: 'Herkimer diamonds (quartz crystals)', target: /herkimer|double.?terminated|quartz crystals?/i,
+    high: /little falls/i,
+    possible: /galway|theresa|hoyt|beekmantown/i }
 ];
 // Words that mean "anything", not a specific target.
 const GENERIC_TARGET = /^(any|anything|everything|stuff|things?|spots?|hot ?spots?|good spots?|places?|sites?|rocks?|rocks and minerals|minerals|rockhounding( spots| sites)?|collecting( spots| sites)?|anything collectible|collectibles?)$/i;
@@ -1752,7 +1761,8 @@ const GENERIC_TARGET = /^(any|anything|everything|stuff|things?|spots?|hot ?spot
 // a rockhound could actually find in it. Returns { ratings, finds, notes, failed }.
 async function rateFormations(units, target) {
   const ratings = {}, finds = {}, notes = [];
-  const rows = scanState !== 'Texas' ? [] : (target ? TX_PRODUCERS.filter(r => r.target.test(target)) : TX_PRODUCERS);
+  const stateRows = FIELD_LIST.filter(r => r.state === scanState);
+  const rows = target ? stateRows.filter(r => r.target.test(target)) : stateRows;
   const rowRating = {}, rowFinds = {};
   let listed = 0;
   for (const u of units) {
@@ -1819,7 +1829,7 @@ async function rateFormations(units, target) {
     ratings[u.name] = rowRating[u.name] || ai;
     const items = (rowFinds[u.name] || []).slice();
     if (a && a.f && !/^none\.?$/i.test(a.f)) {
-      for (const f of a.f.split(/;(?![^()]*\))/).map(x => x.trim()).filter(Boolean)) {
+      for (const f of a.f.split(/[;,](?![^()]*\))/).map(x => x.trim()).filter(Boolean)) {
         const fk = f.toLowerCase().split(' (')[0];
         const i = items.findIndex(x => x.toLowerCase().split(' (')[0] === fk);
         if (i >= 0) { if (f.length > items[i].length) items[i] = f; } // keep the more detailed version
@@ -1881,6 +1891,16 @@ async function fetchRoadByNumber(lat, lon, radiusMiles, num) {
     roads.push({ road: ref, rank: rankOf[ref], allSegs, segs: allSegs.filter(l => lineMiles(l) >= 0.5), near });
   }
   return { roads, report, names: [...names] };
+}
+
+// Drops names that just repeat a shorter one already listed.
+function uniqNames(list) {
+  const out = [];
+  for (const n of [...new Set(list || [])].sort((a, b) => a.length - b.length)) {
+    const k = String(n).toLowerCase().replace(/\s+/g, ' ').trim();
+    if (!out.some(o => k.startsWith(o.toLowerCase()))) out.push(n);
+  }
+  return (list || []).filter(n => out.includes(n)).filter((n, i, a) => a.indexOf(n) === i);
 }
 
 // "Hwy 306" may be FM 306 or TX-306 -- match by number among the roads that
@@ -2102,7 +2122,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
     const s = (rb >= 2 || carry >= 2) ? 2 : (rb >= 1 || carry >= 1) ? 1 : 0;
     cands.push({ kind: 'crossing', s, pri: rb >= 1 ? 0 : carry >= 2 ? 1 : 3, lat: c.lat, lon: c.lon, dist: c.dist,
       road: c.road, stream: c.stream, unit: c.unit, rating: rate(c.unit),
-      alongNames: along.map(u => u.name), carryNames,
+      alongNames: uniqNames(along.map(u => u.name)), carryNames: uniqNames(carryNames),
       findsHere: finds[c.unit.name] || [], findsUp: [...new Set(carryNames.flatMap(n => finds[n] || []))] });
   }
   for (const rr of roadRuns) {
@@ -2994,8 +3014,8 @@ function renderHotspots(spots) {
         '<div class="accessnote">⚠ Access not verified. Roadside right-of-way may end at or near the pavement, nearby land is often private, and creek banks and bridges can be steep or unstable. It&rsquo;s up to you to confirm legal access and judge safety.</div>' +
         '<div class="src">' + (isOwnerConfirmed
           ? '▸ Location and directions confirmed on-site by the app\'s owner; age and mineralogy from independently published geology sources'
-          : h.kind === 'crossing' ? '▸ Crossing computed from the Census road map and ' + (h.drainSource || 'stream map') + '; rock from ' + (h.source || 'USGS') + ' geologic map data. Public right-of-way only.'
-          : h.kind === 'through' ? '▸ Rock under the road from ' + (h.source || 'USGS') + ' geologic map data; exposure at the surface not verified. Public right-of-way only.'
+          : h.kind === 'crossing' ? '▸ Crossing computed from the Census road map and ' + (h.drainSource || 'stream map') + '; rock from ' + (h.source || 'USGS') + ' geologic map data.'
+          : h.kind === 'through' ? '▸ Rock under the road from ' + (h.source || 'USGS') + ' geologic map data; exposure at the surface not verified.'
           : '▸ Formation contact verified directly against ' + (h.source || 'USGS') + ' geologic map data; check both shoulders near the marked stretch') + '</div>' +
       '</div>';
     c.appendChild(card);
