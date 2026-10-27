@@ -198,7 +198,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 26 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 27 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1704,6 +1704,22 @@ async function publicLandAt(lat, lon, meters) {
   return list[0];
 }
 
+// Outlines of public land (parks, beaches, wildlife areas, forests) in the
+// search box that the public may enter (open or restricted access).
+async function fetchPublicLandAreas(lat, lon, radiusMiles) {
+  const base = PADUS_URL.replace(/\/\d+$/, ''), id = PADUS_URL.match(/(\d+)$/)[1];
+  const res = await arcQueryBox(base, id, lat, lon, radiusMiles, "Pub_Access IN ('OA','RA')", 'Unit_Nm,Mang_Name,Pub_Access', 2, 0.0004);
+  const acc = a => ({ OA: 'open', RA: 'restricted' })[String(a || '').toUpperCase()] || 'unknown';
+  const units = [];
+  for (const f of res.features) {
+    if (!f.geometry || !f.geometry.rings) continue;
+    const a = f.attributes || {};
+    units.push({ name: String(a.Unit_Nm || a.Mang_Name || 'public land').trim(), access: acc(a.Pub_Access),
+      rings: f.geometry.rings.map(r => r.map(([x, y]) => [y, x])) });
+  }
+  return { units, report: res.features.length + ' public-land pieces' + (res.truncated ? ' (cut off)' : '') };
+}
+
 async function nameWaterBody(lat, lon) {
   const layers = await arcLayers(CENSUS_HYDRO_BASE);
   const layer = layers.find(l => /area/i.test(l.name || '') && !/label/i.test(l.name || ''));
@@ -2361,38 +2377,93 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
       const testRoads = roads.map(r => ({ road: r.road, lines: r.allSegs || r.segs || [], other: false }))
         .concat((roadRes.others || []).concat(extra).map(r => ({ road: r.road, lines: r.allSegs || [], other: true })))
         .filter(r => { if (seen.has(r.road)) return false; seen.add(r.road); return true; });
+      // Points on a road that sit on top of the water (bridge, causeway).
+      const isBigWater = b => b.type !== 'river';
       const found = [];
       for (const tr of testRoads) {
-        const pts = [];
+        const pts = [], onWater = [];
         for (const line of tr.lines) for (let i = 0; i < line.length; i++) {
           const cand = [line[i]];
           if (i > 0) cand.push([(line[i - 1][0] + line[i][0]) / 2, (line[i - 1][1] + line[i][1]) / 2]);
           for (const p of cand) {
             const q = shoreNear(p);
-            if (q && q.d <= 0.3) pts.push({ p, ...q });
+            if (!q || q.d > 0.3) continue;
+            if (inWater(p)) { onWater.push({ p, body: q.body }); continue; }
+            pts.push({ p, ...q });
           }
         }
         pts.sort((a, b) => a.d - b.d);
         const mine = [];
         for (const x of pts) {
-          if (mine.length >= 3) break;
+          if (mine.length >= 4) break;
           if (mine.some(m => milesBetween(m.p[0], m.p[1], x.p[0], x.p[1]) < 0.75)) continue;
-          if (inWater(x.p)) continue; // on a bridge or causeway
+          // A river bank right where this road bridges that river is a crossing, not a shore.
+          if (!isBigWater(x.body) && onWater.some(w => w.body === x.body && milesBetween(w.p[0], w.p[1], x.p[0], x.p[1]) < 0.5)) continue;
           mine.push(x);
         }
         mine.forEach(x => found.push({ road: tr.road, other: tr.other, ...x }));
       }
-      found.sort((a, b) => (a.other - b.other) || (a.d - b.d));
-      const close = [];
-      for (const x of found) {
-        if (close.length >= 12) break;
-        if (milesBetween(lat, lon, x.p[0], x.p[1]) > radius) continue;
+      // Public land that reaches the shore (state parks, beaches, wildlife
+      // areas): find where its boundary meets the water, then the nearest road.
+      let parkLog = '';
+      try {
+        const pl = await fetchPublicLandAreas(lat, lon, radius);
+        const parks = [];
+        for (const u of pl.units) {
+          let hit = null;
+          for (const ring of u.rings) for (const v of ring) {
+            const q = shoreNear(v);
+            if (!q || q.d > 0.1 || !isBigWater(q.body)) continue;
+            const dc = milesBetween(lat, lon, q.pt[0], q.pt[1]);
+            if (dc > radius) continue;
+            if (!hit || dc < hit.dc) hit = { ...q, dc };
+          }
+          if (hit) parks.push({ u, hit });
+        }
+        parks.sort((a, b) => a.hit.dc - b.hit.dc);
+        let used = 0;
+        for (const { u, hit } of parks) {
+          if (used >= 6) break;
+          let best = null;
+          const kk = Math.cos(hit.pt[0] * Math.PI / 180);
+          for (const tr of testRoads) for (const line of tr.lines) for (let i = 0; i < line.length; i++) {
+            // Nearest point on each road piece (not just its map points).
+            let p = line[i];
+            if (i > 0) {
+              const [ay, ax] = line[i - 1], [by, bx] = line[i];
+              const dx = (bx - ax) * kk, dy = by - ay, L2 = dx * dx + dy * dy;
+              let t = L2 ? (((hit.pt[1] - ax) * kk) * dx + (hit.pt[0] - ay) * dy) / L2 : 0;
+              t = Math.max(0, Math.min(1, t));
+              p = [ay + t * (by - ay), ax + t * (bx - ax)];
+            }
+            const d = milesBetween(p[0], p[1], hit.pt[0], hit.pt[1]);
+            if (d <= 1.5 && (!best || d < best.d) && !inWater(p)) best = { road: tr.road, other: tr.other, p, d };
+          }
+          if (!best) { scanLog.push('shore park with no road within 1.5 mi: ' + u.name); continue; }
+          found.push({ road: best.road, other: best.other, p: best.p, d: best.d, pt: hit.pt, body: hit.body, park: { name: u.name, access: u.access } });
+          used++;
+        }
+        parkLog = ' | public land on the shore: ' + (parks.length ? parks.slice(0, 6).map(x => x.u.name + ' [' + x.u.access + ']').join(', ') : 'none') + ' [' + pl.report + ']';
+      } catch (e) { parkLog = ' | public-land map: ' + errText(e); }
+      // Spread the picks: parks on the shore first, then each water body in
+      // turn (lakes, bays and ocean before rivers), closest to the search first.
+      const rankBody = b => (isBigWater(b) ? 0 : 1);
+      const queue = found.map(x => ({ ...x, dc: milesBetween(lat, lon, x.p[0], x.p[1]) }))
+        .filter(x => x.dc <= radius)
+        .sort((a, b) => (!!b.park - !!a.park) || (rankBody(a.body) - rankBody(b.body)) || (a.dc - b.dc));
+      const close = [], perBody = new Map(), perRoadS = new Map();
+      for (const x of queue) {
+        if (close.length >= 24) break;
+        const n = perBody.get(x.body) || 0, nr = perRoadS.get(x.road) || 0;
+        if (!x.park && (n >= (isBigWater(x.body) ? 8 : 3) || nr >= 2)) continue;
         if (close.some(c => milesBetween(c.p[0], c.p[1], x.p[0], x.p[1]) < 0.75)) continue;
+        perBody.set(x.body, n + 1); perRoadS.set(x.road, nr + 1);
         close.push(x);
       }
       let landErr = '', cityErr = '';
       await Promise.all(close.map(async c => {
         try { c.city = await cityAt(c.p[0], c.p[1]); } catch (e) { cityErr = errText(e); }
+        if (c.park) { c.pub = c.park; return; }
         try { c.pub = await publicLandAt(c.pt[0], c.pt[1], 250); } catch (e) { landErr = errText(e); }
       }));
       let made = 0;
@@ -2409,7 +2480,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
         const best = uniq.reduce((m, u) => Math.max(m, base(rate(u))), 0);
         let sScore = best >= 1 ? 2 : 1;
         if (c.city) sScore = Math.max(0, sScore - 1);
-        const pri = c.pub && c.pub.access === 'open' ? 0.2 : c.city ? 3 : c.other ? 1.0 : 0.6;
+        const pri = (c.pub && c.pub.access === 'open' ? 0.2 : c.city ? 3 : c.other ? 1.0 : 0.6) + (c.body.type === 'river' ? 0.3 : 0);
         cands.push({ kind: 'shore', s: sScore, pri, lat: c.p[0], lon: c.p[1], dist: milesBetween(lat, lon, c.p[0], c.p[1]),
           road: c.road, unit, rating: rate(unit), waterName: prettyWater(c.body.name), waterType: c.body.type, shoreMi: c.d,
           shoreDir: compassFrom(c.p[0], c.p[1], c.pt[0], c.pt[1]), shoreLat: c.pt[0], shoreLon: c.pt[1],
@@ -2420,8 +2491,8 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
         made++;
       }
       shoreLog += ' | ' + close.length + ' road points within 0.3 mi of the water' +
-        (close.length ? ' (' + close.map(c => c.road + ' by ' + prettyWater(c.body.name) + (c.city ? ' in ' + c.city : '') + (c.pub ? ' on ' + c.pub.name + ' [' + c.pub.access + ']' : '')).slice(0, 8).join('; ') + ')' : '') +
-        ', ' + made + ' shore spots' + (cityErr ? ' | city lookup: ' + cityErr : '') + (landErr ? ' | public-land lookup: ' + landErr : '');
+        (close.length ? ' (' + close.map(c => c.road + ' by ' + prettyWater(c.body.name) + (c.city ? ' in ' + c.city : '') + (c.pub ? ' on ' + c.pub.name + ' [' + c.pub.access + ']' : '')).slice(0, 10).join('; ') + ')' : '') +
+        ', ' + made + ' shore spots' + parkLog + (cityErr ? ' | city lookup: ' + cityErr : '') + (landErr ? ' | public-land lookup: ' + landErr : '');
     }
     logStage(shoreLog, t0);
   } catch (e) {
@@ -2627,7 +2698,7 @@ async function writeUpSpot(c, target, town, streamSrc) {
   } else if (c.kind === 'shore') {
     kindText = 'shoreline of a ' + (c.waterType || 'lake') + ' reached from a road';
     facts = 'The shore of ' + c.waterName + ' is about ' + (c.shoreMi < 0.2 ? 'right beside' : c.shoreMi.toFixed(1) + ' mile ' + c.shoreDir + ' of') + ' this point on ' + c.road +
-      ' (lat ' + c.lat.toFixed(4) + ', lon ' + c.lon.toFixed(4) + '), located from the geologic map. Rock and deposits mapped on land near this shore: ' + c.landNames.slice(0, 5).join('; ') + '.\n' +
+      ' (lat ' + c.lat.toFixed(4) + ', lon ' + c.lon.toFixed(4) + '), located from the Census water map. Rock and deposits mapped on land near this shore: ' + c.landNames.slice(0, 5).join('; ') + '.\n' +
       (c.pub ? 'Public land at the shore (USGS Protected Areas Database): ' + c.pub.name + ', access listed as ' + c.pub.access + '. Say the reader must check that land\'s collecting rules; do not say collecting is allowed.\n' : '') +
       (c.city ? 'This point is inside ' + c.city + ' city limits.\n' : '') +
       'Shores and beaches sort and wash out cobbles from the nearby bedrock and glacial or river deposits, so beach gravel here can hold material from those units.';
