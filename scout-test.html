@@ -184,7 +184,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 16 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 17 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1305,8 +1305,8 @@ function tigerRoadRef(name) {
   if (/^(Bus|Business)\b/i.test(n)) return null; // business routes duplicate the main road
   if ((m = n.match(/^US (?:Hwy|Highway|Rte|Route)? ?(\d+[A-Z]?)\b/i))) return { ref: 'US-' + m[1], rank: 0 };
   if ((m = n.match(/^(?:State|St|SH|Texas|Tx)\.? (?:Hwy|Highway|Rte|Route|Rd|Road)? ?(\d+[A-Z]?)\b/i))) return { ref: (abbr || 'SH') + '-' + m[1], rank: 0 };
-  if ((m = n.match(/^(?:Fm|F M|Farm to Market|Farm-to-Market|Farm)(?: Rd| Road)?[- ]?(\d+)\b/i))) return { ref: 'FM ' + m[1], rank: 1 };
-  if ((m = n.match(/^(?:Rm|R M|Ranch to Market|Ranch-to-Market|Ranch)(?: Rd| Road)?[- ]?(\d+)\b/i))) return { ref: 'RM ' + m[1], rank: 1 };
+  if ((m = n.match(/^(?:Fm|F M|Farm to Market|Farm-to-Market|Farm)(?: Rd| Road)?[- ]*(\d+)\b/i))) return { ref: 'FM ' + m[1], rank: 1 };
+  if ((m = n.match(/^(?:Rm|R M|Ranch to Market|Ranch-to-Market|Ranch)(?: Rd| Road)?[- ]*(\d+)\b/i))) return { ref: 'RM ' + m[1], rank: 1 };
   if ((m = n.match(/^(?:State )?(Loop|Spur|Park Rd) (\d+[A-Z]?)\b/i))) return { ref: m[1].replace(/\b\w/g, x => x.toUpperCase()) + ' ' + m[2], rank: 1 };
   if ((m = n.match(/^(?:Co|Co\.|Cnty|County)(?: Rd| Road| Hwy| Highway| Rte| Route)\.? (\w+)/i))) return { ref: 'County Rd ' + m[1].toUpperCase(), rank: 2 };
   if ((m = n.match(/^CR[- ]?(\d+\w*)$/i))) return { ref: 'County Rd ' + m[1].toUpperCase(), rank: 2 };
@@ -1476,7 +1476,7 @@ async function fetchCensusRoads(lat, lon, radiusMiles) {
   const sec = layers.find(l => /secondary/i.test(l.name || ''));
   const pri = layers.find(l => /primary/i.test(l.name || '') && !/secondary/i.test(l.name || ''));
   const loc = layers.find(l => /local/i.test(l.name || ''));
-  const report = [], byRef = {}, rankOf = {}, skipped = new Set();
+  const report = [], byRef = {}, rankOf = {}, skipped = new Set(), oddRuns = {}, allNames = new Set();
   const jobs = [['highways', sec, false], ['big highways', pri, false], ['county/FM roads', loc, true]];
   await Promise.all(jobs.map(async ([label, layer, isLocal]) => {
     if (!layer) { report.push(label + ': no layer'); return; }
@@ -1503,7 +1503,17 @@ async function fetchCensusRoads(lat, lon, radiusMiles) {
         const a = f.attributes || {};
         const raw = a[nf] || a.NAME || a.FULLNAME || a.BASENAME || '';
         const info = tigerRoadRef(raw);
-        if (!info) { if (raw && skipped.size < 40) skipped.add(raw); continue; }
+        if (raw && allNames.size < 3000) allNames.add(String(raw));
+        if (!info) {
+          if (raw && skipped.size < 40) skipped.add(raw);
+          // Odd spellings with a number are kept aside, in case the user asks for that road by number.
+          if (raw && /\d/.test(raw) && f.geometry && f.geometry.paths) {
+            const k = String(raw).replace(/\s+/g, ' ').trim();
+            if (!oddRuns[k]) oddRuns[k] = [];
+            for (const run of clipPaths(f.geometry.paths, lat, lon, radiusMiles)) oddRuns[k].push(run);
+          }
+          continue;
+        }
         if (!f.geometry || !f.geometry.paths) continue;
         if (!byRef[info.ref]) { byRef[info.ref] = []; rankOf[info.ref] = info.rank; }
         rankOf[info.ref] = Math.min(rankOf[info.ref], info.rank);
@@ -1521,7 +1531,14 @@ async function fetchCensusRoads(lat, lon, radiusMiles) {
     roads.push({ road: ref, rank: rankOf[ref], allSegs, segs: allSegs.filter(l => lineMiles(l) >= 0.5), near });
   }
   roads.sort((a, b) => a.near - b.near);
-  return { roads, report, skipped: [...skipped] };
+  const odd = [];
+  for (const k of Object.keys(oddRuns)) {
+    if (!oddRuns[k].length) continue;
+    const allSegs = chainSegments(oddRuns[k]);
+    const near = Math.min(...allSegs.flat().map(([a, b]) => milesBetween(lat, lon, a, b)));
+    odd.push({ road: k, rank: 3, allSegs, segs: allSegs.filter(l => lineMiles(l) >= 0.5), near, odd: true });
+  }
+  return { roads, report, skipped: [...skipped], odd, allNames: [...allNames] };
 }
 
 // --- named creeks and rivers: USGS stream map, Census water as backup ----
@@ -1810,7 +1827,15 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
   // 1a. Stay on one road, if the user asked for that.
   let focus = null, focusLabel = '', focusNote = '';
   if (roadWanted) {
-    const m = matchRequestedRoad(roads, roadWanted);
+    const num = (String(roadWanted).match(/(\d+)/) || [])[1] || '';
+    const withNum = (roadRes.allNames || []).filter(n => num && new RegExp('(^|\\D)' + num + '(\\D|$)').test(n));
+    scanLog.push('road names on the map containing "' + num + '": ' + (withNum.length ? [...new Set(withNum)].slice(0, 12).join(', ') : 'NONE (the map returned no road with that number in this area)'));
+    let m = matchRequestedRoad(roads, roadWanted);
+    if (!m.length) {
+      // Fall back to odd spellings that carry the same number.
+      m = matchRequestedRoad(roadRes.odd || [], roadWanted);
+      if (m.length) { roads.push(...m); scanLog.push('matched by number on an unusual map spelling: ' + m.map(r => r.road).join(', ')); }
+    }
     if (m.length) {
       focus = new Set(m.map(r => r.road));
       focusLabel = [...focus].join(' / ');
