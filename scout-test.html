@@ -198,7 +198,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 30 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 31 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -2295,7 +2295,10 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
     // HOT needs documented-producer rock at the crossing or along the creek;
     // "possible" rock either place makes it WARM.
     const s = (rb >= 2 || carry >= 2) ? 2 : (rb >= 1 || carry >= 1) ? 1 : 0;
-    cands.push({ kind: 'crossing', s, pri: rb >= 1 ? 0 : carry >= 2 ? 1 : 3, lat: c.lat, lon: c.lon, dist: c.dist,
+    // Among equal crossings, prefer creeks that cut through more kinds of
+    // good rock (more variety washing down, usually a deeper cut).
+    const variety = (rb >= 2 ? 1 : rb >= 1 ? 0.5 : 0) + along.reduce((m, u) => m + (base(rate(u)) >= 2 ? 1 : base(rate(u)) >= 1 ? 0.5 : 0), 0);
+    cands.push({ kind: 'crossing', s, pri: rb >= 1 ? 0 : carry >= 2 ? 1 : 3, miles: variety, lat: c.lat, lon: c.lon, dist: c.dist,
       road: c.road, stream: c.stream, unit: c.unit, rating: rate(c.unit),
       alongNames: uniqNames(along.map(u => u.name)), carryNames: uniqNames(carryNames),
       findsHere: finds[c.unit.name] || [], findsUp: [...new Set(carryNames.flatMap(n => finds[n] || []))],
@@ -2628,16 +2631,18 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
   const spreadMi = focus ? 1.0 : Math.max(1.0, radius / 5);
   for (const lvl of [2, 1, 0]) {
     const tier = cands.filter(c => c.s === lvl);
-    for (const strict of [true, false]) {
+    // Pass 0: mix of kinds, spread out, one card per road.
+    // Pass 1: any kind, still spread out and one per road.
+    // Pass 2: only if still short -- closer together, a 2nd crossing per road.
+    for (const pass of [0, 1, 2]) {
       for (const c of tier) {
         if (pick.length >= 4) break;
         if (pick.includes(c)) continue;
-        if (strict && !focus && (perKind[c.kind] || 0) >= limits[c.kind]) continue;
+        if (pass === 0 && !focus && (perKind[c.kind] || 0) >= limits[c.kind]) continue;
         // Spread the cards out: a wider search keeps picks farther apart
         // (about a fifth of the radius), so they don't all cluster by town.
-        if (pick.some(p => milesBetween(p.lat, p.lon, c.lat, c.lon) < (strict ? spreadMi : 1.0))) continue;
-        // One card per road at first (crossings too); more only if needed.
-        if ((perRoad[c.road] || 0) >= (focus ? 4 : strict ? 1 : (c.kind === 'crossing' ? 2 : 1))) continue;
+        if (pick.some(p => milesBetween(p.lat, p.lon, c.lat, c.lon) < (pass < 2 ? spreadMi : 1.0))) continue;
+        if ((perRoad[c.road] || 0) >= (focus ? 4 : pass < 2 ? 1 : (c.kind === 'crossing' ? 2 : 1))) continue;
         perRoad[c.road] = (perRoad[c.road] || 0) + 1;
         perKind[c.kind] = (perKind[c.kind] || 0) + 1;
         pick.push(c);
