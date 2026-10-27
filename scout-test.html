@@ -184,7 +184,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 13 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 14 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1707,6 +1707,18 @@ async function rateFormations(units, target) {
   return { ratings, notes };
 }
 
+// Even grid of points across the search circle (about maxPts of them).
+function areaGrid(lat, lon, radiusMiles, maxPts) {
+  const spacing = Math.max(1.0, radiusMiles * Math.sqrt(Math.PI / maxPts));
+  const dLat = spacing / 69, dLon = spacing / (69 * Math.cos(lat * Math.PI / 180));
+  const n = Math.ceil(radiusMiles / spacing), pts = [];
+  for (let i = -n; i <= n; i++) for (let j = -n; j <= n; j++) {
+    const p = [lat + i * dLat, lon + j * dLon];
+    if (milesBetween(lat, lon, p[0], p[1]) <= radiusMiles) pts.push(p);
+  }
+  return { pts, spacing };
+}
+
 // --- the whole Custom scan -------------------------------------------------
 async function crossingScan(loc, radius, target, town, scan) {
   const lat = loc.lat, lon = loc.lon;
@@ -1733,6 +1745,52 @@ async function crossingScan(loc, radius, target, town, scan) {
     scanLog.push('backup road map: ' + roads.length + ' roads [' + overpassReport.join('; ') + ']');
     if (!roads.length) return { written: [], noRoads: true, roadFailed: osm.failed };
   }
+
+  // 1b. AREA SURVEY: check the rock on an even grid across the whole circle,
+  // so the app knows which formations are here and where -- before it
+  // decides which roads to look at. (The user doesn't need to know a thing.)
+  t0 = Date.now();
+  const { pts: gridPts, spacing: gridSpacing } = areaGrid(lat, lon, radius, 200);
+  const grid = await geoBatch(gridPts, scan, 'Surveying the rocks in your area');
+  if (scan.cancelled) return null;
+  const cells = [];
+  gridPts.forEach((p, i) => { const u = grid.units[i]; if (u && u.name) cells.push({ lat: p[0], lon: p[1], unit: u }); });
+  const areaUnits = {};
+  cells.forEach(c => { areaUnits[c.unit.name] = c.unit; });
+  logStage('area survey: ' + grid.done + ' of ' + gridPts.length + ' points every ' + gridSpacing.toFixed(1) + ' mi, ' + grid.failed + ' failed, ' + Object.keys(areaUnits).length + ' rock units', t0);
+  t0 = Date.now();
+  setProgress('Matching the rocks to what you are hunting...');
+  const ratings = {}, rateNotes = [];
+  if (cells.length) {
+    const r1 = await rateFormations(Object.values(areaUnits), target);
+    Object.assign(ratings, r1.ratings); rateNotes.push(...r1.notes);
+  }
+  const rate = u => (u && u.name && ratings[u.name]) || 'low';
+  const counts = {};
+  cells.forEach(c => { counts[c.unit.name] = (counts[c.unit.name] || 0) + 1; });
+  const area = Object.keys(counts).sort((a, b) => counts[b] - counts[a])
+    .map(n => ({ name: n, pct: Math.round(100 * counts[n] / cells.length), rating: ratings[n] || 'low' }));
+  logStage('area rocks: ' + area.slice(0, 8).map(a => a.name + ' ' + a.pct + '% (' + a.rating + ')').join(' / ') + ' [' + rateNotes.join('; ') + ']', t0);
+  // Rank roads by how much good rock they run through (from the survey grid).
+  const cellNear = (la, lo) => {
+    let best = null, bd = gridSpacing * 0.8;
+    for (const c of cells) { const d = milesBetween(la, lo, c.lat, c.lon); if (d < bd) { bd = d; best = c; } }
+    return best;
+  };
+  for (const r of roads) {
+    let good = 0, ok = 0;
+    for (const run of samplesAlongRoad({ segs: r.segs.length ? r.segs : r.allSegs }, 40, 0.5)) {
+      for (const pt of run) {
+        const c = cellNear(pt[0], pt[1]);
+        const b = c ? base(rate(c.unit)) : 0;
+        if (b === 2) good += 0.5; else if (b === 1) ok += 0.5;
+      }
+    }
+    // A mile of documented-producer rock counts 5x a mile of "possible" rock.
+    r.goodMiles = good; r.okMiles = ok; r.prio = good * 5 + ok;
+  }
+  roads.sort((a, b) => (b.prio - a.prio) || (a.near - b.near));
+  scanLog.push('roads ranked by rock: ' + roads.slice(0, 8).map(r => r.road + ' (' + r.goodMiles.toFixed(1) + ' mi producer, ' + r.okMiles.toFixed(1) + ' mi possible)').join(', '));
 
   // 2. Crossings.
   const crossings = findCrossings(roads, streamRes.streams)
@@ -1764,12 +1822,13 @@ async function crossingScan(loc, radius, target, town, scan) {
       }
     }
   }
-  // Every road gets checked: about one point per 3/4 mile (max 12 per road,
-  // ~600 in all). Nearest roads first in case the budget runs out.
+  // Roads are checked in order of how much good rock the survey says they
+  // cross (CR 312-type roads first), about one point per 3/4 mile, max 12 per
+  // road, ~450 in all.
   const roadRuns = [];
   let roadPtCount = 0;
   for (const r of roads) {
-    if (roadPtCount >= 600) break;
+    if (roadPtCount >= 450) break;
     if (!r.segs.length) continue;
     const runs = dedupeRuns(samplesAlongRoad(r, 12, 0.75), 0.2);
     for (const run of runs) { roadRuns.push({ road: r.road, run }); roadPtCount += run.length; }
@@ -1797,12 +1856,14 @@ async function crossingScan(loc, radius, target, town, scan) {
   const geoDown = geo.done > 0 && geo.failed / geo.done > 0.5;
   if (!Object.keys(seenUnits).length) return { written: [], geoDown: geoDown || geo.done === 0 };
 
-  // 4. Rate the rocks.
+  // 4. Rate any rocks the area survey didn't already see.
   t0 = Date.now();
-  setProgress('Matching rocks to what you are hunting...');
-  const { ratings, notes } = await rateFormations(Object.values(seenUnits), target);
-  const rate = u => (u && u.name && ratings[u.name]) || 'low';
-  logStage('ratings: ' + Object.keys(ratings).map(n => n + '=' + ratings[n]).slice(0, 14).join(' / ') + ' [' + notes.join('; ') + ']', t0);
+  const newUnits = Object.values(seenUnits).filter(u => !(u.name in ratings));
+  if (newUnits.length) {
+    const r2 = await rateFormations(newUnits, target);
+    Object.assign(ratings, r2.ratings); rateNotes.push(...r2.notes.map(n => 'extra rocks: ' + n));
+  }
+  logStage('ratings: ' + Object.keys(ratings).map(n => n + '=' + ratings[n]).slice(0, 16).join(' / ') + ' [' + rateNotes.join('; ') + ']', t0);
 
   // 5. Candidate spots.
   const cands = [];
@@ -1845,15 +1906,25 @@ async function crossingScan(loc, radius, target, town, scan) {
         spanMiles: milesBetween(rr.run[m - 1][0], rr.run[m - 1][1], rr.run[m][0], rr.run[m][1]) });
     }
   }
-  cands.sort((a, b) => (b.s - a.s) || (a.pri - b.pri) || (a.dist - b.dist));
-  const pick = [];
-  const perRoad = {};
-  for (const c of cands) {
-    if (pick.length >= 4) break;
-    if (pick.some(p => milesBetween(p.lat, p.lon, c.lat, c.lon) < 1.0)) continue;
-    if (c.kind !== 'crossing' && (perRoad[c.road] || 0) >= 2) continue;
-    perRoad[c.road] = (perRoad[c.road] || 0) + 1;
-    pick.push(c);
+  cands.sort((a, b) => (b.s - a.s) || (a.pri - b.pri) || ((b.miles || 0) - (a.miles || 0)) || (a.dist - b.dist));
+  // Mix the cards: at each level (HOT, then WARM...), up to 2 creek crossings
+  // and up to 2 roads-through-good-rock first, then fill. One stretch card per road.
+  const pick = [], perRoad = {}, perKind = {};
+  const limits = { crossing: 2, through: 2, boundary: 1 };
+  for (const lvl of [2, 1, 0]) {
+    const tier = cands.filter(c => c.s === lvl);
+    for (const strict of [true, false]) {
+      for (const c of tier) {
+        if (pick.length >= 4) break;
+        if (pick.includes(c)) continue;
+        if (strict && (perKind[c.kind] || 0) >= limits[c.kind]) continue;
+        if (pick.some(p => milesBetween(p.lat, p.lon, c.lat, c.lon) < 1.0)) continue;
+        if (c.kind !== 'crossing' && (perRoad[c.road] || 0) >= 1) continue;
+        if (c.kind !== 'crossing') perRoad[c.road] = (perRoad[c.road] || 0) + 1;
+        perKind[c.kind] = (perKind[c.kind] || 0) + 1;
+        pick.push(c);
+      }
+    }
   }
   const levels = ['cool', 'warm', 'hot'];
   const sampledRoads = [...new Set(roadRuns.map(r => r.road))];
@@ -1880,7 +1951,7 @@ async function crossingScan(loc, radius, target, town, scan) {
   closed = true;
   written.sort((a, b) => a._order - b._order);
   logStage('write-ups (' + written.length + ' of ' + pick.length + ' done)', t0);
-  return { written, candidates: cands.length, geoDown };
+  return { written, candidates: cands.length, geoDown, area };
 }
 
 // One AI write-up for a spot. The app supplies the facts and the score; the
@@ -2388,6 +2459,7 @@ async function runScout() {
       } else {
         printLabel = 'Custom search: ' + place + (target ? ' (' + target + ')' : '');
         renderHotspots(written);
+        showAreaSummary(res.area, place, radius, target);
         showCostLine();
         addClubButton(place, target);
         setStatus(written.length + ' HOTSPOTS');
@@ -2494,6 +2566,23 @@ function restoreLastResults() {
 window.addEventListener('pageshow', restoreLastResults);
 window.addEventListener('DOMContentLoaded', restoreLastResults);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') restoreLastResults(); });
+
+// "What rocks are near me?" -- shown above the cards after a Custom scan.
+function showAreaSummary(area, place, radius, target) {
+  if (!area || !area.length) return;
+  const c = document.getElementById('results');
+  const what = target || 'collectible material';
+  const label = r => r === 'high' ? 'documented producer of ' + what : r === 'possible' ? 'possible host rock for ' + what : '';
+  const box = document.createElement('div');
+  box.className = 'areabox';
+  box.style.cssText = 'border:1px solid rgba(61,158,140,0.4);background:rgba(61,158,140,0.08);border-radius:3px;padding:10px 14px;margin:0 0 14px;font-family:Barlow,sans-serif;';
+  box.innerHTML = '<div style="font-size:0.7rem;letter-spacing:0.12em;color:var(--turquoise);margin-bottom:6px;">▸ ROCKS WITHIN ' + radius + ' MILES OF ' + esc(place).toUpperCase() + '</div>' +
+    area.filter(a => a.pct >= 3).slice(0, 6).map(a => '<div style="font-size:0.85rem;color:var(--cream);line-height:1.5;"><b>' + a.pct + '%</b> ' + esc(a.name) +
+      (label(a.rating) ? ' — <span style="color:' + (a.rating === 'high' ? '#f4b87a' : '#7ec49a') + ';">' + label(a.rating) + '</span>' : '') + '</div>').join('') +
+    '<div style="font-size:0.7rem;color:var(--feldspar);margin-top:6px;">Share of the area, sampled from the geologic map. The cards below favor roads and creeks in the best-rated rock.</div>';
+  const bar = c.querySelector('.printbar');
+  if (bar && bar.nextSibling) c.insertBefore(box, bar.nextSibling); else c.prepend(box);
+}
 
 function renderHotspots(spots) {
   const c = document.getElementById('results');
