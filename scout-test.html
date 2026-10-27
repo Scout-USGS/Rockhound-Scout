@@ -198,7 +198,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 31 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 32 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -2641,7 +2641,9 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
         if (pass === 0 && !focus && (perKind[c.kind] || 0) >= limits[c.kind]) continue;
         // Spread the cards out: a wider search keeps picks farther apart
         // (about a fifth of the radius), so they don't all cluster by town.
-        if (pick.some(p => milesBetween(p.lat, p.lon, c.lat, c.lon) < (pass < 2 ? spreadMi : 1.0))) continue;
+        // (Spacing applies between cards of the same kind; a lake park can sit
+        // near a creek crossing, since they are different kinds of hunting.)
+        if (pick.some(p => milesBetween(p.lat, p.lon, c.lat, c.lon) < (pass < 2 && p.kind === c.kind ? spreadMi : 1.0))) continue;
         if ((perRoad[c.road] || 0) >= (focus ? 4 : pass < 2 ? 1 : (c.kind === 'crossing' ? 2 : 1))) continue;
         perRoad[c.road] = (perRoad[c.road] || 0) + 1;
         perKind[c.kind] = (perKind[c.kind] || 0) + 1;
@@ -3177,11 +3179,30 @@ function showTestLog() {
   if (!el) {
     el = document.createElement('div');
     el.id = 'testLog';
-    el.style.cssText = 'margin:10px 0;padding:8px 10px;border:1px dashed #b3261e;color:#e8b4a0;font:12px/1.5 monospace;white-space:pre-wrap;';
+    el.style.cssText = 'margin:10px 0;padding:8px 10px;border:1px dashed #b3261e;color:#e8b4a0;font:12px/1.5 monospace;';
+    el.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">' +
+      '<b style="flex:1;min-width:140px;">TEST diagnostics</b>' +
+      '<button type="button" id="tlSave" style="font:12px monospace;padding:4px 8px;cursor:pointer;">Save as text file</button>' +
+      '<button type="button" id="tlCopy" style="font:12px monospace;padding:4px 8px;cursor:pointer;">Copy</button></div>' +
+      '<details id="tlBox"><summary style="cursor:pointer;">Show / hide details</summary><pre id="tlText" style="white-space:pre-wrap;margin:6px 0 0;font:inherit;"></pre></details>';
     const box = document.getElementById('errbox');
     box.parentNode.insertBefore(el, box.nextSibling);
+    const fullText = () => 'Rockhound Scout TEST diagnostics\n' + document.title + ' | ' + new Date().toLocaleString() +
+      '\nSearch: ' + ((document.getElementById('customLoc') || {}).value || '') + '\n\n' + scanLog.join('\n') + '\n';
+    el.querySelector('#tlSave').onclick = () => {
+      const q = ((document.getElementById('customLoc') || {}).value || 'scan').replace(/[^a-z0-9]+/gi, '_').slice(0, 40);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([fullText()], { type: 'text/plain' }));
+      a.download = 'diagnostics_' + q + '.txt';
+      document.body.appendChild(a); a.click(); a.remove();
+    };
+    el.querySelector('#tlCopy').onclick = async () => {
+      const b = el.querySelector('#tlCopy');
+      try { await navigator.clipboard.writeText(fullText()); b.textContent = 'Copied'; } catch (e) { b.textContent = 'Copy failed'; }
+      setTimeout(() => { b.textContent = 'Copy'; }, 2000);
+    };
   }
-  el.textContent = 'TEST diagnostics:\n' + scanLog.join('\n');
+  el.querySelector('#tlText').textContent = scanLog.join('\n');
 }
 // TEST: how long each stage of the scan took, shown if a scan times out.
 let scanLog = [];
