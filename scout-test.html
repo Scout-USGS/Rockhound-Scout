@@ -198,7 +198,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 29 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 30 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1156,20 +1156,22 @@ async function parseCustomRequest(text) {
   const clean = text.replace(/[\r\n"]+/g, ' ').slice(0, 300);
   const prompt = 'A rockhounder typed this into a search box: "' + clean + '"\n' +
     'Extract these things and reply with ONLY a JSON object, no other text:\n' +
-    '{"place": "...", "town": "...", "target": "...", "miles": 0, "road": "...", "direction": ""}\n' +
+    '{"place": "...", "town": "...", "target": "...", "miles": 0, "road": "...", "direction": "", "kinds": [], "different": false}\n' +
     '- place: the location as a clean geocodable string, ideally "City, ST" with the two-letter US state (a town, hotel, address, or landmark). Include the state only if the user named it or the place is unmistakable; if no state is given, leave the state off rather than guessing. If the only location given is a road, use that road plus the state if given (e.g. "FM 306, TX"). Use "" if no place is given.\n' +
     '- town: the nearest city or town to that place, as "Town, ST" using the same state rule (for an address, the town it is in or next to). Use "" if unknown.\n' +
     '- target: what they want to find, with obvious typos corrected (e.g. "agatized petrified wood"). Use "" if none is given or if they only said something general like spots, rocks, hotspots or anything.\n' +
     '- miles: the search distance in miles if the user asked for one (e.g. "within 10 miles" gives 10), otherwise 0.\n' +
     '- road: if they asked to stay on or along one specific road (e.g. "on hwy 306", "along FM 1358", "off CR 312"), that road as written; otherwise "".\n' +
-    '- direction: if they asked for one side of the place (e.g. "south of La Grange", "NE of Llano", "west side of Alpine"), one of N, NE, E, SE, S, SW, W, NW; otherwise "". The place is then the town itself (e.g. "La Grange, TX").';
+    '- direction: if they asked for one side of the place (e.g. "south of La Grange", "NE of Llano", "west side of Alpine"), one of N, NE, E, SE, S, SW, W, NW; otherwise "". The place is then the town itself (e.g. "La Grange, TX").\n' +
+    '- kinds: if they asked for only certain kinds of spots, a list using only these words: "crossing" (creek, drainage or river crossings, bridges), "stretch" (road stretches, roadsides, ditches, road cuts), "shore" (lake, river, bay or ocean shores, beaches), "boundary" (contacts where two rock formations meet). "only drainage crossings" gives ["crossing"]; "no shore" gives ["crossing","stretch","boundary"]. Use [] if they did not limit the kinds.\n' +
+    '- different: true if they asked for different, new or other spots than their last search (e.g. "4 different hotspots than before", "show me new ones", "other spots this time"); otherwise false.';
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 15000);
   try {
     const resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
       method: 'POST',
       headers: aiHeaders(),
-      body: JSON.stringify({ model: AI_MODEL, max_tokens: 150, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: AI_MODEL, max_tokens: 200, messages: [{ role: 'user', content: prompt }] }),
       signal: ctrl.signal
     });
     if (!resp.ok) return null;
@@ -1186,7 +1188,9 @@ async function parseCustomRequest(text) {
       target: (t => GENERIC_TARGET.test(t) ? '' : t)(String(j.target || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 80)),
       miles: Number(j.miles) || 0,
       road: String(j.road || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 40),
-      direction: (String(j.direction || '').toUpperCase().match(/^(N|NE|E|SE|S|SW|W|NW)$/) || [''])[0]
+      direction: (String(j.direction || '').toUpperCase().match(/^(N|NE|E|SE|S|SW|W|NW)$/) || [''])[0],
+      kinds: (Array.isArray(j.kinds) ? j.kinds : []).map(k => String(k).toLowerCase().trim()).filter(k => /^(crossing|stretch|shore|boundary)$/.test(k)),
+      different: j.different === true || /\b(different|new|other)\b[^.]*\b(spots?|hotspots?|cards?|ones|places)\b|\bthan (the )?(last|previous|before)\b/i.test(clean)
     };
   } catch (e) {
     return null;
@@ -2086,7 +2090,8 @@ function matchRequestedRoad(roads, wanted) {
   return typed.length ? typed : same;
 }
 
-async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
+async function crossingScan(loc, radius, target, town, scan, roadWanted, side, opts) {
+  opts = opts || {};
   const lat = loc.lat, lon = loc.lon;
   scanCenter = { lat, lon };
   const base = r => r === 'high' ? 2 : r === 'possible' ? 1 : 0;
@@ -2599,11 +2604,28 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
     for (let q = cands.length - 1; q >= 0; q--) if (!onSide(cands[q].lat, cands[q].lon)) cands.splice(q, 1);
     scanLog.push('kept ' + cands.length + ' of ' + before + ' spots on the ' + side.word + ' side');
   }
+  // "Only crossings" / "no shore": keep just the kinds asked for.
+  const KIND_OF = { crossing: 'crossing', through: 'stretch', shore: 'shore', boundary: 'boundary' };
+  if (opts.kinds && opts.kinds.length) {
+    const before = cands.length;
+    for (let q = cands.length - 1; q >= 0; q--) if (!opts.kinds.includes(KIND_OF[cands[q].kind])) cands.splice(q, 1);
+    scanLog.push('kinds asked for: ' + opts.kinds.join(', ') + ' — kept ' + cands.length + ' of ' + before + ' spots');
+  }
+  // "Different spots than last time": skip anything near the last cards.
+  if (opts.avoid && opts.avoid.length) {
+    const before = cands.length;
+    for (let q = cands.length - 1; q >= 0; q--) {
+      const c = cands[q];
+      if (opts.avoid.some(a => milesBetween(a.lat, a.lon, c.lat, c.lon) < 1.5)) cands.splice(q, 1);
+    }
+    scanLog.push('skipping ' + opts.avoid.length + ' earlier card(s) — kept ' + cands.length + ' of ' + before + ' spots');
+  }
   cands.sort((a, b) => (b.s - a.s) || (a.pri - b.pri) || ((b.miles || 0) - (a.miles || 0)) || (a.dist - b.dist));
   // Mix the cards: at each level (HOT, then WARM...), up to 2 creek crossings
   // and up to 2 roads-through-good-rock first, then fill. One stretch card per road.
   const pick = [], perRoad = {}, perKind = {};
   const limits = { crossing: 2, through: 2, shore: 2, boundary: 1 };
+  const spreadMi = focus ? 1.0 : Math.max(1.0, radius / 5);
   for (const lvl of [2, 1, 0]) {
     const tier = cands.filter(c => c.s === lvl);
     for (const strict of [true, false]) {
@@ -2611,9 +2633,12 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
         if (pick.length >= 4) break;
         if (pick.includes(c)) continue;
         if (strict && !focus && (perKind[c.kind] || 0) >= limits[c.kind]) continue;
-        if (pick.some(p => milesBetween(p.lat, p.lon, c.lat, c.lon) < 1.0)) continue;
-        if (c.kind !== 'crossing' && (perRoad[c.road] || 0) >= (focus ? 4 : 1)) continue;
-        if (c.kind !== 'crossing') perRoad[c.road] = (perRoad[c.road] || 0) + 1;
+        // Spread the cards out: a wider search keeps picks farther apart
+        // (about a fifth of the radius), so they don't all cluster by town.
+        if (pick.some(p => milesBetween(p.lat, p.lon, c.lat, c.lon) < (strict ? spreadMi : 1.0))) continue;
+        // One card per road at first (crossings too); more only if needed.
+        if ((perRoad[c.road] || 0) >= (focus ? 4 : strict ? 1 : (c.kind === 'crossing' ? 2 : 1))) continue;
+        perRoad[c.road] = (perRoad[c.road] || 0) + 1;
         perKind[c.kind] = (perKind[c.kind] || 0) + 1;
         pick.push(c);
       }
@@ -2692,7 +2717,8 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
   written.sort((a, b) => a._order - b._order);
   logStage('write-ups (' + written.length + ' of ' + pick.length + ' done)', t0);
   const FL = await loadFieldList();
-  return { written, candidates: cands.length, geoDown, area, focusLabel, focusNote, ratingFailed,
+  const shown = written.map(h => pick[h._order]).filter(Boolean).map(c => ({ lat: c.lat, lon: c.lon, road: c.road, kind: c.kind }));
+  return { written, shown, candidates: cands.length, geoDown, area, focusLabel, focusNote, ratingFailed,
     stateNote: FL.stateNotes[scanState] || '', generalNote: FL.generalNote || '' };
 }
 
@@ -3255,7 +3281,23 @@ async function runScout() {
         scanLoc = { ...loc, lat: moved.lat, lon: moved.lon };
         side = { lat: loc.lat, lon: loc.lon, deg: DIR_DEG[dir], word: DIR_WORD[dir] };
       }
-      const res = await crossingScan(scanLoc, radius, target, (parsed && parsed.town) || place, scan, roadWanted, side);
+      // Earlier cards for this area (kept on this device), for "different spots".
+      const prevKey = 'rsPrevCards_' + ((currentUser && currentUser.id) || 'anon');
+      let prev = null;
+      try { prev = JSON.parse(localStorage.getItem(prevKey) || 'null'); } catch (e) {}
+      const sameArea = prev && prev.cards && milesBetween(prev.lat, prev.lon, scanLoc.lat, scanLoc.lon) <= Math.max(prev.radius || 0, radius);
+      const wantDifferent = !!(parsed && parsed.different);
+      const avoid = wantDifferent && sameArea ? prev.cards : [];
+      if (wantDifferent && !avoid.length) scanLog.push('asked for different spots, but there is no earlier search of this area saved on this device');
+      const kinds = (parsed && parsed.kinds) || [];
+      const res = await crossingScan(scanLoc, radius, target, (parsed && parsed.town) || place, scan, roadWanted, side, { kinds, avoid });
+      // Remember these cards; keep adding to the list while "different" searches continue in the same area.
+      try {
+        if (res && res.shown && res.shown.length) {
+          const cards = (wantDifferent && sameArea ? prev.cards : []).concat(res.shown).slice(-40);
+          localStorage.setItem(prevKey, JSON.stringify({ lat: scanLoc.lat, lon: scanLoc.lon, radius, cards }));
+        }
+      } catch (e) {}
       bail();
       const written = (res && res.written) || [];
       scanLog.push('cards written: ' + written.length);
@@ -3276,11 +3318,19 @@ async function runScout() {
         const ok = await refundScan();
         showError((res && res.geoDown
           ? 'The free geology-map server is not responding right now. Please try again in a few minutes.'
-          : 'Could not build any spots for that area this pass. Try again, or a different area.') + notCharged(ok));
+          : (kinds.length || avoid.length)
+            ? 'No spots in this area fit what you asked for' + (kinds.length ? ' (' + kinds.join(', ') + ' only)' : '') + (avoid.length ? ' after leaving out your earlier cards' : '') + '. Try a wider distance or fewer limits.'
+            : 'Could not build any spots for that area this pass. Try again, or a different area.') + notCharged(ok));
         setStatus(res && res.geoDown ? 'SERVER BUSY' : 'NO DATA');
       } else {
         printLabel = 'Custom search: ' + (side ? side.word + ' of ' : '') + place + (res.focusLabel ? ', along ' + res.focusLabel : '') + (target ? ' (' + target + ')' : '');
         renderHotspots(written);
+        if (written.length < 4 && (kinds.length || avoid.length)) {
+          const kn = { crossing: 'creek crossings', stretch: 'road stretches', shore: 'shores', boundary: 'rock boundaries' };
+          showError('Only ' + written.length + ' spot' + (written.length === 1 ? '' : 's') + ' fit' + (written.length === 1 ? 's' : '') + ' what you asked for' +
+            (kinds.length ? ' (' + kinds.map(k => kn[k]).join(', ') + ' only)' : '') + (avoid.length ? ', leaving out ' + avoid.length + ' earlier card(s)' : '') +
+            ' in this area. Try a wider distance for more.');
+        }
         showAreaSummary(res.area, place, radius, target, res.focusLabel, res.ratingFailed ? 'Rock ratings were not available this time, so these cards may undersell the area. Try the scan again later.' : res.focusNote, side, res.stateNote, res.generalNote);
         showCostLine();
         addClubButton(place, target);
