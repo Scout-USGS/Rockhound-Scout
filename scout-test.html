@@ -198,7 +198,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 22 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 24 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -214,7 +214,7 @@
     <ul class="ilist">
       <li>Enter your email below to sign in.</li>
       <li>Describe what you're hunting and where &mdash; any town, landmark or address in the U.S.</li>
-      <li>Then press &ldquo;Find My Hotspots&rdquo;. Results can take a full minute to compile.</li>
+      <li>Then press &ldquo;Find My Hotspots&rdquo;. Results usually take 1&ndash;2 minutes to compile.</li>
     </ul>
   </div>
   <div class="acct" id="acctBox">
@@ -285,6 +285,9 @@ let region = 'custom'; // TEST: Custom-only version, presets removed
 // The publishable key below is meant to be public (it only allows what the
 // database rules allow: a signed-in customer reading their own balance).
 const WORKER_URL = 'https://hidden-mud-13fc.tightloop2.workers.dev';
+// The AI model every call uses. To change models, change it HERE only
+// (the Worker must allow the same model name).
+const AI_MODEL = 'claude-sonnet-4-6';
 const SUPABASE_URL = 'https://qqjpsqaklhujhfnzbjfl.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_RCDnFzCuGaQKkXXzcexkTw_mboCKWZ_';
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/14AcN65Al90YfxkcGfcMM00';
@@ -444,16 +447,24 @@ async function beginScan(kind) {
     return false;
   }
   let resp, data = null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20000); // don't wait forever on the Worker
   try {
     resp = await fetch(WORKER_URL + '/scan/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ kind: kind })
+      body: JSON.stringify({ kind: kind }),
+      signal: ctrl.signal
     });
     try { data = await resp.json(); } catch (e) {}
   } catch (e) {
-    showError('Could not reach Rockhound Scout. Check your connection and try again.');
+    refreshBalance();
+    showError(e && e.name === 'AbortError'
+      ? 'Rockhound Scout did not answer in time, so the scan did not start. Please try again. If your scan count went down, email RockhoundScoutApp@gmail.com and we will make it right.'
+      : 'Could not reach Rockhound Scout. Check your connection and try again.');
     return false;
+  } finally {
+    clearTimeout(timer);
   }
   if (resp.status === 402) {
     setScansShown(0);
@@ -484,13 +495,18 @@ async function refundScan() {
   try {
     const { data } = await sb.auth.getSession();
     const token = data && data.session && data.session.access_token;
-    const resp = await fetch(WORKER_URL + '/scan/refund', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ ticket: ticket })
-    });
-    const r = await resp.json();
-    ok = !!(r && r.refunded);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000); // don't let a stuck refund hang the page
+    try {
+      const resp = await fetch(WORKER_URL + '/scan/refund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ ticket: ticket }),
+        signal: ctrl.signal
+      });
+      const r = await resp.json();
+      ok = !!(r && r.refunded);
+    } finally { clearTimeout(timer); }
   } catch (e) {}
   refreshBalance();
   return ok;
@@ -752,7 +768,7 @@ async function findLocalClubs() {
       method: 'POST',
       headers: aiHeaders(),
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: AI_MODEL,
         max_tokens: 2500,
         tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3,
                   user_location: { type: 'approximate', country: 'US', region: scanState } }],
@@ -1153,7 +1169,7 @@ async function parseCustomRequest(text) {
     const resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
       method: 'POST',
       headers: aiHeaders(),
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 150, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: AI_MODEL, max_tokens: 150, messages: [{ role: 'user', content: prompt }] }),
       signal: ctrl.signal
     });
     if (!resp.ok) return null;
@@ -1533,7 +1549,14 @@ function clipPaths(paths, lat, lon, radiusMiles) {
 // --- roads: highways + FM/RM + county roads from the Census map ---------
 async function fetchCensusRoads(lat, lon, radiusMiles) {
   const layers = await arcLayers(TIGER_BASE);
-  const sec = layers.find(l => /secondary/i.test(l.name || ''));
+  // The Census map has several "secondary roads" layers. One holds only
+  // interstates and US highways; state highways (like NY-104) are only in the
+  // detailed ones, so prefer the most detailed scale.
+  const secAll = layers.filter(l => /secondary/i.test(l.name || '') && !/label/i.test(l.name || ''));
+  const secPref = [/72/, /144|289/, /578/, /^secondary roads$/i];
+  let sec = null;
+  for (const rx of secPref) { sec = secAll.find(l => rx.test(l.name || '') && !/interstates and us/i.test(l.name || '')); if (sec) break; }
+  if (!sec) sec = secAll.find(l => !/interstates and us/i.test(l.name || '')) || secAll[0];
   const pri = layers.find(l => /primary/i.test(l.name || '') && !/secondary/i.test(l.name || ''));
   const loc = layers.find(l => /local/i.test(l.name || ''));
   const report = [], byRef = {}, rankOf = {}, skipped = new Set(), oddRuns = {}, allNames = new Set();
@@ -1640,6 +1663,20 @@ async function fetchStreams(lat, lon, radiusMiles) {
     }
   }
   return { streams: [], source: '', report };
+}
+
+async function nameWaterBody(lat, lon) {
+  const layers = await arcLayers(CENSUS_HYDRO_BASE);
+  const layer = layers.find(l => /area/i.test(l.name || '') && !/label/i.test(l.name || ''));
+  if (!layer) return '';
+  const fields = await arcFields(CENSUS_HYDRO_BASE, layer.id).catch(() => []);
+  const nf = pickField(fields, ['NAME', 'FULLNAME', 'BASENAME']) || 'NAME';
+  const params = new URLSearchParams({ geometry: lon + ',' + lat, geometryType: 'esriGeometryPoint', inSR: '4326',
+    spatialRel: 'esriSpatialRelIntersects', outFields: nf, returnGeometry: 'false', f: 'json' });
+  const r = await fetchWithTimeout(CENSUS_HYDRO_BASE + '/' + layer.id + '/query?' + params.toString(), 8000);
+  const j = await r.json();
+  const f = (j.features || []).find(x => x.attributes && x.attributes[nf]);
+  return f ? String(f.attributes[nf]).trim() : '';
 }
 
 // --- where roads cross streams ------------------------------------------
@@ -1804,7 +1841,7 @@ async function rateFormations(units, target) {
     try {
       const resp = await fetch(WORKER_URL + '/', {
         method: 'POST', headers: aiHeaders(), signal: ctrl.signal,
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 900, messages: [{ role: 'user', content: p }] })
+        body: JSON.stringify({ model: AI_MODEL, max_tokens: 900, messages: [{ role: 'user', content: p }] })
       });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const data = await resp.json();
@@ -2177,6 +2214,66 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
         spanMiles: milesBetween(rr.run[m - 1][0], rr.run[m - 1][1], rr.run[m][0], rr.run[m][1]) });
     }
   }
+  // Shorelines: when the area survey finds a real body of water (lake, bay,
+  // ocean), find where roads come close to it, walk toward the water with a
+  // few geology checks to locate the shore, and offer it as a spot. Waves
+  // sort and wash out cobbles from the local bedrock and glacial deposits.
+  const isWater = u => u && /^(water|open water|lakes?|reservoir|ocean|sea|bay)$/i.test(String(u.name).trim());
+  const waterCells = cells.filter(c => isWater(c.unit));
+  if (waterCells.length >= 4) {
+    t0 = Date.now();
+    const nearestWater = (la, lo) => {
+      let best = null, bd = Infinity;
+      for (const w of waterCells) { const d = milesBetween(la, lo, w.lat, w.lon); if (d < bd) { bd = d; best = w; } }
+      return { cell: best, d: bd };
+    };
+    const shoreTries = [];
+    for (const rr of roadRuns) {
+      let best = null;
+      rr.run.forEach((pt, i) => {
+        if (!rr.units[i] || isWater(rr.units[i])) return;
+        const nw = nearestWater(pt[0], pt[1]);
+        if (nw.d <= gridSpacing * 1.2 && (!best || nw.d < best.nw.d)) best = { pt, unit: rr.units[i], nw };
+      });
+      if (best) shoreTries.push({ road: rr.road, ...best });
+    }
+    shoreTries.sort((a, b) => a.nw.d - b.nw.d);
+    const tries = [];
+    for (const t of shoreTries) {
+      if (tries.length >= 6) break;
+      if (tries.some(x => milesBetween(x.pt[0], x.pt[1], t.pt[0], t.pt[1]) < 2)) continue;
+      tries.push(t);
+    }
+    // Step from the road toward the water every ~0.15 mile.
+    const steps = [];
+    tries.forEach((t, k) => {
+      const n = Math.max(1, Math.min(14, Math.ceil(t.nw.d / 0.15)));
+      for (let q = 1; q <= n; q++) steps.push({ k, q, p: [t.pt[0] + (t.nw.cell.lat - t.pt[0]) * q / n, t.pt[1] + (t.nw.cell.lon - t.pt[1]) * q / n] });
+    });
+    const sg = steps.length ? await geoBatch(steps.map(x => x.p), scan, 'Finding the shoreline') : { units: [] };
+    if (scan.cancelled) return null;
+    let waterName = '';
+    try { waterName = await nameWaterBody(waterCells[0].lat, waterCells[0].lon); } catch (e) {}
+    let made = 0;
+    tries.forEach((t, k) => {
+      const mine = steps.map((x, i) => ({ ...x, u: sg.units[i] })).filter(x => x.k === k).sort((a, b) => a.q - b.q);
+      const hit = mine.find(x => isWater(x.u));
+      if (!hit) return;
+      const shoreMi = milesBetween(t.pt[0], t.pt[1], hit.p[0], hit.p[1]);
+      if (shoreMi > 1.5) return;
+      const landNear = cells.filter(c => !isWater(c.unit) && milesBetween(hit.p[0], hit.p[1], c.lat, c.lon) <= 1.6).map(c => c.unit);
+      const uniq = [...new Map(landNear.concat([t.unit]).map(u => [u.name, u])).values()];
+      const best = uniq.reduce((m, u) => Math.max(m, base(rate(u))), 0);
+      cands.push({ kind: 'shore', s: best >= 1 ? 2 : 1, pri: 0.5, lat: t.pt[0], lon: t.pt[1], dist: milesBetween(lat, lon, t.pt[0], t.pt[1]),
+        road: t.road, unit: t.unit, rating: rate(t.unit), waterName: waterName || 'the shore', shoreMi,
+        shoreDir: compassFrom(t.pt[0], t.pt[1], hit.p[0], hit.p[1]), shoreLat: hit.p[0], shoreLon: hit.p[1],
+        landNames: uniqNames(uniq.map(u => u.name)),
+        findsHere: [...new Set(uniq.flatMap(u => finds[u.name] || []))].slice(0, 5),
+        rules: [...new Set(uniq.flatMap(u => ruleNotes[u.name] || []))] });
+      made++;
+    });
+    logStage('shoreline: ' + waterCells.length + ' water survey points' + (waterName ? ' (' + waterName + ')' : '') + ', ' + tries.length + ' roads near the water, ' + made + ' shore spots', t0);
+  }
   if (side) {
     const before = cands.length;
     for (let q = cands.length - 1; q >= 0; q--) if (!onSide(cands[q].lat, cands[q].lon)) cands.splice(q, 1);
@@ -2186,7 +2283,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
   // Mix the cards: at each level (HOT, then WARM...), up to 2 creek crossings
   // and up to 2 roads-through-good-rock first, then fill. One stretch card per road.
   const pick = [], perRoad = {}, perKind = {};
-  const limits = { crossing: 2, through: 2, boundary: 1 };
+  const limits = { crossing: 2, through: 2, shore: 2, boundary: 1 };
   for (const lvl of [2, 1, 0]) {
     const tier = cands.filter(c => c.s === lvl);
     for (const strict of [true, false]) {
@@ -2301,6 +2398,13 @@ async function writeUpSpot(c, target, town, streamSrc) {
       'Within the search area ' + c.stream + ' also runs through: ' + (c.alongNames.length ? c.alongNames.slice(0, 6).join('; ') : 'no other mapped units found') + '.';
     ratingText = 'rock at the crossing: ' + rk(c.rating) + '; producing rock the stream runs through: ' + (c.carryNames.length ? c.carryNames.slice(0, 3).join('; ') : 'none found');
     names = c.road + ', ' + c.stream + ' and ' + town;
+  } else if (c.kind === 'shore') {
+    kindText = 'shoreline of a large body of water reached from a road';
+    facts = 'The shore of ' + c.waterName + ' is about ' + (c.shoreMi < 0.2 ? 'right beside' : c.shoreMi.toFixed(1) + ' mile ' + c.shoreDir + ' of') + ' this point on ' + c.road +
+      ' (lat ' + c.lat.toFixed(4) + ', lon ' + c.lon.toFixed(4) + '), located from the geologic map. Rock and deposits mapped on land near this shore: ' + c.landNames.slice(0, 5).join('; ') + '.\n' +
+      'Shores and beaches sort and wash out cobbles from the nearby bedrock and glacial or river deposits, so beach gravel here can hold material from those units.';
+    ratingText = 'best nearby land rock: ' + (c.landNames.length ? c.landNames[0] : u.name);
+    names = c.road + ', ' + c.waterName + ' and ' + town;
   } else if (c.kind === 'through') {
     kindText = 'stretch of road running across a mapped rock unit';
     facts = 'About ' + c.miles.toFixed(1) + ' miles of ' + c.road + ' cross ' + u.name + (u.lith ? ' (' + u.lith + ')' : '') + ', centered near lat ' + c.lat.toFixed(4) + ', lon ' + c.lon.toFixed(4) + '. The rock is mapped under the road; how much is exposed at the surface is not known. ' +
@@ -2344,7 +2448,7 @@ HONESTY RULES:
 - ACCESS: tell the reader to confirm they have legal access before stopping (do not assume the roadside is public or that collecting there is allowed), to park only where it is legal and safe, and never to cross fences or enter private land without the landowner's permission. Never say or imply that a spot is public, legal or safe to collect.
 
 Write ONE record in EXACTLY this format (no markdown, no extra commentary):
-NAME: short catchy name for this spot${c.kind === 'through' ? ' that ends with the word "Stretch"' : c.kind === 'crossing' ? ' that ends with the word "Crossing"' : ''}
+NAME: short catchy name for this spot${c.kind === 'through' ? ' that ends with the word "Stretch"' : c.kind === 'crossing' ? ' that ends with the word "Crossing"' : c.kind === 'shore' ? ' that ends with the word "Shore"' : ''}
 WHERE: one sentence describing the spot in general terms
 MINERALS: comma-separated, per the rule above
 DIRECTIONS: plain-English directions from ${town} using the MEASURED LOCATION; name only ${names} — never invent any other road, turn or landmark; include the ACCESS rule
@@ -2357,7 +2461,7 @@ WHY: one or two sentences per the WHY rule
   try {
     resp = await fetch(WORKER_URL + '/', {
       method: 'POST', headers: aiHeaders(), signal: ctrl.signal,
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: AI_MODEL, max_tokens: 500, messages: [{ role: 'user', content: prompt }] })
     });
   } finally { clearTimeout(timer); }
   if (!resp.ok) throw new Error('API error ' + resp.status);
@@ -2393,6 +2497,12 @@ WHY: one or two sentences per the WHY rule
     rec.detail = 'Rock at the crossing: ' + u.name + '.' + (c.carryNames.length ? ' ' + c.stream + ' also runs through ' + c.carryNames.slice(0, 2).join(' and ') + '.' : '');
     rec.drainages = [c.stream];
     rec.drainSource = streamSrc || 'stream map';
+  } else if (c.kind === 'shore') {
+    rec.headline = c.waterName + ' shore off ' + c.road;
+    rec.detail = 'Shoreline about ' + (c.shoreMi < 0.2 ? 'right beside the road' : c.shoreMi.toFixed(1) + ' mile ' + c.shoreDir + ' of this point') + '. Nearby land rock: ' + c.landNames.slice(0, 3).join(', ') + '.';
+    rec.drainages = [c.waterName];
+    rec.drainSource = 'geologic & Census water maps';
+    rec.rules = (rec.rules || []).concat(['Beaches and shorelines are often private, or part of parks and preserves with their own collecting rules — check before you collect.']);
   } else if (c.kind === 'through') {
     rec.headline = c.road + ' through ' + u.name;
     rec.detail = 'About ' + c.miles.toFixed(1) + ' miles of ' + c.road + ' cross this formation.' +
@@ -2604,7 +2714,7 @@ WHY: one or two sentences: why this contact is geologically interesting and, fol
     resp = await fetch('https://hidden-mud-13fc.tightloop2.workers.dev/', {
       method: 'POST',
       headers: aiHeaders(),
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: AI_MODEL, max_tokens: 500, messages: [{ role: 'user', content: prompt }] }),
       signal: ctrl.signal
     });
   } finally {
@@ -3012,6 +3122,7 @@ function renderHotspots(spots) {
           '<span class="clabel">' + (isOwnerConfirmed ? 'Formation (published sources + owner-confirmed location)'
             : h.kind === 'crossing' ? '✓ Mapped creek crossing — road, stream & ' + (h.source || 'USGS') + ' geologic maps'
             : h.kind === 'through' ? '✓ Road across mapped formation — ' + (h.source || 'USGS') + ' Geologic Map'
+            : h.kind === 'shore' ? '✓ Shoreline near a road — ' + (h.source || 'USGS') + ' geologic map'
             : '✓ Verified Formation Contact — ' + (h.source || 'USGS') + ' Geologic Map') + '</span>' +
           '<span class="cval">' + (h.headline || (h.from_formation + (h.to_formation ? ' ▸ ' + h.to_formation : ''))) + '</span>' +
           (h.detail ? '<span style="font-size:0.78rem;color:var(--cream);display:block;margin-top:3px;">' + h.detail + '</span>' : '') +
@@ -3019,7 +3130,7 @@ function renderHotspots(spots) {
         '</div>' +
         (drains.length > 0 ?
           '<div class="drain-strip">' +
-            '<span class="dlabel">' + (h.kind === 'crossing' ? 'Creek / river crossed' : 'Named Drainages Nearby') + ' (' + (h.drainSource || 'OpenStreetMap') + ')</span>' +
+            '<span class="dlabel">' + (h.kind === 'crossing' ? 'Creek / river crossed' : h.kind === 'shore' ? 'Shoreline' : 'Named Drainages Nearby') + ' (' + (h.drainSource || 'OpenStreetMap') + ')</span>' +
             '<span class="dval">〰 ' + drains.join('  〰 ') + '</span>' +
           '</div>' : '') +
         '<div class="dir-strip">' +
@@ -3043,6 +3154,7 @@ function renderHotspots(spots) {
           ? '▸ Location and directions confirmed on-site by the app\'s owner; age and mineralogy from independently published geology sources'
           : h.kind === 'crossing' ? '▸ Crossing computed from the Census road map and ' + (h.drainSource || 'stream map') + '; rock from ' + (h.source || 'USGS') + ' geologic map data.'
           : h.kind === 'through' ? '▸ Rock under the road from ' + (h.source || 'USGS') + ' geologic map data; exposure at the surface not verified.'
+          : h.kind === 'shore' ? '▸ Shoreline located from ' + (h.source || 'USGS') + ' geologic map data; GPS point is on the road nearest the shore.'
           : '▸ Formation contact verified directly against ' + (h.source || 'USGS') + ' geologic map data; check both shoulders near the marked stretch') + '</div>' +
       '</div>';
     c.appendChild(card);
