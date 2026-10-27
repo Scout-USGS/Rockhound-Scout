@@ -198,7 +198,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 33 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 34 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1159,7 +1159,7 @@ async function parseCustomRequest(text) {
     '{"place": "...", "town": "...", "target": "...", "miles": 0, "road": "...", "direction": "", "kinds": [], "different": false}\n' +
     '- place: the location as a clean geocodable string, ideally "City, ST" with the two-letter US state (a town, hotel, address, or landmark). Include the state only if the user named it or the place is unmistakable; if no state is given, leave the state off rather than guessing. If the only location given is a road, use that road plus the state if given (e.g. "FM 306, TX"). Use "" if no place is given.\n' +
     '- town: the nearest city or town to that place, as "Town, ST" using the same state rule (for an address, the town it is in or next to). Use "" if unknown.\n' +
-    '- target: what they want to find, with obvious typos corrected (e.g. "agatized petrified wood"). Use "" if none is given or if they only said something general like spots, rocks, hotspots or anything.\n' +
+    '- target: what they want to find, with obvious typos corrected (e.g. "agatized petrified wood"). Use "" if none is given or if they only said something general like spots, rocks, hotspots or anything (including misspellings such as \"sets\" or \"spts\" for spots).\n' +
     '- miles: the search distance in miles if the user asked for one (e.g. "within 10 miles" gives 10), otherwise 0.\n' +
     '- road: if they asked to stay on or along one specific road (e.g. "on hwy 306", "along FM 1358", "off CR 312"), that road as written; otherwise "".\n' +
     '- direction: if they asked for one side of the place (e.g. "south of La Grange", "NE of Llano", "west side of Alpine"), one of N, NE, E, SE, S, SW, W, NW; otherwise "". The place is then the town itself (e.g. "La Grange, TX").\n' +
@@ -1919,7 +1919,7 @@ async function loadFieldList() {
 }
 
 // Words that mean "anything", not a specific target.
-const GENERIC_TARGET = /^(any|anything|everything|stuff|things?|spots?|hot ?spots?|good spots?|places?|sites?|rocks?|rocks and minerals|minerals|rockhounding( spots| sites)?|collecting( spots| sites)?|anything collectible|collectibles?)$/i;
+const GENERIC_TARGET = /^(any|anything|everything|stuff|things?|spots?|sets?|spts?|sots?|spoys?|locations?|areas?|stops?|hot ?spots?|good spots?|places?|sites?|rocks?|rocks and minerals|minerals|rockhounding( spots| sites)?|collecting( spots| sites)?|anything collectible|collectibles?)$/i;
 
 // Rates each rock for the target (or for collecting in general) AND says what
 // a rockhound could actually find in it. Returns { ratings, finds, notes, failed }.
@@ -2234,6 +2234,34 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
     return true;
   });
   const headwaterMi = c => freeEnds.filter(e => e.name === c.stream).reduce((m, e) => Math.min(m, milesBetween(c.lat, c.lon, e.p[0], e.p[1])), Infinity);
+  // Miles of creek ABOVE the crossing: follow the creek line from the crossing
+  // to its free (head) end. Ends that join another stream are the mouth side.
+  const freeSet = new Set(freeEnds.map(e => e.p));
+  const upstreamMi = c => {
+    const st = streamRes.streams.find(x => x.name === c.stream);
+    if (!st) return 0;
+    let best = null;
+    for (const l of st.segs) {
+      let cum = 0;
+      for (let i = 1; i < l.length; i++) {
+        const segLen = milesBetween(l[i - 1][0], l[i - 1][1], l[i][0], l[i][1]);
+        const k = Math.cos(c.lat * Math.PI / 180);
+        const ax = l[i - 1][1] * k, ay = l[i - 1][0], bx = l[i][1] * k, by = l[i][0];
+        const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+        let t = L2 ? ((c.lon * k - ax) * dx + (c.lat - ay) * dy) / L2 : 0; t = Math.max(0, Math.min(1, t));
+        const d = milesBetween(c.lat, c.lon, ay + t * dy, (ax + t * dx) / k);
+        if (!best || d < best.d) best = { d, l, at: cum + t * segLen };
+        cum += segLen;
+      }
+      if (best && best.l === l) best.total = cum;
+    }
+    if (!best) return 0;
+    const startFree = freeSet.has(best.l[0]), endFree = freeSet.has(best.l[best.l.length - 1]);
+    if (startFree && endFree) return Math.max(best.at, best.total - best.at); // can't tell which way it flows
+    if (startFree) return best.at;
+    if (endFree) return best.total - best.at;
+    return best.total; // both ends join other water: treat the whole line as feeding it
+  };
   // Pick which crossings to study: good rock (from the area survey), bigger
   // creeks, not headwater swales -- from the whole search area, not just the
   // ones closest to town.
@@ -2242,10 +2270,11 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
     .filter(c => c.dist <= radius && onFocus(c.road));
   for (const c of allX) {
     const cell = cellNear(c.lat, c.lon);
-    c.len = streamLen[c.stream] || 0;
+    c.creekLen = streamLen[c.stream] || 0;
+    c.len = Math.min(upstreamMi(c), c.creekLen);
     c.head = headwaterMi(c);
     c.pre = (cell ? base(rate(cell.unit)) * 2 : 0) + Math.min(c.len, 10) / 4 - (c.len < 3 ? (c.head < 0.5 ? 2 : c.head < 1 ? 1 : 0) : 0) - c.dist / radius;
-    c.swale = c.head < 0.5 && c.len < 3;
+    c.swale = c.len < 1.5 || (c.head < 0.5 && c.len < 3);
   }
   allX.sort((a, b) => b.pre - a.pre);
   const crossings = [];
@@ -2255,7 +2284,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
     crossings.push(c);
   }
   crossings.sort((a, b) => a.dist - b.dist);
-  scanLog.push('crossings: ' + crossings.length + ' studied of ' + allX.length + ' found, ' + allX.filter(c => c.swale).length + ' near the head of a short creek' + (allX.some(c => c.swale) ? ' (' + allX.filter(c => c.swale).slice(0, 4).map(c => c.stream + ' × ' + c.road).join(', ') + ')' : '') + '; best ('  + crossings.slice().sort((a, b) => b.pre - a.pre).slice(0, 10).map(c => c.stream + ' × ' + c.road + ' ' + c.dist.toFixed(1) + 'mi, creek ' + c.len.toFixed(1) + 'mi' + (c.swale ? ', near headwater' : '')).join('; ') + ')');
+  scanLog.push('crossings: ' + crossings.length + ' studied of ' + allX.length + ' found, ' + allX.filter(c => c.swale).length + ' near the head of a creek (under ~1.5 mi of creek above the road)' + (allX.some(c => c.swale) ? ' (' + allX.filter(c => c.swale).slice(0, 4).map(c => c.stream + ' × ' + c.road).join(', ') + ')' : '') + '; best ('  + crossings.slice().sort((a, b) => b.pre - a.pre).slice(0, 10).map(c => c.stream + ' × ' + c.road + ' ' + c.dist.toFixed(1) + 'mi, ' + c.len.toFixed(1) + ' mi of creek above' + (c.swale ? ', near headwater' : '')).join('; ') + ')');
 
   // 3. Geology points: crossings first, then along the crossed creeks, then roads.
   const streamOrder = [];
