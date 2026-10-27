@@ -96,6 +96,20 @@
   .waze-box input { width:100%; font-family:'Barlow',sans-serif; font-weight:500; font-size:0.78rem; color:#7ec49a; background:rgba(0,0,0,0.4); border:1px solid rgba(126,196,154,0.3); border-radius:2px; padding:8px 10px; outline:none; cursor:text; }
   .waze-box .winst { font-family:'Barlow',sans-serif; font-weight:500; font-size:0.66rem; color:var(--feldspar); margin-top:6px; line-height:1.5; display:block; }
   .why { font-size:0.68rem; color:var(--feldspar); font-style:italic; line-height:1.5; padding-top:6px; border-top:1px solid rgba(139,111,78,0.15); }
+  .accessnote { font-family:'Barlow',sans-serif; font-size:0.72rem; line-height:1.45; color:#f4b87a; background:rgba(196,98,45,0.10); border:1px solid rgba(196,98,45,0.35); border-radius:2px; padding:7px 10px; margin-top:8px; }
+  .accessbanner { font-family:'Barlow',sans-serif; font-size:0.85rem; line-height:1.45; color:#f4b87a; background:rgba(196,98,45,0.12); border:1px solid rgba(196,98,45,0.45); border-radius:3px; padding:9px 12px; margin:0 0 14px; }
+  #ackModal { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; display:none; align-items:center; justify-content:center; padding:16px; }
+  #ackModal.show { display:flex; }
+  #ackModal .ackbox { max-width:520px; width:100%; background:#1f1a16; border:1px solid var(--copper); border-radius:4px; padding:18px; font-family:'Barlow',sans-serif; color:var(--cream); }
+  #ackModal h3 { font-family:'Bebas Neue',sans-serif; letter-spacing:0.06em; color:var(--copper); font-size:1.4rem; margin:0 0 10px; }
+  #ackModal p { font-size:0.9rem; line-height:1.5; margin:0 0 10px; }
+  #ackModal label { display:flex; gap:10px; align-items:flex-start; font-size:0.9rem; line-height:1.45; margin:12px 0; cursor:pointer; }
+  #ackModal input[type=checkbox] { width:20px; height:20px; flex:none; margin-top:2px; }
+  #ackModal .ackbtns { display:flex; gap:10px; justify-content:flex-end; margin-top:12px; }
+  #ackModal button { font-family:'Barlow',sans-serif; font-weight:600; font-size:0.9rem; padding:10px 16px; border-radius:3px; cursor:pointer; border:1px solid var(--copper); }
+  #ackModal #ackAgree { background:var(--copper); color:#1a1612; }
+  #ackModal #ackAgree:disabled { opacity:0.4; cursor:not-allowed; }
+  #ackModal #ackCancel { background:transparent; color:var(--cream); border-color:rgba(139,111,78,0.5); }
   .src { font-family:'Barlow',sans-serif; font-weight:500; font-size:0.60rem; color:rgba(126,196,154,0.7); padding-top:2px; }
   .verbadge { font-family:'Barlow',sans-serif; font-weight:500; font-size:0.5rem; color:rgba(126,196,154,0.7); text-align:center; padding-top:10px; }
   .acct { border:1px solid rgba(139,111,78,0.3); border-radius:3px; padding:12px; background:rgba(42,36,32,0.35); }
@@ -159,7 +173,7 @@
     @page { margin:0.5in; }
     html, body { background:#fff !important; color:#111 !important; }
     body::before { display:none !important; }
-    .header, .usgs-badge, .acct, .noprint, hr, .scoutbtn, .loading, .errbox, .verbadge, .printbar, #clubBox, #customLocWrap { display:none !important; }
+    .header, .usgs-badge, .acct, .noprint, hr, .scoutbtn, .loading, .errbox, .verbadge, .printbar, #clubBox, #customLocWrap, #ackModal, #testLog { display:none !important; }
     .content { max-width:none; padding:0; gap:0; display:block !important; }
     .printonly { display:block !important; font-family:Georgia, 'Times New Roman', serif; color:#111; border-bottom:2px solid #c4622d; padding-bottom:8px; margin-bottom:14px; }
     .printonly .ph1 { font-size:20pt; font-weight:bold; letter-spacing:0.04em; }
@@ -184,7 +198,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 18 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 19 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -239,10 +253,19 @@
     <div class="lprog" id="lprog">Sampling road corridors against verified map data — 20-40 seconds</div>
   </div>
   <div class="errbox" id="errbox"></div>
+<div id="ackModal" role="dialog" aria-modal="true" aria-labelledby="ackTitle">
+  <div class="ackbox">
+    <h3 id="ackTitle">Before your first scan</h3>
+    <p>Rockhound Scout finds promising spots from geologic, road and stream maps. Nobody has visited or checked these spots.</p>
+    <p>It does <b>not</b> check property lines, road right-of-way, collecting rules, or safety. Roadside right-of-way may end at or near the pavement, nearby land is often private, and creek banks and bridges can be steep or unstable.</p>
+    <label><input type="checkbox" id="ackCheck"> <span>I understand Rockhound Scout finds spots from maps only and does not check property lines, right-of-way, collecting rules, or safety. I am responsible for making sure I can legally and safely access any spot before I stop or collect.</span></label>
+    <div class="ackbtns"><button id="ackCancel" type="button">Cancel</button><button id="ackAgree" type="button" disabled>I agree</button></div>
+  </div>
+</div>
   <div class="printonly" id="printHead">
     <div class="ph1">ROCKHOUND SCOUT — HOTSPOT CARDS</div>
     <div class="ph2" id="printSub"></div>
-    <div class="ph3">Always get the landowner&rsquo;s permission before collecting. Park off the highway shoulder. RockhoundScout.com</div>
+    <div class="ph3">Spots are picked from geologic and road maps, not visited or verified. Confirm you can legally and safely access a spot before you stop; get the landowner&rsquo;s permission before collecting. RockhoundScout.com</div>
   </div>
   <div class="results" id="results"></div>
   <div class="noprint" style="font-family:'Barlow',sans-serif; font-weight:500; font-size:0.66rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
@@ -361,6 +384,43 @@ async function signOut() {
   document.getElementById('acctCodeRow').style.display = 'none';
   document.getElementById('acctCode').value = '';
   renderAccount();
+}
+
+// --- Access agreement --------------------------------------------------------
+// Shown once before a customer's first scan. Saved on their account (with the
+// date and wording version) so it follows them to any device; also saved on
+// this device as a backup.
+const ACK_VERSION = 1;
+function ackLocalKey(uid) { return 'rsAccessAck_v' + ACK_VERSION + '_' + (uid || 'anon'); }
+async function hasAccessAck() {
+  let user = null;
+  try { const { data } = sb ? await sb.auth.getSession() : { data: null }; user = data && data.session && data.session.user; } catch (e) {}
+  const meta = (user && user.user_metadata) || {};
+  if (meta.access_ack_version >= ACK_VERSION) return { ok: true, user };
+  try { if (localStorage.getItem(ackLocalKey(user && user.id))) return { ok: true, user }; } catch (e) {}
+  return { ok: false, user };
+}
+function askAccessAck() {
+  return new Promise(resolve => {
+    const m = document.getElementById('ackModal'), chk = document.getElementById('ackCheck');
+    const agree = document.getElementById('ackAgree'), cancel = document.getElementById('ackCancel');
+    chk.checked = false; agree.disabled = true;
+    chk.onchange = () => { agree.disabled = !chk.checked; };
+    const done = v => { m.classList.remove('show'); agree.onclick = cancel.onclick = null; resolve(v); };
+    agree.onclick = () => done(true);
+    cancel.onclick = () => done(false);
+    m.classList.add('show');
+    chk.focus();
+  });
+}
+async function ensureAccessAck() {
+  const st = await hasAccessAck();
+  if (st.ok) return true;
+  if (!(await askAccessAck())) return false;
+  const when = new Date().toISOString();
+  try { localStorage.setItem(ackLocalKey(st.user && st.user.id), when); } catch (e) {}
+  try { if (sb && st.user) await sb.auth.updateUser({ data: { access_ack_version: ACK_VERSION, access_ack_at: when } }); } catch (e) { /* device copy still holds */ }
+  return true;
 }
 
 // Headers for every AI call: the ticket for the scan in progress.
@@ -2237,8 +2297,8 @@ HONESTY RULES:
 - MINERALS: what a rockhound could realistically find here and take home. Start with every item under WHAT CAN BE FOUND HERE (target first if it qualifies). You may add other collectible items commonly found in this rock type: fossils by type, collectible crystals (calcite or quartz crystals in vugs and fractures, celestine, selenite), geodes, concretions, agate, jasper, chert, ore-mineral nodules. Do NOT list a mineral just because the rock is made of it (limestone is calcite; list "calcite crystals" only if crystals occur). Mark anything not documented for this formation "(possible)". Up to 6 items; write exactly "nothing notable" only if nothing collectible is realistic.
 - WHY: say honestly whether finds are documented, possible or unlikely here and why (for a crossing, whether the creek runs through producing rock upstream). Never promise. State a geologic age only if you are confident of it for that exact formation.
 - The app's rating describes the FORMATION, not this exact spot. Never say or imply that finds have been recorded, reported or documented at this particular spot or stretch — say the formation is known to produce it in general.
-- SIDE ROADS: if quieter side roads are listed, tell the reader to drive them slowly and check their bar ditches and wash crossings — stopping there is easier and safer than on a highway.
-- ACCESS: tell the reader to park only where it is legal and safe, stay in the public road right-of-way, and never cross fences or enter private land without the landowner's permission.
+- SIDE ROADS: if quieter side roads are listed, tell the reader to drive them slowly and look at their bar ditches and wash crossings from the road — stopping there is usually easier than on a highway, but legal access still has to be confirmed.
+- ACCESS: tell the reader to confirm they have legal access before stopping (do not assume the roadside is public or that collecting there is allowed), to park only where it is legal and safe, and never to cross fences or enter private land without the landowner's permission. Never say or imply that a spot is public, legal or safe to collect.
 
 Write ONE record in EXACTLY this format (no markdown, no extra commentary):
 NAME: short catchy name for this spot${c.kind === 'through' ? ' that ends with the word "Stretch"' : c.kind === 'crossing' ? ' that ends with the word "Crossing"' : ''}
@@ -2650,6 +2710,13 @@ async function runScout() {
         btn.disabled = false;
         return;
       }
+      if (!(await ensureAccessAck())) {
+        clearTimeout(watchdog);
+        showError('You need to agree to the access notice before scanning. Nothing was charged.');
+        setStatus('READY');
+        btn.disabled = false;
+        return;
+      }
       if (!(await beginScan('custom'))) {
         clearTimeout(watchdog);
         setStatus('READY');
@@ -2871,6 +2938,12 @@ function renderHotspots(spots) {
       '<div class="printhint">' + pdfHint() + '</div>';
     c.appendChild(bar);
   }
+  if (spots && spots.length) {
+    const ab = document.createElement('div');
+    ab.className = 'accessbanner';
+    ab.innerHTML = '⚠ These spots are picked from maps, not visited or verified. Always confirm you can <b>legally and safely</b> access a spot before you stop.';
+    c.appendChild(ab);
+  }
   spots.forEach((h, i) => {
     const badge = h.score === 'hot' ? ['score-hot', '🔥 HOTSPOT']
                 : h.score === 'cool' ? ['score-cool', '◌ LONG SHOT']
@@ -2918,6 +2991,7 @@ function renderHotspots(spots) {
           '<span class="winst">' + (h.waze ? 'GPS point of the spot — tap to select, copy, paste into Waze or Google Maps' : 'Tap to select — long press to copy — paste into Waze search') + '</span>' +
         '</div>' +
         '<div class="why">' + h.why + '</div>' +
+        '<div class="accessnote">⚠ Access not verified. Roadside right-of-way may end at or near the pavement, nearby land is often private, and creek banks and bridges can be steep or unstable. It&rsquo;s up to you to confirm legal access and judge safety.</div>' +
         '<div class="src">' + (isOwnerConfirmed
           ? '▸ Location and directions confirmed on-site by the app\'s owner; age and mineralogy from independently published geology sources'
           : h.kind === 'crossing' ? '▸ Crossing computed from the Census road map and ' + (h.drainSource || 'stream map') + '; rock from ' + (h.source || 'USGS') + ' geologic map data. Public right-of-way only.'
