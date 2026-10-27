@@ -184,7 +184,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 17 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 18 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1520,7 +1520,7 @@ async function fetchCensusRoads(lat, lon, radiusMiles) {
         for (const run of clipPaths(f.geometry.paths, lat, lon, radiusMiles)) byRef[info.ref].push(run);
         used++;
       }
-      report.push(label + ': ' + res.features.length + ' pieces, ' + used + ' used' + (res.truncated ? ' (truncated)' : ''));
+      report.push(label + ' [' + layer.name + ']: ' + res.features.length + ' pieces, ' + used + ' used' + (res.truncated ? ' (CUT OFF — more roads than the map sent)' : ''));
     } catch (e) { report.push(label + ': ' + errText(e)); }
   }));
   const roads = [];
@@ -1784,6 +1784,45 @@ function areaGrid(lat, lon, radiusMiles, maxPts) {
 }
 
 // --- the whole Custom scan -------------------------------------------------
+// Asks the Census map directly for any road whose name contains this number,
+// on every road layer, so a requested road can't be lost in the general
+// road list (which can be cut short in busy areas).
+async function fetchRoadByNumber(lat, lon, radiusMiles, num) {
+  const report = [], byRef = {}, rankOf = {}, names = new Set();
+  let layers = [];
+  try { layers = (await arcLayers(TIGER_BASE)).filter(l => /road/i.test(l.name || '')); }
+  catch (e) { return { roads: [], report: ['layer list: ' + errText(e)], names: [] }; }
+  await Promise.all(layers.map(async layer => {
+    try {
+      const fields = await arcFields(TIGER_BASE, layer.id).catch(() => []);
+      const nf = pickField(fields, ['NAME', 'FULLNAME', 'BASENAME']);
+      if (!nf) { report.push(layer.name + ': no name field'); return; }
+      const res = await arcQueryBox(TIGER_BASE, layer.id, lat, lon, radiusMiles, 'UPPER(' + nf + ") LIKE '%" + num + "%'", nf, 3);
+      let used = 0;
+      for (const f of res.features) {
+        const raw = String((f.attributes || {})[nf] || '').replace(/\s+/g, ' ').trim();
+        if (!raw || !new RegExp('(^|\\D)' + num + '(\\D|$)').test(raw)) continue;
+        names.add(raw);
+        if (!f.geometry || !f.geometry.paths) continue;
+        const info = tigerRoadRef(raw);
+        const ref = info ? info.ref : raw;
+        if (!byRef[ref]) { byRef[ref] = []; rankOf[ref] = info ? info.rank : 3; }
+        for (const run of clipPaths(f.geometry.paths, lat, lon, radiusMiles)) byRef[ref].push(run);
+        used++;
+      }
+      report.push(layer.name + ': ' + res.features.length + ' with "' + num + '"' + (used ? ', ' + used + ' pieces kept' : ''));
+    } catch (e) { report.push(layer.name + ': ' + errText(e)); }
+  }));
+  const roads = [];
+  for (const ref of Object.keys(byRef)) {
+    if (!byRef[ref].length) continue;
+    const allSegs = chainSegments(byRef[ref]);
+    const near = Math.min(...allSegs.flat().map(([a, b]) => milesBetween(lat, lon, a, b)));
+    roads.push({ road: ref, rank: rankOf[ref], allSegs, segs: allSegs.filter(l => lineMiles(l) >= 0.5), near });
+  }
+  return { roads, report, names: [...names] };
+}
+
 // "Hwy 306" may be FM 306 or TX-306 -- match by number among the roads that
 // are actually there, and prefer the same road type if the user gave one.
 function matchRequestedRoad(roads, wanted) {
@@ -1830,6 +1869,16 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side) {
     const num = (String(roadWanted).match(/(\d+)/) || [])[1] || '';
     const withNum = (roadRes.allNames || []).filter(n => num && new RegExp('(^|\\D)' + num + '(\\D|$)').test(n));
     scanLog.push('road names on the map containing "' + num + '": ' + (withNum.length ? [...new Set(withNum)].slice(0, 12).join(', ') : 'NONE (the map returned no road with that number in this area)'));
+    // Ask the map for that road directly by number, and add whatever it returns.
+    if (num) {
+      const direct = await fetchRoadByNumber(lat, lon, radius, num);
+      scanLog.push('direct lookup for "' + num + '": ' + (direct.names.length ? direct.names.slice(0, 10).join(', ') : 'none') + ' [' + direct.report.join('; ') + ']');
+      for (const r of direct.roads) {
+        const have = roads.find(x => x.road === r.road);
+        if (have) { have.allSegs = chainSegments(have.allSegs.concat(r.allSegs)); have.segs = have.allSegs.filter(l => lineMiles(l) >= 0.5); }
+        else roads.push(r);
+      }
+    }
     let m = matchRequestedRoad(roads, roadWanted);
     if (!m.length) {
       // Fall back to odd spellings that carry the same number.
