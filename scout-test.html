@@ -184,7 +184,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 10 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 11 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1438,7 +1438,10 @@ async function findContactsForRoad(road, town, scan) {
     }
     k += run.length;
   }
-  return { contacts, checked: all.length, failed };
+  const names = [...new Set(units.filter(u => u && u.name).map(u => u.name))];
+  const noUnit = units.filter(u => !u).length - failed;
+  const miles = (road.segs || []).reduce((m, l) => m + lineMiles(l), 0);
+  return { contacts, checked: all.length, failed, names, noUnit, miles };
 }
 
 function parseRecord(raw) {
@@ -1587,7 +1590,7 @@ async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target, scan)
     const town = (wazeTowns && wazeTowns[road.road]) || defaultTown;
     const tg = Date.now();
     const r = await findContactsForRoad(road, town, scan);
-    logStage('geology ' + road.road + ' (' + r.checked + ' checks, ' + r.failed + ' failed)', tg);
+    logStage('geology ' + road.road + ' (' + r.miles.toFixed(1) + ' mi of road, ' + r.checked + ' checks, ' + r.failed + ' failed, ' + r.noUnit + ' no map unit; rocks seen: ' + (r.names.slice(0, 5).join(' / ') || 'none') + ')', tg);
     geoChecked += r.checked; geoFailed += r.failed;
     allContacts = allContacts.concat(r.contacts);
   }
@@ -1643,6 +1646,18 @@ async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target, scan)
 // that scan cancelled, so its leftover work stops and can't show results,
 // spend the next scan's ticket, or re-enable the button mid-scan.
 let currentScan = null;
+// TEST: show the step-by-step diagnostics under every result or error.
+function showTestLog() {
+  let el = document.getElementById('testLog');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'testLog';
+    el.style.cssText = 'margin:10px 0;padding:8px 10px;border:1px dashed #b3261e;color:#e8b4a0;font:12px/1.5 monospace;white-space:pre-wrap;';
+    const box = document.getElementById('errbox');
+    box.parentNode.insertBefore(el, box.nextSibling);
+  }
+  el.textContent = 'TEST diagnostics:\n' + scanLog.join('\n');
+}
 // TEST: how long each stage of the scan took, shown if a scan times out.
 let scanLog = [];
 function logStage(label, t0) { scanLog.push(label + ' ' + ((Date.now() - t0) / 1000).toFixed(0) + 's'); }
@@ -1746,6 +1761,8 @@ async function runScout() {
       showLoading('READING REAL ' + geoSource() + ' GEOLOGIC MAP...', 'Sampling ' + roads.length + ' road(s) near "' + place + '" — 20-40 seconds');
       const { allContacts, written, geoDown } = await scanRoadsForHotspots(roads, (parsed && parsed.town) || place, {}, target, scan);
       bail();
+      scanLog.push('contacts found: ' + allContacts.length + ', cards written: ' + written.length);
+      showTestLog();
 
       clearTimeout(watchdog);
       hideLoading();
