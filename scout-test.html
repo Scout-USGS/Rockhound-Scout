@@ -192,7 +192,10 @@
     .acctmsg { font-size:0.8rem; }
     .acct .notes { font-size:0.95rem; color:var(--cream); background:#3a332e; border:1px solid #6b5d50; border-radius:8px; padding:9px 11px; }
     .acctbtn { border-radius:8px; background:#3d9e8c; color:#1f1a16; font-size:1.1rem; }
-    .installbtn { border-radius:8px; font-size:0.75rem; }
+    .acctinrow { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .acctinrow .acctinfo { min-width:0; }
+    .installbtn { width:auto; flex:none; margin-top:0; padding:6px 10px; border-radius:8px; font-size:0.7rem; font-weight:600; letter-spacing:0.04em; line-height:1.25; text-align:center; }
+    .accessbanner { margin:4px 0 0; }
     .installnote { font-size:0.8rem; }
     .notes::placeholder { color:rgba(203,188,166,0.55); }
 
@@ -302,12 +305,12 @@
 </style>
 </head>
 <body>
-<div style="position:relative;z-index:20;background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 39 — not the live app. Real scans still use your real scan balance.</div>
+<div style="position:relative;z-index:20;background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 40 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
     <h1>Rockhound Scout</h1>
-    <div class="sub">Find your Personal Rockhounding Hotspot Now!</div>
+    <div class="sub">Find your Personal Hotspot Now!</div>
   </div>
   <div class="status"><span class="dot"></span><span id="statusTxt">READY</span></div>
 </header>
@@ -336,12 +339,14 @@
       <div class="acctmsg" id="acctMsg"></div>
       <div class="acctinfo">No scans yet? <a href="index.html#pricing">Get 200 scans for $25</a></div>
     </div>
-    <button class="installbtn" id="installBtn" onclick="installApp()">📲 PUT ROCKHOUND SCOUT ON YOUR HOME SCREEN</button>
-    <div class="installnote" id="installNote"></div>
     <div id="acctIn" style="display:none;">
-      <div class="acctinfo">Signed in as <b id="acctWho"></b><br>Scans left: <b id="acctScans">…</b>
-        &nbsp;·&nbsp; <a href="#" id="acctBuy" target="_blank" rel="noopener">Buy 200 more</a>
-        &nbsp;·&nbsp; <a href="#" onclick="signOut(); return false;">Sign out</a></div>
+      <div class="acctinrow">
+        <div class="acctinfo">Signed in as <b id="acctWho"></b><br>Scans left: <b id="acctScans">…</b>
+          &nbsp;·&nbsp; <a href="#" id="acctBuy" target="_blank" rel="noopener">Buy 200 more</a>
+          &nbsp;·&nbsp; <a href="#" onclick="signOut(); return false;">Sign out</a></div>
+        <button class="installbtn" id="installBtn" onclick="installApp()">📲 Add to<br>home screen</button>
+      </div>
+      <div class="installnote" id="installNote"></div>
     </div>
   </div>
   <div id="customLocWrap">
@@ -3727,12 +3732,6 @@ function renderHotspots(spots, previous, savedAt) {
       '<button class="printbtn" onclick="printCards()" title="Print these cards or save them as a PDF">🖨 Print / PDF</button>';
     c.appendChild(bar);
   }
-  if (spots && spots.length) {
-    const ab = document.createElement('div');
-    ab.className = 'accessbanner';
-    ab.innerHTML = '⚠ These spots are picked from maps, not visited or verified. Always confirm you can <b>legally and safely</b> access a spot before you stop.';
-    c.appendChild(ab);
-  }
   spots.forEach((h, i) => {
     const badge = h.score === 'hot' ? ['score-hot', '🔥 HOTSPOT']
                 : h.score === 'cool' ? ['score-cool', '◌ LONG SHOT']
@@ -3792,6 +3791,12 @@ function renderHotspots(spots, previous, savedAt) {
       '</div>';
     c.appendChild(card);
   });
+  if (spots && spots.length) {
+    const ab = document.createElement('div');
+    ab.className = 'accessbanner';
+    ab.innerHTML = '⚠ These spots are picked from maps, not visited or verified. Always confirm you can <b>legally and safely</b> access a spot before you stop.';
+    c.appendChild(ab);
+  }
 }
 </script>
 <script>
