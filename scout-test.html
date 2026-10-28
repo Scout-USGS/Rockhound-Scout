@@ -395,7 +395,7 @@
   <div class="noprint" style="font-family:'Barlow',sans-serif; font-weight:500; font-size:0.66rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
-  <div class="verbadge">▸ v7.0 · build 42 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 43 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -611,7 +611,7 @@ async function beginScan(kind) {
 
 // Gives the scan back when it found nothing. The Worker decides if it
 // qualifies. Returns true if the scan was not charged.
-async function refundScan() {
+async function refundScan(reason) {
   const ticket = currentTicket;
   if (!ticket) return false;
   currentTicket = null;
@@ -625,7 +625,7 @@ async function refundScan() {
       const resp = await fetch(WORKER_URL + '/scan/refund', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ ticket: ticket }),
+        body: JSON.stringify({ ticket: ticket, reason: reason || 'no_results' }),
         signal: ctrl.signal
       });
       const r = await resp.json();
@@ -3469,7 +3469,7 @@ async function runScout() {
   const watchdog = setTimeout(async () => {
     scan.cancelled = true;
     hideLoading();
-    const ok = await refundScan();
+    const ok = await refundScan('timeout');
     showError('This is taking much longer than it should — something likely stalled. Please try again.' + notCharged(ok) + (DIAG ? ' [timing — ' + scanLog.join(' | ') + ' | still running at cutoff]' : ''));
     setStatus('TIMEOUT');
     document.getElementById('scoutBtn').disabled = false;
@@ -3664,7 +3664,7 @@ async function runScout() {
     clearTimeout(watchdog);
     if (scan.cancelled) return; // the safety cutoff already handled this scan
     hideLoading();
-    showError('Error: ' + err.message + notCharged(await refundScan()));
+    showError('Error: ' + err.message + notCharged(await refundScan('error')));
     setStatus('ERROR');
   }
   btn.disabled = false;
