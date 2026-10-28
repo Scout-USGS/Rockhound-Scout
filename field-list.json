@@ -1,5 +1,5 @@
 {
-"version": 3,
+"version": 4,
 "about": "Rockhound Scout field list: which FORMATIONS produce which materials, by state. Not a list of spots. 'high' = documented producer; 'possible' = may contain it. Rows marked authoritative (JT's field knowledge) override the AI; researched rows can only raise the AI's rating. Patterns are case-insensitive text patterns; | means 'or'. Optional 'areas' = [[lat, lon, miles], ...] limits a row to searches near those places. 'review' marks rows that need a stronger source before launch.",
 "generalNote": "Public land rules (most BLM land): reasonable personal amounts of rocks, minerals and common invertebrate or plant fossils; petrified wood up to 25 lb plus 1 piece per day and 250 lb per year; no vertebrate fossils (bones, teeth, tracks); no collecting in national parks, developed recreation sites, or on mining claims without the claimholder's permission.",
 "stateNotes": {
@@ -12,7 +12,15 @@
 "South Dakota": "No collecting of any kind inside Badlands National Park or Wind Cave/Mount Rushmore. Buffalo Gap National Grassland allows surface collecting of minerals and common invertebrate fossils for personal use.",
 "North Dakota": "No collecting in Theodore Roosevelt National Park. Little Missouri National Grassland: 25 lb per day, 250 lb per year, no machinery, no vertebrate fossils.",
 "Wisconsin": "Collecting rocks, minerals and fossils is prohibited in Wisconsin State Parks.",
-"Michigan": "Collecting is prohibited at Isle Royale, Pictured Rocks and Sleeping Bear Dunes (National Park Service). Michigan limits collecting on state land to 25 lb."
+"Michigan": "Collecting is prohibited at Isle Royale, Pictured Rocks and Sleeping Bear Dunes (National Park Service). Michigan limits collecting on state land to 25 lb.",
+"Tennessee": "Collecting is generally prohibited in Tennessee state parks, Great Smoky Mountains National Park and Big South Fork. Cherokee National Forest allows personal, non-commercial collecting in reasonable amounts.",
+"North Carolina": "Most gem collecting is at fee-dig mines on private land. Nantahala and Pisgah National Forests allow surface collecting in reasonable amounts — no digging.",
+"South Carolina": "Collecting fossils from the bottom of state waterways requires an SC DNR Hobby Diver License; significant finds must be reported.",
+"Georgia": "Collecting is prohibited in Georgia State Parks. Chattahoochee National Forest allows surface collecting for personal use.",
+"Florida": "Fossil shark and ray teeth, plants and invertebrates: no permit needed. Other vertebrate fossils on state land or in state waters need a Florida Fossil Permit ($5/year). No collecting in state parks, wildlife refuges, national parks or national forests.",
+"Alabama": "Get permission on private land (posting isn't required for trespass to apply). National forests allow casual collecting of rocks and common invertebrate fossils; no vertebrate fossils without a permit.",
+"Mississippi": "No collecting in Mississippi state parks. National forests: 25 lb per day plus one piece, 250 lb per year; vertebrate fossils need a permit.",
+"West Virginia": "Collecting is generally not permitted in state parks or the New River Gorge National Park; don't remove rock from Seneca Rocks."
 },
 "rows": [
 {
@@ -751,6 +759,404 @@
 "sources": [
 "https://en.wikipedia.org/wiki/Flint_Ridge_State_Memorial"
 ]
+},
+{
+"state": "Kentucky",
+"label": "geodes",
+"target": "geode",
+"high": "fort payne|warsaw",
+"possible": "salem|borden|muldraugh|st\\. louis",
+"note": "East: Estill, Lee and Powell counties (Irvine, Red River Gorge creek bottoms). West: Breckinridge County (Rough River). Red River Gorge is in Daniel Boone National Forest — surface collecting only.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/where-to-find-geodes-in-kentucky"
+]
+},
+{
+"state": "Kentucky",
+"label": "Kentucky agate (state rock)",
+"target": "agate|kentucky agate|chalcedony",
+"possible": "borden|renfro|fort payne|alluvium|gravel",
+"areas": [
+[
+37.7,
+-83.97,
+30
+]
+],
+"note": "Found around Irvine in parts of Estill, Powell, Jackson, Menifee, Madison and Lee counties — mostly in creek beds.",
+"sources": [
+"https://www.uky.edu/KGS/announce/book_agate.htm",
+"https://www.mindat.org/loc-213835.html"
+],
+"review": "host unit (Borden Fm / Renfro Mbr) from a mindat locality name, not a survey statement"
+},
+{
+"state": "Kentucky",
+"label": "Ordovician fossils (brachiopods, bryozoans, trilobites)",
+"target": "fossil|trilobite|brachiopod|bryozoan|crinoid|coral|horn coral|cephalopod|nautiloid|clam|snail|gastropod",
+"high": "kope|fairview|grant lake|miamitown|bellevue|corryville|mount auburn|arnheim|waynesville|liberty|whitewater|drakes|dillsboro|saluda|cincinnati|richmond group|maysville group|eden group|clays ferry",
+"possible": "lexington|tanglewood|grier|calloway creek|garrard",
+"note": "Northern Kentucky around Cincinnati and the Bluegrass road cuts.",
+"sources": [
+"https://en.wikipedia.org/wiki/Cincinnati_Group",
+"https://ordovicianatlas.org/fossil-collecting"
+],
+"review": "Lexington Limestone units in 'possible' are mine"
+},
+{
+"state": "Tennessee",
+"label": "geodes",
+"target": "geode",
+"possible": "fort payne|warsaw|st\\. louis|monteagle|bangor",
+"areas": [
+[
+35.85,
+-86.0,
+35
+],
+[
+36.3,
+-85.4,
+45
+]
+],
+"note": "Cannon County around Woodbury, and the Upper Cumberland belt (Fentress, Overton, Clay, White counties). Most land is private; collecting is generally prohibited in Tennessee state parks.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-tennessee"
+],
+"review": "source says 'Mississippian limestone' without naming units — names are mine"
+},
+{
+"state": "Tennessee",
+"label": "agate (Paint Rock, Horse Mountain)",
+"target": "agate|chalcedony|jasper",
+"high": "hermitage",
+"possible": "fort payne|monteagle|bangor|st\\. louis|warsaw",
+"areas": [
+[
+35.3,
+-85.4,
+40
+],
+[
+35.5,
+-86.4,
+15
+]
+],
+"note": "Paint Rock agate: Cumberland Plateau, Sequatchie County (Mississippian limestone and chert). Horse Mountain agate: Hermitage Formation east of Shelbyville. Ask permission — mostly private land.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-tennessee"
+]
+},
+{
+"state": "Tennessee",
+"label": "fossils (Ordovician brachiopods, crinoids, corals; Devonian silicified fossils)",
+"target": "fossil|trilobite|brachiopod|bryozoan|crinoid|coral|horn coral|cephalopod|nautiloid|clam|snail|gastropod",
+"high": "carters|hermitage",
+"possible": "lebanon|ridley|bigby|cannon|catheys|leipers|camden|harriman|ross|birdsong",
+"note": "Central Tennessee road cuts around Nashville; silicified Devonian fossils on the western Highland Rim. No collecting in Great Smoky Mountains NP or Big South Fork.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-tennessee"
+],
+"review": "'possible' unit names are mine"
+},
+{
+"state": "North Carolina",
+"label": "rubies and sapphires",
+"target": "ruby|rubies|sapphire|corundum",
+"possible": "alluvium|gravel|amphibolite|dunite|ultramafic",
+"areas": [
+[
+35.25,
+-83.4,
+20
+]
+],
+"note": "Cowee Valley near Franklin (Macon County) — almost all collecting is at fee-dig mines on private land.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-north-carolina"
+]
+},
+{
+"state": "North Carolina",
+"label": "emerald, hiddenite and pegmatite gems (aquamarine, garnet, smoky quartz)",
+"target": "emerald|hiddenite|beryl|aquamarine|garnet|moonstone|smoky quartz|pegmatite|crystals?",
+"high": "pegmatite",
+"possible": "gneiss|schist",
+"areas": [
+[
+35.9,
+-81.1,
+20
+],
+[
+35.9,
+-82.07,
+25
+]
+],
+"note": "Hiddenite (Alexander County): Emerald Hollow Mine is a fee dig open to the public. Spruce Pine: pegmatite district; Pisgah National Forest allows surface collecting only.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-north-carolina"
+]
+},
+{
+"state": "North Carolina",
+"label": "megalodon and other shark teeth",
+"target": "shark|teeth|tooth|megalodon|meg\\b|fossil",
+"high": "pungo river|yorktown",
+"areas": [
+[
+35.3,
+-76.79,
+25
+]
+],
+"note": "Aurora: the Aurora Fossil Museum's Fossil Park lets visitors dig in mine tailings and keep what they find.",
+"sources": [
+"https://en.wikipedia.org/wiki/Aurora_Fossil_Museum",
+"https://en.wikipedia.org/wiki/Pungo_River_Formation"
+]
+},
+{
+"state": "South Carolina",
+"label": "shark teeth and megalodon teeth",
+"target": "shark|teeth|tooth|megalodon|meg\\b|fossil",
+"possible": "chandler bridge|ashley|cooper|edisto|marks head|goose creek|santee|alluvium",
+"areas": [
+[
+32.9,
+-80.1,
+60
+]
+],
+"note": "Edisto Beach after storms; black-water rivers (Cooper, Edisto, Stono). Collecting from the bottom of state waterways needs an SC DNR Hobby Diver License.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-south-carolina"
+],
+"review": "source says 'Eocene–Miocene Coastal Plain formations' — unit names are mine"
+},
+{
+"state": "South Carolina",
+"label": "amethyst",
+"target": "amethyst|quartz crystals?|crystals?",
+"possible": "pegmatite|granite|gneiss",
+"areas": [
+[
+34.33,
+-82.39,
+15
+]
+],
+"note": "Pegmatite dikes near Due West (Abbeville County) — private land.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-south-carolina"
+]
+},
+{
+"state": "South Carolina",
+"label": "placer gold",
+"target": "gold",
+"possible": "alluvium|gravel|slate|metavolcanic",
+"areas": [
+[
+34.85,
+-81.0,
+50
+]
+],
+"note": "Carolina Gold Belt creeks in Lancaster, York, Cherokee and Chesterfield counties (Kings Creek, Thicketty Creek).",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-south-carolina"
+]
+},
+{
+"state": "Georgia",
+"label": "staurolite (fairy crosses)",
+"target": "staurolite|fairy cross|fairy stone|garnet",
+"high": "staurolite",
+"possible": "schist|mica schist",
+"areas": [
+[
+34.75,
+-84.35,
+35
+]
+],
+"note": "Fannin and Gilmer counties: weathers out of mica schist as creek float. Chattahoochee National Forest allows surface collecting for personal use.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-georgia"
+]
+},
+{
+"state": "Georgia",
+"label": "amethyst and quartz crystals",
+"target": "amethyst|quartz crystals?|smoky quartz|crystals?",
+"possible": "gneiss|schist|metavolcanic|granite",
+"areas": [
+[
+33.9,
+-82.75,
+25
+]
+],
+"note": "Jackson's Crossroads (Wilkes County, private — check current access); Graves Mountain (Lincoln County, lazulite, rutile, kyanite) is private and open only on scheduled dig days.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-georgia"
+]
+},
+{
+"state": "Georgia",
+"label": "placer gold",
+"target": "gold",
+"possible": "alluvium|gravel|metavolcanic|schist",
+"areas": [
+[
+34.55,
+-84.0,
+25
+]
+],
+"note": "Dahlonega district (Chestatee and Etowah rivers, Yahoola Creek); pan at public access points. Collecting is prohibited in Georgia State Parks.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-georgia"
+]
+},
+{
+"state": "Florida",
+"label": "shark teeth and megalodon teeth",
+"target": "shark|teeth|tooth|megalodon|meg\\b|fossil",
+"possible": "peace river|bone valley|hawthorn|beach",
+"note": "Fossil shark and ray teeth, plants and invertebrates need no permit. Other vertebrate fossils (bones, other teeth) on state land or in state waters need a $5/year Florida Fossil Permit. No collecting in state parks, wildlife refuges, national parks or national forests.",
+"sources": [
+"https://www.floridamuseum.ufl.edu/florida-fossil-permit/faq"
+],
+"review": "unit names (Peace River, Bone Valley, Hawthorn) are mine; the source covers the permit rules only"
+},
+{
+"state": "Alabama",
+"label": "geodes",
+"target": "geode",
+"high": "fort payne",
+"areas": [
+[
+34.55,
+-85.85,
+40
+]
+],
+"note": "North Alabama, mainly DeKalb and Jackson counties.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-alabama"
+]
+},
+{
+"state": "Alabama",
+"label": "Pennsylvanian plant fossils (ferns, Calamites)",
+"target": "fossil|fern|plant|calamites|lepidodendron|leaf|leaves",
+"possible": "pottsville|pennsylvanian|coal",
+"note": "Bankhead National Forest: casual collecting of rocks and common invertebrate and plant fossils allowed; no digging or machinery.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-alabama"
+],
+"review": "source says 'Pennsylvanian sandstone and shale' — Pottsville name is mine"
+},
+{
+"state": "Alabama",
+"label": "Cretaceous chalk shark teeth",
+"target": "shark|teeth|tooth|megalodon|meg\\b|fossil|mosasaur",
+"high": "demopolis|mooreville",
+"possible": "selma|prairie bluff|ripley|eutaw",
+"note": "West-central Alabama chalk gullies (the 'Black Belt'). Mostly private land — get permission; bones of mosasaurs and turtles are best reported to a museum.",
+"sources": [
+"https://en.wikipedia.org/wiki/Demopolis_Chalk",
+"https://www.alabamapaleosoc.org/post/cretaceous-fossils-from-the-white-gullies-of-alabama"
+],
+"review": "Mooreville Chalk as 'high' is from club trip reports, not the Wikipedia source"
+},
+{
+"state": "Mississippi",
+"label": "petrified wood (state stone)",
+"target": "petrified|pet ?wood|silicified wood|fossil(ized)? wood",
+"high": "hattiesburg|pascagoula",
+"possible": "catahoula|forest hill|citronelle|alluvium",
+"note": "Red Creek cuts through the Hattiesburg and Pascagoula formations. Bienville National Forest: 25 lb per day plus one piece, 250 lb per year. No collecting in Mississippi state parks.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-mississippi"
+],
+"review": "catahoula/forest hill/citronelle as possible are mine"
+},
+{
+"state": "Mississippi",
+"label": "shark teeth",
+"target": "shark|teeth|tooth|megalodon|meg\\b|fossil",
+"high": "yazoo",
+"possible": "moodys branch|jackson|cockfield",
+"note": "Eocene and Oligocene marine clays and creek gravels.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-mississippi"
+]
+},
+{
+"state": "Louisiana",
+"label": "petrified palmwood (state fossil)",
+"target": "petrified|palm ?wood|palmwood|pet ?wood|silicified wood|fossil(ized)? wood",
+"high": "catahoula",
+"possible": "alluvium|gravel|terrace",
+"note": "Central Louisiana road cuts (e.g. Highway 84 between Jena and Vidalia), creek banks and construction gravel.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-louisiana"
+]
+},
+{
+"state": "Louisiana",
+"label": "agate, jasper and chert in river gravels",
+"target": "agate|jasper|chert|chalcedony|novaculite",
+"possible": "gravel|terrace|point bar",
+"note": "Mississippi and Red River gravel bars — material carried from far upriver, including Lake Superior agates.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-louisiana"
+]
+},
+{
+"state": "Virginia",
+"label": "staurolite (fairy stones)",
+"target": "staurolite|fairy stone|fairy cross",
+"possible": "schist|staurolite",
+"areas": [
+[
+36.78,
+-80.12,
+15
+]
+],
+"note": "Fairy Stone State Park (Patrick County): a small number may be taken for personal use from the park area left of the Fairy Stone Pitstop on Route 57; no commercial digging.",
+"sources": [
+"https://dcr.virginia.gov/state-parks/fairystones"
+]
+},
+{
+"state": "West Virginia",
+"label": "Pennsylvanian plant fossils (fern impressions, coal balls)",
+"target": "fossil|fern|plant|lepidodendron|calamites|coal ball|leaf|leaves",
+"possible": "pottsville|allegheny|conemaugh|monongahela|kanawha|new river|dunkard",
+"note": "Shale above coal seams. Coal and mine areas need written permission from the owner or operator.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-west-virginia"
+],
+"review": "group names are mine; source says 'Pennsylvanian coal measures'"
+},
+{
+"state": "West Virginia",
+"label": "marine fossils (brachiopods, crinoids, horn corals)",
+"target": "fossil|trilobite|brachiopod|bryozoan|crinoid|coral|horn coral|cephalopod|nautiloid|clam|snail|gastropod",
+"possible": "greenbrier|helderberg|oriskany|marcellus|mahantango|brallier|chemung|hampshire|pocono|mauch chunk",
+"note": "Devonian and Mississippian limestones and shales. Monongahela National Forest allows surface collecting of common invertebrate fossils for personal use. No collecting in the New River Gorge National Park portion.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-west-virginia"
+],
+"review": "unit names are mine except Greenbrier"
 }
 ]
 }
