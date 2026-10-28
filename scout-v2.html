@@ -210,6 +210,11 @@
     .chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:6px; }
     .chip { font-family:'Barlow',sans-serif; font-size:0.84rem; font-weight:600; text-align:left; padding:6px 12px; border-radius:999px; background:#574c44; color:#f6d9b5; border:1px solid #6e6054; cursor:pointer; }
     .chip:hover { border-color:var(--accent); }
+    .paytoggle { display:flex; align-items:center; gap:9px; margin-top:10px; font-size:0.9rem; font-weight:600; color:var(--cream); cursor:pointer; }
+    .paytoggle input { width:20px; height:20px; accent-color:#e8a23a; flex:none; }
+    .paytoggle small { font-weight:500; color:var(--feldspar); }
+    .knownbanner.fee { color:#ffd37a !important; border-color:rgba(244,197,66,0.6) !important; background:rgba(244,197,66,0.12) !important; }
+    .paynote { font-size:0.85rem; color:#ffd37a; background:rgba(244,197,66,0.1); border:1px solid rgba(244,197,66,0.4); border-radius:10px; padding:8px 12px; }
     .swipehint { display:none; letter-spacing:0.06em; text-transform:none; font-weight:600; }
     @media (max-width:520px) { .swipehint { display:inline; } }
     .herotips { font-size:0.85rem; color:var(--feldspar); line-height:1.5; margin-top:12px; }
@@ -248,6 +253,8 @@
     .waze-box { background:#3f4a40; }
     .waze-box input { font-size:0.9rem; background:#2f2925; border-radius:6px; }
     .waze-box .winst { font-size:0.76rem; }
+    .gmapbtn { display:block; margin-top:8px; text-align:center; text-decoration:none; font-weight:700; font-size:0.9rem; padding:10px 12px; border-radius:8px; background:#2e7d6b; color:#fff; border:1px solid #3d9e8c; }
+    .gmapbtn:active { filter:brightness(0.9); }
     .mtag { font-size:0.8rem; font-weight:600; padding:3px 9px; border-radius:6px; background:#574c44; color:#f6d9b5; border-color:#6e6054; }
     .why { font-size:0.8rem; color:var(--feldspar); border-top-color:#5c5149; }
     .accessnote { font-size:0.8rem; border-radius:8px; color:#ffc79a; }
@@ -299,7 +306,7 @@
     @page { margin:0.5in; }
     html, body { background:#fff !important; color:#111 !important; }
     body::before { display:none !important; }
-    .header, .usgs-badge, .acct, .noprint, hr, .scoutbtn, .loading, .errbox, .verbadge, .printbar, #clubBox, #customLocWrap, #ackModal, #testLog { display:none !important; }
+    .paynote, .paytoggle, .header, .usgs-badge, .acct, .noprint, hr, .scoutbtn, .loading, .errbox, .verbadge, .printbar, #clubBox, #customLocWrap, #ackModal, #testLog { display:none !important; }
     .content { max-width:none; padding:0; gap:0; display:block !important; }
     .printonly { display:block !important; font-family:Georgia, 'Times New Roman', serif; color:#111; border-bottom:2px solid #c4622d; padding-bottom:8px; margin-bottom:14px; }
     .printonly .ph1 { font-size:20pt; font-weight:bold; letter-spacing:0.04em; }
@@ -318,7 +325,7 @@
     .hcard .hbody > div[style] { color:#7a3510 !important; background:#fff !important; border:1px solid #c4622d !important; }
     .hcard .mtag { background:#fff !important; color:#1d5f70 !important; border:1px solid #888 !important; }
     .waze-box input { background:#fff !important; color:#111 !important; border:1px solid #999 !important; }
-    .waze-box .winst { display:none !important; }
+    .waze-box .winst, .gmapbtn { display:none !important; }
     .hcard .why, .hcard .src { color:#444 !important; }
   }
 </style>
@@ -372,6 +379,7 @@
     <h2 class="herohead">Where do you want to hunt?</h2>
     <p class="herosub">Just name a place anywhere in the U.S. and we&rsquo;ll find what&rsquo;s there. Know what you&rsquo;re after? Add it too.</p>
     <textarea class="notes armed" id="customLoc" rows="2" placeholder="Try: what can I find near Quartzsite, AZ?"></textarea>
+    <label class="paytoggle"><input type="checkbox" id="payToggle" onchange="setIncludePay(this.checked)"> <span>Include pay-to-dig sites <small>(commercial mines and fee digs)</small></span></label>
     <div class="scanwrap">
       <div class="scanflag" aria-hidden="true">▼ Click here to Scan ▼</div>
       <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
@@ -384,10 +392,10 @@
       <button type="button" class="chip" onclick="useExample(this)">anything on Hwy 101 south of Newport, OR</button>
       <button type="button" class="chip" onclick="useExample(this)">Herkimer diamonds near Herkimer, NY</button>
       <button type="button" class="chip" onclick="useExample(this)">Montana agate on Hwy 16 near Glendive, MT</button>
-      <button type="button" class="chip" onclick="useExample(this)">trilobites west of Delta, UT</button>
+      <button type="button" class="chip" onclick="useExample(this)">shark teeth south of Venice, FL</button>
       <button type="button" class="chip" onclick="useExample(this)">Lake Superior agate near Two Harbors, MN</button>
     </div>
-    <div class="herotips"><b>Tips:</b> searches about 20 miles around your place. Add &ldquo;within 10 miles&rdquo;, &ldquo;on Hwy 101&rdquo; or &ldquo;west of Delta&rdquo; to narrow it. A town, hotel or address works too.</div>
+    <div class="herotips"><b>Tips:</b> searches about 20 miles around your place. Add &ldquo;within 10 miles&rdquo;, &ldquo;on Hwy 101&rdquo; or &ldquo;south of Venice&rdquo; to narrow it. A town, hotel or address works too.</div>
    </div>
   </div>
  </div>
@@ -415,7 +423,7 @@
   <div class="noprint" style="font-family:'Barlow',sans-serif; font-weight:500; font-size:0.66rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
-  <div class="verbadge">▸ v7.0 · build 45 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 47 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1133,22 +1141,57 @@ const curatedSpots = {
   }]
 };
 
-// Curated spots inside a Custom search area. Small features like the llanite
-// dike are too narrow to show on the statewide geologic map, so the map scan
-// can't find them - these are added on top when the search covers them.
-function curatedInArea(center, radius, side, target, kinds, roadWanted, avoid) {
-  const all = Object.values(curatedSpots).flat().filter(s => typeof s.lat === 'number');
+// Known sites (known-sites.json): well-known collecting spots - hand-checked
+// roadcuts, free public sites and pay-to-dig mines. Small features like the
+// llanite dike are too narrow for the statewide geologic map, so the map scan
+// can't find them; these are added on top when the search area covers them.
+// Pay-to-dig sites only show when the customer turns on the toggle.
+const KNOWN_SITES_BUILTIN = {"version": 1, "about": "Rockhound Scout known sites: well-known collecting spots added to a Custom search when the search area covers them. 'fee': true = pay-to-dig (only shown when the customer turns on 'Include pay-to-dig sites'). 'approx': true = location is approximate (within a mile or two) and is used only to decide which searches include the site; the Google Maps button searches by 'mapQuery'. Reviewed by JT before use.", "sites": [{"id": "tx-baby-head", "state": "Texas", "name": "Baby Head Ridge Llanite Dike Roadcut — TX-16 Northbound", "lat": 30.885, "lon": -98.672, "approx": true, "fee": false, "verified_by": "owner", "road": "TX-16", "town": "Llano, TX", "rock": "Llanite dike (porphyritic rhyolite, ~1.106 billion years old) cutting Valley Spring Gneiss", "where": "Roadcut at the crest of a low ridge about 9 miles north of Llano on TX-16 — the llanite dike cuts across the highway through the surrounding Valley Spring Gneiss.", "finds": ["Llanite (blue quartz phenocrysts — world type locality)", "microcline feldspar", "plagioclase", "biotite"], "directions": "From the Llano courthouse square, take TX-16 north about 9 miles. Baby Head Cemetery will be on your right (east side). Continue a short distance further north to a small gravel pullout at the roadcut — park there, not on the highway shoulder.", "truck": "Watch for a low, dark ridge notching across the highway — the llanite is distinctly darker and more blocky than the pale pinkish-tan gneiss around it. Fractured boulders and rock fragments are visible at the roadcut on both sides of the pavement.", "why": "This roadcut is the world type locality for llanite — its striking blue quartz phenocrysts get their color from microscopic ilmenite inclusions, and this rock is found nowhere else on Earth.", "access": "Roadside right-of-way only. Do not climb fences; the land on both sides is private.", "mapQuery": "", "sources": ["Owner field-confirmed", "https://www.flickr.com/people/jsjgeology/ (James St. John, geologist)"]}, {"id": "ar-crystal-vista", "state": "Arkansas", "name": "Crystal Vista — Free Quartz Crystal Site (Ouachita National Forest)", "lat": 34.5, "lon": -93.57, "approx": true, "fee": false, "verified_by": "published", "road": "County Rd 2237 (Owley Rd)", "town": "Mount Ida, AR", "rock": "Quartz veins in Ouachita Mountain sandstone and shale", "where": "A 4-acre former commercial crystal mine on top of Gardner Mountain, now a National Forest site where quartz crystals can be collected from the ground surface.", "finds": ["quartz crystals", "quartz clusters"], "directions": "From Mount Ida, head south on AR-27 for 3.8 miles, then turn left (east) onto County Road 2237 (Owley Road). Continue 4.1 miles to the Crystal Vista trailhead.", "truck": "Look for the trailhead parking at the end of the directions; the old mine spoil is a short walk up Gardner Mountain. No water at the site.", "why": "One of the few free public places in the Ouachitas to pick up quartz crystals. Surface collecting only — check current Forest Service rules before you dig.", "access": "Ouachita National Forest. Call the Caddo-Womble Ranger District at (870) 867-2101 for current collecting rules.", "mapQuery": "Crystal Vista Trailhead, Mount Ida, AR", "sources": ["https://fs.usda.gov/r08/ouachita/recreation/trails/crystal-vista-trail"]}, {"id": "ar-crater-of-diamonds", "state": "Arkansas", "name": "Crater of Diamonds State Park — Dig for Real Diamonds", "lat": 34.0323, "lon": -93.6702, "fee": true, "verified_by": "published", "road": "AR-301", "town": "Murfreesboro, AR", "rock": "Eroded surface of a volcanic lamproite pipe", "where": "The only public diamond-bearing site in the world where visitors keep what they find.", "finds": ["diamonds", "amethyst", "agate", "jasper", "garnet", "quartz", "barite", "calcite"], "directions": "The park is about 2 miles southeast of Murfreesboro, Arkansas. Use the Google Maps button for turn-by-turn directions.", "truck": "Follow the park signs to the visitor center; you pay and get digging rules there.", "why": "Visitors pay a small admission fee to search the 37-acre plowed field and keep any gemstone they find, regardless of value.", "access": "Arkansas state park — admission fee to dig. Collecting is allowed only in the search field.", "mapQuery": "Crater of Diamonds State Park, Murfreesboro, AR", "sources": ["https://en.wikipedia.org/wiki/Crater_of_Diamonds_State_Park", "https://www.arkansasstateparks.com/parks/crater-diamonds-state-park/about"]}, {"id": "ar-wegner", "state": "Arkansas", "name": "Wegner Crystal Mines — Pay-to-Dig Quartz", "lat": 34.52, "lon": -93.61, "approx": true, "fee": true, "verified_by": "published", "road": "AR-27", "town": "Mount Ida, AR", "rock": "Quartz veins in Ouachita Mountain rock", "where": "A family-run commercial quartz crystal mine south of Mount Ida, the 'Quartz Crystal Capital of the World.'", "finds": ["quartz crystals", "quartz clusters"], "directions": "Wegner Crystal Mines is just south of Mount Ida off AR-27. Use the Google Maps button for turn-by-turn directions, and call ahead for hours and fees.", "truck": "Watch for the Wegner Crystal Mines signs off AR-27.", "why": "A commercial mine with dig-your-own options for quartz crystals.", "access": "Private commercial mine — fee to dig. Call ahead for hours.", "mapQuery": "Wegner Crystal Mines, Mount Ida, AR", "sources": ["https://www.arkansas.com/articles/one-tank-travels-mount-ida", "https://www.arkansas.com/articles/quartz-crystals"]}, {"id": "ny-herkimer-diamond-mines", "state": "New York", "name": "Herkimer Diamond Mines — Pay-to-Dig", "lat": 43.12, "lon": -74.97, "approx": true, "fee": true, "verified_by": "published", "road": "NY-28", "town": "Herkimer, NY", "rock": "Little Falls Dolostone (Cambrian)", "where": "The best-known Herkimer diamond dig, on NY-28 north of Herkimer near Middleville.", "finds": ["Herkimer diamonds (double-terminated quartz)", "quartz clusters", "dolomite crystals"], "directions": "From Herkimer, take NY-28 north about 7 miles toward Middleville. Use the Google Maps button for turn-by-turn directions.", "truck": "Watch for the Herkimer Diamond Mines signs and gift shop on NY-28.", "why": "Herkimer diamonds weather out of cavities in the Little Falls Dolostone; this commercial mine lets visitors split rock and keep what they find.", "access": "Private commercial mine — fee to dig. Seasonal; check hours before you go.", "mapQuery": "Herkimer Diamond Mines, 4601 State Route 28, Herkimer, NY", "sources": ["https://herkimerdiamond.com/mine/", "https://www.herkimerhistory.com/Mine_List_and_Directions.html"]}, {"id": "ny-ace-of-diamonds", "state": "New York", "name": "Ace of Diamonds Mine — Pay-to-Dig", "lat": 43.1325, "lon": -74.9744, "fee": true, "verified_by": "published", "road": "NY-28", "town": "Middleville, NY", "rock": "Little Falls Dolostone (Cambrian)", "where": "A commercial Herkimer diamond mine on NY-28 just south of Middleville.", "finds": ["Herkimer diamonds (double-terminated quartz)", "quartz clusters"], "directions": "From Herkimer, take NY-28 north past the Herkimer Diamond KOA campground; the mine entrance is a little further on the left. It's easy to miss — use the Google Maps button.", "truck": "Watch for mining equipment on a hill on the left side of NY-28.", "why": "Another long-running commercial dig in the same Herkimer-diamond-bearing dolostone.", "access": "Private commercial mine — fee to dig. Seasonal; check hours before you go.", "mapQuery": "Ace of Diamonds Mine, Middleville, NY", "sources": ["https://www.mindat.org/loc-6476.html", "https://www.herkimerhistory.com/Mine_List_and_Directions.html"]}, {"id": "ny-crystal-grove", "state": "New York", "name": "Crystal Grove Diamond Mine — Pay-to-Dig", "lat": 43.04, "lon": -74.67, "approx": true, "fee": true, "verified_by": "published", "road": "County Rd 114", "town": "St. Johnsville, NY", "rock": "Little Falls Dolostone (Cambrian)", "where": "A Herkimer diamond dig and campground north of St. Johnsville.", "finds": ["Herkimer diamonds (double-terminated quartz)", "quartz clusters"], "directions": "In St. Johnsville, turn onto County Route 114 North and follow the Crystal Grove signs to the campground on the right. Use the Google Maps button for turn-by-turn directions.", "truck": "Watch for Crystal Grove signs; there is a small store and parking lot.", "why": "A commercial dig in the Herkimer-diamond-bearing Little Falls Dolostone.", "access": "Private commercial mine — fee to dig. Seasonal; check hours before you go.", "mapQuery": "Crystal Grove Diamond Mine, St. Johnsville, NY", "sources": ["https://www.herkimerhistory.com/Mine_List_and_Directions.html"]}, {"id": "ut-topaz-mountain", "state": "Utah", "name": "Topaz Mountain Rockhound Area (BLM) — Free", "lat": 39.6665, "lon": -113.1146, "fee": false, "verified_by": "published", "road": "US-6", "town": "Delta, UT", "rock": "Topaz Mountain rhyolite", "where": "A BLM rockhound recreation area in the Thomas Range about 55 miles northwest of Delta.", "finds": ["topaz crystals", "bixbyite", "red beryl (rare)", "quartz crystals"], "directions": "From Delta, take US-6 west, then follow the paved county road north to the Thomas Range. Use the Google Maps button for turn-by-turn directions; there are no services out there.", "truck": "Look for the BLM rockhound area signs below Topaz Mountain; collect in the gravels and rhyolite cavities.", "why": "A designated BLM rockhound area known for sherry-colored topaz crystals. No facilities; dispersed camping is allowed.", "access": "BLM public land — free. Personal collecting under BLM rules. Fillmore Field Office: 435-743-3100.", "mapQuery": "Topaz Mountain Rockhound Area, Utah", "sources": ["https://www.blm.gov/visit/topaz-mountain-rockhound-recreation-area"]}, {"id": "ut-u-dig", "state": "Utah", "name": "U-Dig Fossils — Pay-to-Dig Trilobites", "lat": 39.3548, "lon": -113.2787, "fee": true, "verified_by": "published", "road": "US-6 / US-50", "town": "Delta, UT", "rock": "Wheeler Shale (Cambrian)", "where": "A private trilobite quarry near Antelope Springs in the House Range, about 52 miles west of Delta.", "finds": ["trilobites (Elrathia kingii)", "brachiopods", "crinoid pieces"], "directions": "From Delta, drive 32 miles west on US-6/50 and turn north at the U-Dig Fossils sign between mile markers 56 and 57. Follow the 20-mile gravel road and the U-Dig signs.", "truck": "Watch for the U-Dig Fossils sign between mile markers 56 and 57 on US-6/50.", "why": "One of the best-known places in the country to split shale and keep your own trilobites.", "access": "Private quarry — fee to dig. Open about mid-April to mid-October, weather permitting.", "mapQuery": "U-Dig Fossils, Delta, UT", "sources": ["https://www.rockhounding.org/locations-and-dig-sites/utah/u-dig-fossil-quarry.html"]}, {"id": "fl-caspersen", "state": "Florida", "name": "Caspersen Beach — Free Shark Tooth Hunting", "lat": 27.055, "lon": -82.443, "approx": true, "fee": false, "verified_by": "published", "road": "Harbor Dr S", "town": "Venice, FL", "rock": "Fossil-rich Gulf beach sands (Peace River Formation fossils)", "where": "A Sarasota County beach park at the south end of Venice, the 'Shark Tooth Capital of the World.'", "finds": ["fossil shark teeth", "fossil bone fragments", "fossil shells"], "directions": "Caspersen Beach Park is at 4100 Harbor Drive South in Venice, at the south end of Harbor Drive. Use the Google Maps button for turn-by-turn directions.", "truck": "Park in the beach lot; sift the shell line at the water's edge.", "why": "Fossil shark teeth wash up here every day; a sifting scoop at the waterline is the classic way to find them.", "access": "Sarasota County park. Check park rules; collecting loose shark teeth on the beach is a long-standing tradition here.", "mapQuery": "Caspersen Beach Park, 4100 Harbor Dr S, Venice, FL", "sources": ["https://www.visitsarasota.com/beaches/caspersen-beach", "https://www.visitflorida.com/travel-ideas/articles/finding-shark-teeth-on-caspersen-beach-in-venice-fla/"]}]};
+let KNOWN = null;
+async function loadKnownSites() {
+  if (KNOWN) return KNOWN;
+  try {
+    const r = await plainFetch('known-sites.json?t=' + Math.floor(Date.now() / 600000), 6000);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    KNOWN = { sites: d.sites || [], from: 'file v' + (d.version || 0) };
+  } catch (e) { KNOWN = { sites: KNOWN_SITES_BUILTIN.sites, from: 'built-in v' + KNOWN_SITES_BUILTIN.version + ' (' + errText(e) + ')' }; }
+  return KNOWN;
+}
+function includePaySites() { try { return localStorage.getItem('rsIncludePay') === '1'; } catch (e) { return false; } }
+function setIncludePay(on) { try { localStorage.setItem('rsIncludePay', on ? '1' : '0'); } catch (e) {} }
+function knownToCard(k) {
+  return {
+    name: k.name, score: 'hot', kind: 'known', known: true, fee: !!k.fee, verified_by: k.verified_by || 'published',
+    road: k.road || '', town: k.town || '', headline: k.rock || '', detail: k.where || '', drainages: [],
+    minerals: k.finds || [], directions: k.directions || '', from_the_truck: k.truck || '', why: k.why || '',
+    rules: [k.access].filter(Boolean),
+    waze: k.mapQuery || (k.approx ? '' : k.lat.toFixed(5) + ', ' + k.lon.toFixed(5)) || k.town,
+    mapQuery: k.mapQuery || '', sources: k.sources || [], lat: k.lat, lon: k.lon
+  };
+}
+async function knownInArea(center, radius, side, target, kinds, roadWanted, avoid) {
+  const KS = await loadKnownSites();
+  const pay = includePaySites();
   const words = String(target || '').toLowerCase().split(/[^a-z]+/).filter(w => w.length > 3);
   const digits = String(roadWanted || '').replace(/\D/g, '');
-  return all.filter(s => {
-    if (milesBetween(center.lat, center.lon, s.lat, s.lon) > radius) return false;
-    if (side) { let d = Math.abs(bearingDeg(side.lat, side.lon, s.lat, s.lon) - side.deg) % 360; if (d > 180) d = 360 - d; if (d > 70) return false; }
-    if (kinds && kinds.length && !kinds.some(k => k === 'stretch' || k === 'boundary')) return false;
-    if (digits && String(s.road || '').replace(/\D/g, '') !== digits) return false;
-    if (words.length) { const txt = (s.name + ' ' + (s.minerals || []).join(' ') + ' ' + s.to_formation + ' ' + s.why).toLowerCase(); if (!words.some(w => txt.includes(w))) return false; }
-    if (avoid && avoid.some(a => a && (a.name === s.name || a === s.name))) return false;
+  const near = KS.sites.filter(k => typeof k.lat === 'number' && milesBetween(center.lat, center.lon, k.lat, k.lon) <= radius + (k.approx ? 2 : 0));
+  const hiddenPay = near.filter(k => k.fee && !pay).length;
+  const list = near.filter(k => {
+    if (k.fee && !pay) return false;
+    if (side) { let d = Math.abs(bearingDeg(side.lat, side.lon, k.lat, k.lon) - side.deg) % 360; if (d > 180) d = 360 - d; if (d > 70) return false; }
+    if (kinds && kinds.length && !kinds.some(x => x === 'stretch' || x === 'boundary')) return false;
+    if (digits && !String(k.road || '').replace(/\D/g, ' ').split(' ').includes(digits)) return false;
+    if (words.length) { const txt = (k.name + ' ' + (k.finds || []).join(' ') + ' ' + (k.rock || '') + ' ' + (k.why || '')).toLowerCase(); if (!words.some(w => txt.includes(w.replace(/s$/, '')))) return false; }
+    if (avoid && avoid.some(a => a && a.lat != null && milesBetween(a.lat, a.lon, k.lat, k.lon) < 0.5)) return false;
     return true;
-  }).map(s => ({ ...s }));
+  }).sort((a, b) => (a.fee - b.fee) || (milesBetween(center.lat, center.lon, a.lat, a.lon) - milesBetween(center.lat, center.lon, b.lat, b.lon)));
+  const reach = Math.min(75, radius * 3);
+  const farther = KS.sites.filter(k => typeof k.lat === 'number' && !near.includes(k) && (pay || !k.fee) &&
+      milesBetween(center.lat, center.lon, k.lat, k.lon) <= reach)
+    .map(k => ({ k, mi: milesBetween(center.lat, center.lon, k.lat, k.lon), dir: compassFrom(center.lat, center.lon, k.lat, k.lon) }))
+    .sort((a, b) => a.mi - b.mi).slice(0, 3);
+  return { cards: list.map(knownToCard), hiddenPay, from: KS.from, farther };
 }
 
 function pick(btn) {
@@ -1159,6 +1202,7 @@ function pick(btn) {
   document.getElementById('customLocWrap').style.display = (region === 'custom') ? 'block' : 'none';
   document.getElementById('customLoc').classList.toggle('armed', region === 'custom');
 }
+document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('payToggle'); if (t) t.checked = includePaySites(); });
 function useExample(b) { const t = document.getElementById('customLoc'); t.value = b.textContent; t.focus(); }
 function setStatus(t) { document.getElementById('statusTxt').textContent = t; }
 function showLoading(msg, prog) {
@@ -1213,12 +1257,25 @@ async function plainFetch(url, ms) {
   }
 }
 
+let geoBasementSkipped = 0;
 async function fetchGeoUnit(lat, lon) {
   try {
     const r = await fetchWithTimeout(`https://macrostrat.org/api/v2/geologic_units/map?lat=${lat}&lng=${lon}&format=json`, 10000);
     if (!r.ok) return { error: true };
     const d = await r.json();
-    const units = (d.success && d.success.data) ? d.success.data : [];
+    let units = (d.success && d.success.data) ? d.success.data : [];
+    // The map can return deep layers along with the surface rock (e.g. buried
+    // Precambrian granite under Iowa limestone). Skip "Unmapped" entries, and
+    // when a younger (post-Precambrian) unit is present, skip the Precambrian
+    // ones - where Precambrian rock IS the surface (Llano) it is kept.
+    const topAge = u => { const v = Number(u.t_int_age != null ? u.t_int_age : u.t_age); return isFinite(v) ? v : null; };
+    const real = units.filter(u => !/^\s*unmapped\s*$/i.test(u.name || '') && !/^\s*unmapped\s*$/i.test(u.strat_name || ''));
+    if (real.length) units = real;
+    if (units.some(u => topAge(u) != null && topAge(u) < 541)) {
+      const young = units.filter(u => topAge(u) == null || topAge(u) < 541);
+      if (young.length < units.length) geoBasementSkipped++;
+      units = young;
+    }
     const named = units.find(u => u.strat_name) || units[0] || null;
     if (!named) return null;
     return { name: (named.strat_name || named.name || '').trim(), lith: named.lith || '' };
@@ -1254,6 +1311,8 @@ async function fetchDrainageNearby(lat, lon) {
 // The state the current scan is in. Presets are all Texas; a Custom search
 // sets this from wherever the place lookup actually lands.
 let scanState = 'Texas';
+// States with a lot of BLM land, where the BLM collecting rules box is useful.
+const BLM_STATES = ['Alaska', 'Arizona', 'California', 'Colorado', 'Idaho', 'Montana', 'Nevada', 'New Mexico', 'Oregon', 'Utah', 'Washington', 'Wyoming'];
 const US_STATES = {AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming'};
 // True if the text already names a US state (full name, or a ", XX" abbreviation).
 function mentionsState(text) {
@@ -1755,7 +1814,7 @@ async function fetchCensusRoads(lat, lon, radiusMiles) {
   if (!sec) sec = secAll.find(l => !/interstates and us/i.test(l.name || '')) || secAll[0];
   const pri = layers.find(l => /primary/i.test(l.name || '') && !/secondary/i.test(l.name || ''));
   const loc = layers.find(l => /local/i.test(l.name || ''));
-  const report = [], byRef = {}, rankOf = {}, skipped = new Set(), oddRuns = {}, otherRuns = {}, allNames = new Set();
+  const report = [], byRef = {}, rankOf = {}, skipped = new Set(), oddRuns = {}, otherRuns = {}, allNames = new Set(), badHwy = new Set();
   const jobs = [['highways', sec, false], ['big highways', pri, false], ['county/FM roads', loc, true]];
   await Promise.all(jobs.map(async ([label, layer, isLocal]) => {
     if (!layer) { report.push(label + ': no layer'); return; }
@@ -1771,17 +1830,21 @@ async function fetchCensusRoads(lat, lon, radiusMiles) {
       }
       let res;
       try {
-        res = await arcQueryBox(TIGER_BASE, layer.id, lat, lon, radiusMiles, where, nf || '*', isLocal ? 4 : 3);
+        const of = nf ? [nf].concat(['RTTYP', 'MTFCC'].filter(x => fields.includes(x))).join(',') : '*';
+        res = await arcQueryBox(TIGER_BASE, layer.id, lat, lon, radiusMiles, where, of, isLocal ? 4 : 3);
       } catch (e) {
         if (where === '1=1') throw e;
-        res = await arcQueryBox(TIGER_BASE, layer.id, lat, lon, radiusMiles, '1=1', nf || '*', 4);
+        res = await arcQueryBox(TIGER_BASE, layer.id, lat, lon, radiusMiles, '1=1', nf ? [nf].concat(['RTTYP', 'MTFCC'].filter(x => fields.includes(x))).join(',') : '*', 4);
         report.push(label + ': name filter refused, used all');
       }
       let used = 0;
       for (const f of res.features) {
         const a = f.attributes || {};
         const raw = a[nf] || a.NAME || a.FULLNAME || a.BASENAME || '';
-        const info = tigerRoadRef(raw);
+        let info = tigerRoadRef(raw);
+        // A highway label ("AZ-1") only when the Census says it really is a
+        // state or US route - a local road called "Hwy 1" stays a local road.
+        if (info && info.rank === 0 && a.RTTYP && !/^[SUI]$/i.test(String(a.RTTYP).trim())) { info = null; badHwy.add(String(raw)); }
         if (raw && allNames.size < 3000) allNames.add(String(raw));
         if (!info) {
           if (raw && skipped.size < 40) skipped.add(raw);
@@ -1814,6 +1877,11 @@ async function fetchCensusRoads(lat, lon, radiusMiles) {
     const near = Math.min(...allSegs.flat().map(([a, b]) => milesBetween(lat, lon, a, b)));
     roads.push({ road: ref, rank: rankOf[ref], allSegs, segs: allSegs.filter(l => lineMiles(l) >= 0.5), near });
   }
+  for (let i = roads.length - 1; i >= 0; i--) {
+    const m = roads[i].road.match(/^[A-Z]{2}-(\d+[A-Z]?)$/);
+    if (m && roads[i].road.slice(0, 3) !== 'US-' && roads.some(r => r.road === 'US-' + m[1])) { report.push('dropped ' + roads[i].road + ' (same road as US-' + m[1] + ')'); roads.splice(i, 1); }
+  }
+  if (badHwy.size) report.push('not real highways (local roads named like one): ' + [...badHwy].slice(0, 8).join(', '));
   roads.sort((a, b) => a.near - b.near);
   const odd = [];
   for (const k of Object.keys(oddRuns)) {
@@ -1889,13 +1957,18 @@ async function cityAt(lat, lon) {
   const fs = await arcPointQuery(PLACES_BASE + '/' + layer.id, lat, lon, 'NAME');
   return fs.length ? String(fs[0].attributes.NAME || 'a city') : '';
 }
+// PAD-US sometimes has no real name ("Miscellaneous", "Unknown Beach").
+function landName(a) {
+  const n = String((a && (a.Unit_Nm || a.Mang_Name)) || '').trim();
+  return !n || /^(miscellaneous|misc\.?|unknown( \w+)?|public land|other|n\/?a|none)$/i.test(n) ? 'public land (name not listed)' : n;
+}
 // Public land at/near the point: { name, access: 'open'|'restricted'|'closed'|'unknown' } or null.
 async function publicLandAt(lat, lon, meters) {
   const fs = await arcPointQuery(PADUS_URL, lat, lon, 'Unit_Nm,Mang_Name,Pub_Access,Des_Tp', meters);
   if (!fs.length) return null;
   const acc = a => ({ OA: 'open', RA: 'restricted', XA: 'closed' })[String(a || '').toUpperCase()] || 'unknown';
   const rank = { open: 0, restricted: 1, unknown: 2, closed: 3 };
-  const list = fs.map(f => ({ name: String(f.attributes.Unit_Nm || f.attributes.Mang_Name || 'public land').trim(), access: acc(f.attributes.Pub_Access) }))
+  const list = fs.map(f => ({ name: landName(f.attributes), access: acc(f.attributes.Pub_Access) }))
     .sort((a, b) => rank[a.access] - rank[b.access]);
   return list[0];
 }
@@ -1910,11 +1983,57 @@ async function fetchPublicLandAreas(lat, lon, radiusMiles) {
   for (const f of res.features) {
     if (!f.geometry || !f.geometry.rings) continue;
     const a = f.attributes || {};
-    units.push({ name: String(a.Unit_Nm || a.Mang_Name || 'public land').trim(), access: acc(a.Pub_Access),
+    units.push({ name: landName(a), access: acc(a.Pub_Access),
       rings: f.geometry.rings.map(r => r.map(([x, y]) => [y, x])) });
   }
   return { units, report: res.features.length + ' public-land pieces' + (res.truncated ? ' (cut off)' : '') };
 }
+
+// Tribal land (no collecting without a tribal permit) and BLM land (open to
+// personal rockhounding) in the search box, from PAD-US.
+async function fetchTribalBlm(lat, lon, radiusMiles) {
+  const base = PADUS_URL.replace(/\/\d+$/, ''), id = PADUS_URL.match(/(\d+)$/)[1];
+  const nameLike = "Unit_Nm LIKE '%Reservation%' OR Unit_Nm LIKE '%Indian%' OR Unit_Nm LIKE '%Pueblo%' OR Unit_Nm LIKE '%Rancheria%' OR Unit_Nm LIKE '%Tribal%'";
+  let res, how = 'by agency';
+  try {
+    res = await arcQueryBox(base, id, lat, lon, radiusMiles, "Mang_Name IN ('BLM','TRIB') OR Des_Tp = 'TRIBL' OR " + nameLike, 'Unit_Nm,Mang_Name,Des_Tp', 2, 0.0004);
+  } catch (e) {
+    res = await arcQueryBox(base, id, lat, lon, radiusMiles, nameLike, 'Unit_Nm,Mang_Name', 2, 0.0004); how = 'by name only (' + errText(e) + ')';
+  }
+  const tribal = [], blm = [];
+  for (const f of res.features) {
+    if (!f.geometry || !f.geometry.rings) continue;
+    const a = f.attributes || {}, nm = String(a.Unit_Nm || '');
+    const rings = f.geometry.rings.map(r => r.map(([x, y]) => [y, x]));
+    const isTrib = String(a.Mang_Name || '').toUpperCase() === 'TRIB' || String(a.Des_Tp || '').toUpperCase() === 'TRIBL' || /reservation|indian|pueblo|rancheria|tribal/i.test(nm);
+    if (isTrib) tribal.push({ name: nm || 'tribal land', rings });
+    else if (String(a.Mang_Name || '').toUpperCase() === 'BLM') blm.push({ name: nm || 'BLM land', rings });
+  }
+  return { tribal, blm, report: tribal.length + ' tribal / ' + blm.length + ' BLM pieces, ' + how };
+}
+function inRings(lat, lon, rings) {
+  let inside = false;
+  for (const r of rings) for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    if (((r[i][0] > lat) !== (r[j][0] > lat)) && (lon < (r[j][1] - r[i][1]) * (lat - r[i][0]) / (r[j][0] - r[i][0]) + r[i][1])) inside = !inside;
+  }
+  return inside;
+}
+// What washes up on well-known collecting coasts, whatever rock the land is.
+// (Can be overridden by "beachFinds" in field-list.json.)
+const BEACH_FINDS_BUILTIN = [
+  { state: 'Oregon', water: 'pacific ocean', finds: ['beach agate', 'jasper', 'carnelian', 'agatized wood', 'petrified wood'] },
+  { state: 'Washington', water: 'pacific ocean', finds: ['beach agate', 'jasper', 'petrified wood'] },
+  { state: 'California', water: 'pacific ocean', finds: ['beach agate', 'jasper', 'chert'] },
+  { state: 'Minnesota', water: 'lake superior', finds: ['Lake Superior agate', 'thomsonite', 'jasper'] },
+  { state: 'Wisconsin', water: 'lake superior', finds: ['Lake Superior agate', 'jasper'] },
+  { state: 'Michigan', water: 'lake superior', finds: ['Lake Superior agate', 'jasper', 'native copper'] },
+  { state: 'Michigan', water: 'lake michigan', areas: [[45.37, -84.96, 45]], finds: ['Petoskey stones', 'Charlevoix stones', 'fossil corals'] },
+  { state: 'Florida', water: 'gulf|mexico', areas: [[27.07, -82.42, 25]], finds: ['fossil shark teeth', 'fossil bone fragments', 'fossil shells'] },
+  { state: 'Maryland', water: 'chesapeake', areas: [[38.5, -76.45, 25]], finds: ['fossil shark teeth', 'fossil shells', 'fossil bone fragments'] }
+];
+// States where state parks don't allow taking rocks, minerals or fossils.
+const NO_COLLECT_STATE_PARKS = ['Texas', 'New York', 'Minnesota'];
+const STATE_PARK_RX = /\bstate (park|natural area|recreation area|historic|nature preserve|preserve|scenic)/i;
 
 async function nameWaterBody(lat, lon) {
   const layers = await arcLayers(CENSUS_HYDRO_BASE);
@@ -2084,14 +2203,14 @@ function dedupeRuns(runs, minMi) {
 // The field list lives in its own file (field-list.json) next to the app, so
 // rows can be added without touching the app. A built-in copy is used if the
 // file can't be loaded.
-const FIELD_LIST_BUILTIN = {"version": 2, "about": "Rockhound Scout field list: which FORMATIONS produce which materials, by state. Not a list of spots. 'high' = documented producer; 'possible' = may contain it. Rows marked authoritative (JT's field knowledge) override the AI; researched rows can only raise the AI's rating. Patterns are case-insensitive text patterns; | means 'or'. Optional 'areas' = [[lat, lon, miles], ...] limits a row to searches near those places. 'review' marks rows that need a stronger source before launch.", "generalNote": "Public land rules (most BLM land): reasonable personal amounts of rocks, minerals and common invertebrate or plant fossils; petrified wood up to 25 lb plus 1 piece per day and 250 lb per year; no vertebrate fossils (bones, teeth, tracks); no collecting in national parks, developed recreation sites, or on mining claims without the claimholder's permission.", "stateNotes": {"Hawaii": "Hawaii is one of the most restrictive states for collecting. State rules prohibit taking sand, rocks, dead coral or other beach deposits from the shoreline (shells, driftwood and beach glass are allowed). Collecting is prohibited in Hawaii Volcanoes National Park and at Papakolea green-sand beach, and most zeolite outcrops are on private or military land. Many visitors photograph rather than collect.", "Alaska": "No rock, mineral or fossil collecting in national parks (the Kobuk jade country borders Gates of the Arctic). Alaska Native corporation land is private. Never pan or dig on an active mining claim without the claimholder's written permission; recreational panning is allowed on most open state and BLM land.", "Nevada": "Much of Nevada is BLM land open to casual collecting, but mining claims are everywhere — you can't collect on an active claim without the claimant's permission. Most turquoise mines are closed to the public.", "Colorado": "Much of the Pikes Peak crystal country is National Forest, but active mining claims are common and some areas (like Crystal Park) are largely private — never dig on a claim without permission."}, "rows": [{"state": "Texas", "authoritative": true, "label": "petrified wood", "target": "petrified|palm ?wood|pet ?wood|agati[sz]ed wood|opali[sz]ed wood|silicified wood|fossil(ized)? wood", "high": "oakville|fleming", "possible": "catahoula|jackson|whitsett|manning|wellborn|caddell", "sources": ["JT field knowledge"]}, {"state": "Texas", "authoritative": true, "label": "fossils", "target": "fossil(?!(ized)? wood)|ammonite|shark|teeth|tooth|echinoid|sea urchin|oyster|clam|shells?\\b|gastropod|snail|rudist|trilobite|crinoid|dinosaur", "high": "glen rose|walnut|comanche peak|del rio|grayson|austin chalk|eagle ford|duck creek|kiamichi|fort worth|goodland|weno|pawpaw|main street|denton|corsicana|kemp|kincaid|cow creek", "possible": "edwards|kainer|person|georgetown|buda|fredericksburg|washita|segovia|fort terrett|devils river|pecan gap|ozan|taylor|navarro|hensell", "sources": ["JT field knowledge"]}, {"state": "Texas", "authoritative": true, "label": "chert/flint", "target": "chert|flint", "high": "edwards|kainer|person|segovia|fort terrett|devils river", "possible": "georgetown|uvalde gravel|leona", "sources": ["JT field knowledge"]}, {"state": "New York", "label": "Herkimer diamonds (quartz crystals)", "target": "herkimer|double.?terminated|quartz crystals?", "high": "little falls", "possible": "galway|theresa|hoyt|beekmantown", "sources": ["https://en.wikipedia.org/wiki/Little_Falls_Formation", "https://herkimerhistory.com/HostRock.html", "https://ngmdb.usgs.gov/Geolex/Units/LittleFalls_2495.html"]}, {"state": "Hawaii", "label": "olivine (peridot)", "target": "olivine|peridot|green sand", "high": "picrit|ankaramite|oceanite", "possible": "basalt|volcanics|lava|kau|puna|hilina|pahala|kilauea|mauna loa|mauna kea|hualalai|kohala|koolau|waianae|honolulu|napali|koloa|haleakala|kula|hana|honomanu", "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-hawaii"]}, {"state": "Hawaii", "label": "zeolite crystals", "target": "zeolite|chabazite|phillipsite|analcime|natrolite|crystals?", "possible": "koolau|waianae|napali|makaweli|olokele|haupu", "note": "Zeolites fill gas pockets in weathered basalt on the older islands (mainly Oahu and Kauai); most known outcrops are on private or military land.", "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-hawaii"]}, {"state": "Arizona", "label": "petrified wood", "target": "petrified|pet ?wood|silicified wood|fossil(ized)? wood", "high": "chinle|shinarump|sonsela|petrified forest member|blue mesa|owl rock|painted desert member", "note": "No collecting in Petrified Forest National Park. On BLM land: up to 25 lb plus 1 piece per day, 250 lb per year.", "sources": ["https://azgs.arizona.edu/petrified-wood-petrified-forest-national-park-arizona", "https://www.blm.gov/learn/can-i-keep-this"]}, {"state": "Arizona", "label": "Apache tears (obsidian)", "target": "apache tear|obsidian", "high": "perlite", "possible": "apache leap|rhyolite|vitrophyre|obsidian", "sources": ["https://en.wikipedia.org/wiki/Apache_tears"]}, {"state": "Oregon", "label": "thundereggs", "target": "thunderegg|geode", "possible": "john day|clarno|rhyolite|ash-flow|tuff", "note": "Many famous thunderegg beds are fee-dig ranches (e.g. Priday, Richardson's); some public sites need permits — check before digging.", "sources": ["https://rockhounding.org/rockhounding-articles/what-are-thundereggs"]}, {"state": "Arkansas", "label": "quartz crystals", "target": "quartz|crystals?", "high": "blakely|crystal mountain", "possible": "mazarn|womble|bigfork|polk creek|missouri mountain|arkansas novaculite|stanley|atoka|jackfork|collier", "note": "Many Ouachita crystal sites are pay-to-dig mines near Mount Ida and Jessieville — call ahead for fees.", "sources": ["https://www.geology.arkansas.gov/docs/pdf/education/arkansas-quartz-crystals.pdf"]}, {"state": "Arkansas", "label": "diamonds", "target": "diamond", "high": "lamproite|prairie creek", "note": "Crater of Diamonds State Park: pay a small fee and keep what you find.", "sources": ["https://en.wikipedia.org/wiki/Crater_of_Diamonds_State_Park"]}, {"state": "Minnesota", "label": "Lake Superior agates", "target": "agate|lake superior", "high": "north shore volcanic|portage lake|keweenawan|chengwatana", "possible": "till|outwash|glacial|drift|superior lobe|moraine|gravel", "note": "Agates formed in the North Shore lava flows; glaciers spread them through gravels across NE and central Minnesota.", "sources": ["https://dnr.state.mn.us/education/geology/digging/agate.html"]}, {"state": "Iowa", "label": "geodes", "target": "geode", "high": "warsaw", "possible": "keokuk", "sources": ["https://en.wikipedia.org/wiki/Warsaw_Formation", "https://rockhounding.org/rockhounding-articles/where-to-find-geodes-in-iowa"]}, {"state": "Missouri", "label": "geodes", "target": "geode", "high": "warsaw", "possible": "keokuk", "sources": ["https://en.wikipedia.org/wiki/Warsaw_Formation"]}, {"state": "Illinois", "label": "geodes", "target": "geode", "high": "warsaw", "possible": "keokuk", "sources": ["https://en.wikipedia.org/wiki/Warsaw_Formation"]}, {"state": "Iowa", "label": "crinoid fossils", "target": "fossil|crinoid", "high": "burlington", "sources": ["https://en.wikipedia.org/wiki/Burlington_Limestone"]}, {"state": "Missouri", "label": "crinoid fossils", "target": "fossil|crinoid", "high": "burlington", "sources": ["https://en.wikipedia.org/wiki/Burlington_Limestone"]}, {"state": "Illinois", "label": "crinoid fossils", "target": "fossil|crinoid", "high": "burlington", "sources": ["https://en.wikipedia.org/wiki/Burlington_Limestone"]}, {"state": "Utah", "label": "trilobites", "target": "trilobite|fossil", "high": "wheeler", "possible": "marjum", "sources": ["https://en.wikipedia.org/wiki/Wheeler_Shale"]}, {"state": "Utah", "label": "topaz crystals", "target": "topaz|crystals?", "high": "topaz mountain", "possible": "rhyolite", "note": "Topaz Mountain is a BLM rockhound area; topaz fades from amber to clear in sunlight.", "sources": ["https://geology.utah.gov/popular/rocks-minerals/rock-mineral-collecting-sites/topaz-at-topaz-mountain/"]}, {"state": "Utah", "label": "dinosaur bone (look, don't take on public land)", "target": "dinosaur|bone", "high": "morrison", "note": "Vertebrate fossils such as dinosaur bone can't be collected on federal land; only on private land with the owner's permission.", "sources": ["https://www.blm.gov/learn/can-i-keep-this"]}, {"state": "New Mexico", "label": "thundereggs, agate and jasper", "target": "thunderegg|geode|agate|jasper|perlite|apache tear|obsidian", "high": "little florida", "possible": "rhyolite|tuff", "note": "Rockhound State Park (near Deming) allows collecting up to 15 lb per visitor; no collecting for resale.", "sources": ["https://geoinfo.nmt.edu/tour/state/rockhound/home.html"]}, {"state": "New Mexico", "label": "petrified wood", "target": "petrified|pet ?wood|silicified wood|fossil(ized)? wood", "high": "chinle|shinarump|petrified forest member", "sources": ["https://azgs.arizona.edu/petrified-wood-petrified-forest-national-park-arizona", "https://www.blm.gov/learn/can-i-keep-this"]}, {"state": "Oklahoma", "label": "barite rose rocks", "target": "barite|rose rock|desert rose", "high": "garber", "note": "Rose rocks occur mainly from just northeast of Lexington to north of Lake Stanley Draper, around Norman.", "sources": ["https://ou.edu/ogs/generalinterest/rose_rocks"]}, {"state": "California", "label": "nephrite jade", "target": "jade|nephrite", "possible": "serpentin|franciscan", "areas": [[35.91, -121.47, 20]], "note": "Jade Cove area (Big Sur): loose jade may be collected only below mean high tide, by hand, and only what one person can carry; day use only.", "sources": ["https://en.wikipedia.org/wiki/Jade_Cove"], "review": "host rock not named in source; listed as possible only"}, {"state": "Nevada", "label": "precious opal", "target": "opal", "high": "virgin valley", "note": "Virgin Valley opal: private fee-dig mines (e.g. Royal Peacock, Bonanza) surrounded by BLM land.", "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-nevada"]}, {"state": "Nevada", "label": "trilobites", "target": "trilobite|fossil", "possible": "pioche", "sources": ["https://roadtripryan.com/go/t/nevada/southern-nevada/oak-springs-trilobite"], "review": "Oak Springs trilobite area is BLM shale; formation name (Pioche Shale) not confirmed by source"}, {"state": "Idaho", "label": "star garnets", "target": "garnet", "possible": "schist|gneiss|alluvium", "areas": [[47.02, -116.33, 25]], "note": "Emerald Creek star garnet area (Idaho Panhandle National Forests): advance tickets required through recreation.gov.", "sources": ["https://fs.usda.gov/Internet/FSE_DOCUMENTS/fseprd1087093.pdf"], "review": "source rock not named in source; possible only"}, {"state": "Montana", "label": "sapphires", "target": "sapphire|corundum", "possible": "alluvium|terrace|gravel|colluvium|mudflow", "areas": [[46.7, -111.8, 25], [46.23, -113.55, 25]], "note": "Montana sapphires: fee digs on the Missouri River bars near Helena (e.g. Spokane Bar) and at Gem Mountain on Rock Creek, where you buy and wash gravel.", "sources": ["https://www.gia.edu/articles/summer-2017-montana-alluvial-deposits"]}, {"state": "Montana", "label": "Montana moss agates", "target": "agate|moss agate", "possible": "alluvium|terrace|gravel", "areas": [[45.83, -109.95, 60], [45.78, -108.5, 60], [46.41, -105.84, 60], [47.11, -104.71, 60]], "note": "Montana moss agates are found along the Yellowstone River and its tributaries; best at low water (early spring, late fall). A Montana Conservation License is needed for most state land, including fishing access sites.", "sources": ["https://southeastmontana.com/blog/rockhounding-montana-moss-agates"]}, {"state": "Wyoming", "label": "turritella (Elimia) agate", "target": "agate|turritella|elimia", "high": "laney", "sources": ["https://thefossilforum.com/topic/129464-turritellaelimia-agate-and-the-green-river-fm"], "review": "forum source; confirm with a survey publication before launch"}, {"state": "Wyoming", "label": "fossil fish (look, don't take on public land)", "target": "fish|fossil", "high": "fossil butte member", "note": "Fossil fish: no collecting at Fossil Butte National Monument; private quarries near Kemmerer offer fee digs. Vertebrate fossils can't be collected on federal land.", "sources": ["https://thefossilforum.com/topic/129464-turritellaelimia-agate-and-the-green-river-fm", "https://www.blm.gov/learn/can-i-keep-this"]}, {"state": "Colorado", "label": "amazonite, smoky quartz and topaz", "target": "amazonite|smoky quartz|quartz crystals?|topaz|fluorite|crystals?", "high": "pikes peak", "sources": ["https://en.wikipedia.org/wiki/Mineralogy_of_the_Pikes_Peak_Region"]}, {"state": "Washington", "label": "petrified wood", "target": "petrified|pet ?wood|silicified wood|fossil(ized)? wood", "possible": "wanapum|columbia river basalt|grande ronde|ellensburg|vantage", "note": "Ginkgo Petrified Forest State Park (Vantage) is for viewing; check state park rules before collecting anything.", "sources": ["https://en.wikipedia.org/wiki/Ginkgo_Petrified_Forest_State_Park"], "review": "source names only the Columbia basalt group; listed as possible"}, {"state": "Washington", "label": "Eocene leaf and insect fossils", "target": "fossil|leaf|leaves|insect", "high": "klondike mountain", "areas": [[48.65, -118.74, 30]], "note": "Stonerose Interpretive Center (Republic): dig for your own fossils and take some home, under the center's rules.", "sources": ["https://www.burkemuseum.org/news/where-see-fossils-washington-state"], "review": "formation name (Klondike Mountain Fm) not in source"}, {"state": "Alaska", "label": "nephrite jade", "target": "jade|nephrite", "possible": "serpentin|ultramafic", "areas": [[66.9, -157.0, 150]], "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-alaska"]}, {"state": "Alaska", "label": "placer gold", "target": "gold", "possible": "alluvium|gravel|placer|terrace|beach|schist", "areas": [[64.84, -147.72, 60], [64.5, -165.41, 40]], "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-alaska"]}, {"state": "Alaska", "label": "almandine garnet", "target": "garnet", "possible": "schist", "areas": [[56.53, -132.0, 40]], "note": "Wrangell Garnet Ledge is privately owned; ask locally about permission.", "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-alaska"]}]};
+const FIELD_LIST_BUILTIN = {"version": 3, "about": "Rockhound Scout field list: which FORMATIONS produce which materials, by state. Not a list of spots. 'high' = documented producer; 'possible' = may contain it. Rows marked authoritative (JT's field knowledge) override the AI; researched rows can only raise the AI's rating. Patterns are case-insensitive text patterns; | means 'or'. Optional 'areas' = [[lat, lon, miles], ...] limits a row to searches near those places. 'review' marks rows that need a stronger source before launch.", "generalNote": "Public land rules (most BLM land): reasonable personal amounts of rocks, minerals and common invertebrate or plant fossils; petrified wood up to 25 lb plus 1 piece per day and 250 lb per year; no vertebrate fossils (bones, teeth, tracks); no collecting in national parks, developed recreation sites, or on mining claims without the claimholder's permission.", "stateNotes": {"Hawaii": "Hawaii is one of the most restrictive states for collecting. State rules prohibit taking sand, rocks, dead coral or other beach deposits from the shoreline (shells, driftwood and beach glass are allowed). Collecting is prohibited in Hawaii Volcanoes National Park and at Papakolea green-sand beach, and most zeolite outcrops are on private or military land. Many visitors photograph rather than collect.", "Alaska": "No rock, mineral or fossil collecting in national parks (the Kobuk jade country borders Gates of the Arctic). Alaska Native corporation land is private. Never pan or dig on an active mining claim without the claimholder's written permission; recreational panning is allowed on most open state and BLM land.", "Nevada": "Much of Nevada is BLM land open to casual collecting, but mining claims are everywhere — you can't collect on an active claim without the claimant's permission. Most turquoise mines are closed to the public.", "Colorado": "Much of the Pikes Peak crystal country is National Forest, but active mining claims are common and some areas (like Crystal Park) are largely private — never dig on a claim without permission."}, "rows": [{"state": "Texas", "authoritative": true, "label": "petrified wood", "target": "petrified|palm ?wood|pet ?wood|agati[sz]ed wood|opali[sz]ed wood|silicified wood|fossil(ized)? wood", "high": "oakville|fleming", "possible": "catahoula|jackson|whitsett|manning|wellborn|caddell", "sources": ["JT field knowledge"]}, {"state": "Texas", "authoritative": true, "label": "fossils", "target": "fossil(?!(ized)? wood)|ammonite|shark|teeth|tooth|echinoid|sea urchin|oyster|clam|shells?\\b|gastropod|snail|rudist|trilobite|crinoid|dinosaur", "high": "glen rose|walnut|comanche peak|del rio|grayson|austin chalk|eagle ford|duck creek|kiamichi|fort worth|goodland|weno|pawpaw|main street|denton|corsicana|kemp|kincaid|cow creek", "possible": "edwards|kainer|person|georgetown|buda|fredericksburg|washita|segovia|fort terrett|devils river|pecan gap|ozan|taylor|navarro|hensell", "sources": ["JT field knowledge"]}, {"state": "Texas", "authoritative": true, "label": "chert/flint", "target": "chert|flint", "high": "edwards|kainer|person|segovia|fort terrett|devils river", "possible": "georgetown|uvalde gravel|leona", "sources": ["JT field knowledge"]}, {"state": "New York", "label": "Herkimer diamonds (quartz crystals)", "target": "herkimer|double.?terminated|quartz crystals?", "high": "little falls", "possible": "galway|theresa|hoyt|beekmantown", "sources": ["https://en.wikipedia.org/wiki/Little_Falls_Formation", "https://herkimerhistory.com/HostRock.html", "https://ngmdb.usgs.gov/Geolex/Units/LittleFalls_2495.html"], "not": "herkimer formation|kirkland|willowvale|westmoreland|sauquoit|otsquago|oneida", "note": "Herkimer diamonds weather out of the Little Falls Dolostone along the Mohawk Valley; the best-known digs (Middleville, NY-28) are pay-to-dig. The \"Herkimer Formation\" is a different, younger rock and does not produce them."}, {"state": "New York", "label": "Herkimer diamonds (quartz crystals)", "target": "herkimer|double.?terminated|quartz crystals?", "high": "beekmantown|little falls|tribes hill", "areas": [[43.03, -74.99, 35]], "note": "On the statewide map the Little Falls Dolostone is lumped into the Beekmantown Group in the Mohawk Valley.", "sources": ["https://en.wikipedia.org/wiki/Little_Falls_Formation", "https://herkimerhistory.com/HostRock.html", "https://ngmdb.usgs.gov/Geolex/Units/LittleFalls_2495.html"]}, {"state": "Hawaii", "label": "olivine (peridot)", "target": "olivine|peridot|green sand", "high": "picrit|ankaramite|oceanite", "possible": "basalt|volcanics|lava|kau|puna|hilina|pahala|kilauea|mauna loa|mauna kea|hualalai|kohala|koolau|waianae|honolulu|napali|koloa|haleakala|kula|hana|honomanu", "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-hawaii"]}, {"state": "Hawaii", "label": "zeolite crystals", "target": "zeolite|chabazite|phillipsite|analcime|natrolite|crystals?", "possible": "koolau|waianae|napali|makaweli|olokele|haupu", "note": "Zeolites fill gas pockets in weathered basalt on the older islands (mainly Oahu and Kauai); most known outcrops are on private or military land.", "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-hawaii"]}, {"state": "Arizona", "label": "petrified wood", "target": "petrified|pet ?wood|silicified wood|fossil(ized)? wood", "high": "chinle|shinarump|sonsela|petrified forest member|blue mesa|owl rock|painted desert member", "note": "No collecting in Petrified Forest National Park. On BLM land: up to 25 lb plus 1 piece per day, 250 lb per year.", "sources": ["https://azgs.arizona.edu/petrified-wood-petrified-forest-national-park-arizona", "https://www.blm.gov/learn/can-i-keep-this"]}, {"state": "Arizona", "label": "Apache tears (obsidian)", "target": "apache tear|obsidian", "high": "perlite", "possible": "apache leap|rhyolite|vitrophyre|obsidian", "sources": ["https://en.wikipedia.org/wiki/Apache_tears"]}, {"state": "Oregon", "label": "thundereggs", "target": "thunderegg|geode", "possible": "john day|clarno|rhyolite|ash-flow|tuff", "note": "Many famous thunderegg beds are fee-dig ranches (e.g. Priday, Richardson's); some public sites need permits — check before digging.", "sources": ["https://rockhounding.org/rockhounding-articles/what-are-thundereggs"]}, {"state": "Arkansas", "label": "quartz crystals", "target": "quartz|crystals?", "high": "blakely|crystal mountain", "possible": "mazarn|womble|bigfork|polk creek|missouri mountain|arkansas novaculite|stanley|atoka|jackfork|collier", "note": "Many Ouachita crystal sites are pay-to-dig mines near Mount Ida and Jessieville — call ahead for fees.", "sources": ["https://www.geology.arkansas.gov/docs/pdf/education/arkansas-quartz-crystals.pdf"]}, {"state": "Arkansas", "label": "diamonds", "target": "diamond", "high": "lamproite|prairie creek", "note": "Crater of Diamonds State Park: pay a small fee and keep what you find.", "sources": ["https://en.wikipedia.org/wiki/Crater_of_Diamonds_State_Park"]}, {"state": "Minnesota", "label": "Lake Superior agates", "target": "agate|lake superior", "high": "north shore volcanic|portage lake|keweenawan|chengwatana", "possible": "till|outwash|glacial|drift|superior lobe|moraine|gravel", "note": "Agates formed in the North Shore lava flows; glaciers spread them through gravels across NE and central Minnesota.", "sources": ["https://dnr.state.mn.us/education/geology/digging/agate.html"]}, {"state": "Iowa", "label": "geodes", "target": "geode", "high": "warsaw", "possible": "keokuk", "sources": ["https://en.wikipedia.org/wiki/Warsaw_Formation", "https://rockhounding.org/rockhounding-articles/where-to-find-geodes-in-iowa"]}, {"state": "Missouri", "label": "geodes", "target": "geode", "high": "warsaw", "possible": "keokuk", "sources": ["https://en.wikipedia.org/wiki/Warsaw_Formation"]}, {"state": "Illinois", "label": "geodes", "target": "geode", "high": "warsaw", "possible": "keokuk", "sources": ["https://en.wikipedia.org/wiki/Warsaw_Formation"]}, {"state": "Iowa", "label": "crinoid fossils", "target": "fossil|crinoid", "high": "burlington", "sources": ["https://en.wikipedia.org/wiki/Burlington_Limestone"]}, {"state": "Missouri", "label": "crinoid fossils", "target": "fossil|crinoid", "high": "burlington", "sources": ["https://en.wikipedia.org/wiki/Burlington_Limestone"]}, {"state": "Illinois", "label": "crinoid fossils", "target": "fossil|crinoid", "high": "burlington", "sources": ["https://en.wikipedia.org/wiki/Burlington_Limestone"]}, {"state": "Utah", "label": "trilobites", "target": "trilobite|fossil", "high": "wheeler", "possible": "marjum", "sources": ["https://en.wikipedia.org/wiki/Wheeler_Shale"]}, {"state": "Utah", "label": "topaz crystals", "target": "topaz|crystals?", "high": "topaz mountain", "possible": "rhyolite", "note": "Topaz Mountain is a BLM rockhound area; topaz fades from amber to clear in sunlight.", "sources": ["https://geology.utah.gov/popular/rocks-minerals/rock-mineral-collecting-sites/topaz-at-topaz-mountain/"]}, {"state": "Utah", "label": "dinosaur bone (look, don't take on public land)", "target": "dinosaur|bone", "high": "morrison", "note": "Vertebrate fossils such as dinosaur bone can't be collected on federal land; only on private land with the owner's permission.", "sources": ["https://www.blm.gov/learn/can-i-keep-this"]}, {"state": "New Mexico", "label": "thundereggs, agate and jasper", "target": "thunderegg|geode|agate|jasper|perlite|apache tear|obsidian", "high": "little florida", "possible": "rhyolite|tuff", "note": "Rockhound State Park (near Deming) allows collecting up to 15 lb per visitor; no collecting for resale.", "sources": ["https://geoinfo.nmt.edu/tour/state/rockhound/home.html"]}, {"state": "New Mexico", "label": "petrified wood", "target": "petrified|pet ?wood|silicified wood|fossil(ized)? wood", "high": "chinle|shinarump|petrified forest member", "sources": ["https://azgs.arizona.edu/petrified-wood-petrified-forest-national-park-arizona", "https://www.blm.gov/learn/can-i-keep-this"]}, {"state": "Oklahoma", "label": "barite rose rocks", "target": "barite|rose rock|desert rose", "high": "garber", "note": "Rose rocks occur mainly from just northeast of Lexington to north of Lake Stanley Draper, around Norman.", "sources": ["https://ou.edu/ogs/generalinterest/rose_rocks"]}, {"state": "California", "label": "nephrite jade", "target": "jade|nephrite", "possible": "serpentin|franciscan", "areas": [[35.91, -121.47, 20]], "note": "Jade Cove area (Big Sur): loose jade may be collected only below mean high tide, by hand, and only what one person can carry; day use only.", "sources": ["https://en.wikipedia.org/wiki/Jade_Cove"], "review": "host rock not named in source; listed as possible only"}, {"state": "Nevada", "label": "precious opal", "target": "opal", "high": "virgin valley", "note": "Virgin Valley opal: private fee-dig mines (e.g. Royal Peacock, Bonanza) surrounded by BLM land.", "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-nevada"]}, {"state": "Nevada", "label": "trilobites", "target": "trilobite|fossil", "possible": "pioche", "sources": ["https://roadtripryan.com/go/t/nevada/southern-nevada/oak-springs-trilobite"], "review": "Oak Springs trilobite area is BLM shale; formation name (Pioche Shale) not confirmed by source"}, {"state": "Idaho", "label": "star garnets", "target": "garnet", "possible": "schist|gneiss|alluvium", "areas": [[47.02, -116.33, 25]], "note": "Emerald Creek star garnet area (Idaho Panhandle National Forests): advance tickets required through recreation.gov.", "sources": ["https://fs.usda.gov/Internet/FSE_DOCUMENTS/fseprd1087093.pdf"], "review": "source rock not named in source; possible only"}, {"state": "Montana", "label": "sapphires", "target": "sapphire|corundum", "possible": "alluvium|terrace|gravel|colluvium|mudflow", "areas": [[46.7, -111.8, 25], [46.23, -113.55, 25]], "note": "Montana sapphires: fee digs on the Missouri River bars near Helena (e.g. Spokane Bar) and at Gem Mountain on Rock Creek, where you buy and wash gravel.", "sources": ["https://www.gia.edu/articles/summer-2017-montana-alluvial-deposits"]}, {"state": "Montana", "label": "Montana moss agates", "target": "agate|moss agate", "areas": [[45.83, -109.95, 60], [45.78, -108.5, 60], [46.41, -105.84, 60], [47.11, -104.71, 60]], "note": "Montana moss agates are found along the Yellowstone River and its tributaries; best at low water (early spring, late fall). A Montana Conservation License is needed for most state land, including fishing access sites. Agates come from the Yellowstone River gravels, terraces and alluvium, not from the bedrock.", "sources": ["https://southeastmontana.com/blog/rockhounding-montana-moss-agates"], "high": "alluvium|terrace|gravel"}, {"state": "Wyoming", "label": "turritella (Elimia) agate", "target": "agate|turritella|elimia", "high": "laney", "sources": ["https://thefossilforum.com/topic/129464-turritellaelimia-agate-and-the-green-river-fm"], "review": "forum source; confirm with a survey publication before launch"}, {"state": "Wyoming", "label": "fossil fish (look, don't take on public land)", "target": "fish|fossil", "high": "fossil butte member", "note": "Fossil fish: no collecting at Fossil Butte National Monument; private quarries near Kemmerer offer fee digs. Vertebrate fossils can't be collected on federal land.", "sources": ["https://thefossilforum.com/topic/129464-turritellaelimia-agate-and-the-green-river-fm", "https://www.blm.gov/learn/can-i-keep-this"]}, {"state": "Colorado", "label": "amazonite, smoky quartz and topaz", "target": "amazonite|smoky quartz|quartz crystals?|topaz|fluorite|crystals?", "high": "pikes peak", "sources": ["https://en.wikipedia.org/wiki/Mineralogy_of_the_Pikes_Peak_Region"]}, {"state": "Washington", "label": "petrified wood", "target": "petrified|pet ?wood|silicified wood|fossil(ized)? wood", "possible": "wanapum|columbia river basalt|grande ronde|ellensburg|vantage", "note": "Ginkgo Petrified Forest State Park (Vantage) is for viewing; check state park rules before collecting anything.", "sources": ["https://en.wikipedia.org/wiki/Ginkgo_Petrified_Forest_State_Park"], "review": "source names only the Columbia basalt group; listed as possible"}, {"state": "Washington", "label": "Eocene leaf and insect fossils", "target": "fossil|leaf|leaves|insect", "high": "klondike mountain", "areas": [[48.65, -118.74, 30]], "note": "Stonerose Interpretive Center (Republic): dig for your own fossils and take some home, under the center's rules.", "sources": ["https://www.burkemuseum.org/news/where-see-fossils-washington-state"], "review": "formation name (Klondike Mountain Fm) not in source"}, {"state": "Alaska", "label": "nephrite jade", "target": "jade|nephrite", "possible": "serpentin|ultramafic", "areas": [[66.9, -157.0, 150]], "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-alaska"]}, {"state": "Alaska", "label": "placer gold", "target": "gold", "possible": "alluvium|gravel|placer|terrace|beach|schist", "areas": [[64.84, -147.72, 60], [64.5, -165.41, 40]], "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-alaska"]}, {"state": "Alaska", "label": "almandine garnet", "target": "garnet", "possible": "schist", "areas": [[56.53, -132.0, 40]], "note": "Wrangell Garnet Ledge is privately owned; ask locally about permission.", "sources": ["https://rockhounding.org/rockhounding-articles/gem-hunting-in-alaska"]}]};
 let FIELD = null;
 let scanCenter = null; // set at the start of each Custom scan
 function compileFieldList(d) {
   const rx = t => t ? new RegExp(t, 'i') : null;
   return {
-    version: d.version || 0, generalNote: d.generalNote || '', stateNotes: d.stateNotes || {},
-    rows: (d.rows || []).map(r => ({ state: r.state, label: r.label, authoritative: !!r.authoritative, note: r.note || '',
+    version: d.version || 0, generalNote: d.generalNote || '', stateNotes: d.stateNotes || {}, beachFinds: Array.isArray(d.beachFinds) ? d.beachFinds : null,
+    rows: (d.rows || []).map(r => ({ state: r.state, label: r.label, authoritative: !!r.authoritative, note: r.note || '', not: r.not ? new RegExp(r.not, 'i') : null,
       areas: Array.isArray(r.areas) ? r.areas : null,
       target: rx(r.target) || /$^/, high: rx(r.high), possible: rx(r.possible) }))
   };
@@ -2186,17 +2305,25 @@ async function rateFormations(units, target) {
       notes.push('AI rating failed (' + errText(e) + ')');
     }
   }
+  const targetRows = !!(target && rows.length);
   units.forEach((u, i) => {
     const a = got[i + 1];
-    const ai = a ? (a.r === 'h' ? 'high' : a.r === 'p' ? 'possible' : 'low') : 'low';
+    let ai = a ? (a.r === 'h' ? 'high' : a.r === 'p' ? 'possible' : 'low') : 'low';
+    // When our field list covers this target, only the rocks it names can be
+    // "documented" producers - the AI can't promote a rock just because its
+    // name sounds right (the Herkimer Formation is not where Herkimer
+    // diamonds come from). Rocks the list rules out are "not expected".
+    if (targetRows && rows.some(r => r.not && r.not.test(u.name)) && !rowRating[u.name]) ai = 'low';
+    else if (targetRows && ai === 'high' && !rowRating[u.name]) ai = 'possible';
     // JT's rows decide; researched rows can only raise the AI's rating.
     const lv = r => r === 'high' ? 2 : r === 'possible' ? 1 : 0;
     ratings[u.name] = rowAuth[u.name] ? rowRating[u.name] : (lv(rowRating[u.name]) > lv(ai) ? rowRating[u.name] : ai);
     const items = (rowFinds[u.name] || []).slice();
     if (a && a.f && !/^none\.?$/i.test(a.f)) {
       for (const f of a.f.split(/[;,](?![^()]*\))/).map(x => x.trim()).filter(Boolean)) {
-        const fk = f.toLowerCase().split(' (')[0];
-        const i = items.findIndex(x => x.toLowerCase().split(' (')[0] === fk);
+        const sg = x => x.toLowerCase().split(' (')[0].trim().replace(/(\w{3,})s\b/g, '$1');
+        const fk = sg(f);
+        const i = items.findIndex(x => sg(x) === fk);
         if (i >= 0) { if (f.length > items[i].length) items[i] = f; } // keep the more detailed version
         else if (!items.some(x => f.toLowerCase().includes(x.toLowerCase()))) items.push(f);
       }
@@ -2286,7 +2413,12 @@ function matchRequestedRoad(roads, wanted) {
   const type = /\b(fm|farm)/i.test(w) ? /^FM /i : /\b(rm|ranch)/i.test(w) ? /^RM /i : /\b(co|county|cr)\b/i.test(w) ? /^County Rd/i
     : /\bus\b/i.test(w) ? /^US-/i : /\b(sh|state|tx)\b/i.test(w) ? /^[A-Z]{2}-/ : /\b(loop)\b/i.test(w) ? /^Loop/i : /\b(spur)\b/i.test(w) ? /^Spur/i : null;
   const typed = type ? same.filter(r => type.test(r.road)) : [];
-  return typed.length ? typed : same;
+  if (typed.length) return typed;
+  // "Hwy 16" / "Highway 16" / "Route 16" mean a highway, not "Aoap 16-N".
+  const isHwyWord = /\b(hwy|highway|route|rte|rt)\b/i.test(w);
+  const proper = same.filter(r => /^(US-|[A-Z]{2}-|FM |RM |County Rd |Loop |Spur |Park Rd )/.test(r.road));
+  if (isHwyWord) { const h = proper.filter(r => /^(US-|[A-Z]{2}-)/.test(r.road)); if (h.length) return h; }
+  return proper.length ? proper : same;
 }
 
 async function crossingScan(loc, radius, target, town, scan, roadWanted, side, opts) {
@@ -2382,10 +2514,27 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
     ratingFailed = r1.failed;
   }
   const rate = u => (u && u.name && ratings[u.name]) || 'low';
-  const counts = {};
-  cells.forEach(c => { counts[c.unit.name] = (counts[c.unit.name] || 0) + 1; });
-  const area = Object.keys(counts).sort((a, b) => counts[b] - counts[a])
-    .map(n => ({ name: n, pct: Math.round(100 * counts[n] / cells.length), rating: ratings[n] || 'low', finds: finds[n] || [] }));
+  // Area summary: leave out water and lake-bottom units, and merge the same
+  // rock listed two ways by different maps ("Tongue River Member" and
+  // "Tongue River Member of Fort Union Formation").
+  const underWater = n => /^\s*water\s*$|\bunder (lake|the)\b|^lake (clay|silt|sand)/i.test(n);
+  const normName = n => String(n).toLowerCase().replace(/\s+of (the )?[a-z .'-]+ (group|formation|supergroup)$/, '')
+    .replace(/\s*(;|\band\b)\s*/g, ', ').replace(/\b(formation|fm\.?)\b/g, '').replace(/[\s,]+/g, ' ').trim();
+  const counts = {}, show = {}, raw = {};
+  const landCells = cells.filter(c => !underWater(c.unit.name));
+  landCells.forEach(c => { raw[c.unit.name] = (raw[c.unit.name] || 0) + 1; });
+  const lvA = r => r === 'high' ? 2 : r === 'possible' ? 1 : 0;
+  const merged = {};
+  Object.keys(raw).forEach(n => {
+    const k = normName(n);
+    const m = merged[k] || (merged[k] = { name: n, n: 0, top: 0, rating: 'low', finds: [] });
+    m.n += raw[n];
+    if (raw[n] > m.top) { m.top = raw[n]; m.name = n; }
+    if (lvA(ratings[n]) > lvA(m.rating)) m.rating = ratings[n];
+    for (const f of (finds[n] || [])) if (!m.finds.some(x => x.toLowerCase() === f.toLowerCase())) m.finds.push(f);
+  });
+  const area = Object.values(merged).sort((a, b) => b.n - a.n)
+    .map(m => ({ name: m.name, pct: Math.round(100 * m.n / Math.max(1, landCells.length)), rating: m.rating, finds: m.finds.slice(0, 5) }));
   logStage('area rocks: ' + area.slice(0, 8).map(a => a.name + ' ' + a.pct + '% (' + a.rating + (a.finds.length ? ': ' + a.finds.join(', ') : '') + ')').join(' / ') + ' [' + rateNotes.join('; ') + ']', t0);
   // Rank roads by how much good rock they run through (from the survey grid).
   const cellNear = (la, lo) => {
@@ -2878,6 +3027,48 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
     for (let q = cands.length - 1; q >= 0; q--) if (!onSide(cands[q].lat, cands[q].lon)) cands.splice(q, 1);
     scanLog.push('kept ' + cands.length + ' of ' + before + ' spots on the ' + side.word + ' side');
   }
+  // Land rules: no cards on tribal land or restricted public land; state-park
+  // shores are skipped where parks ban collecting (and marked down elsewhere);
+  // spots on BLM land are flagged and sorted first within their level.
+  {
+    let land = null;
+    try { land = await fetchTribalBlm(lat, lon, radius + 1); scanLog.push('tribal/BLM land: ' + land.report); }
+    catch (e) { scanLog.push('tribal/BLM land: lookup failed (' + errText(e) + ')'); }
+    const dropped = { tribal: [], restricted: [], statepark: [] };
+    for (let q = cands.length - 1; q >= 0; q--) {
+      const c = cands[q];
+      const pts = [[c.lat, c.lon]].concat(c.kind === 'shore' && c.shoreLat != null ? [[c.shoreLat, c.shoreLon]] : []);
+      const trib = land && land.tribal.find(t => pts.some(p => inRings(p[0], p[1], t.rings)));
+      if (trib) { dropped.tribal.push((c.stream ? c.stream + ' × ' : '') + c.road + ' (' + trib.name + ')'); cands.splice(q, 1); continue; }
+      if (c.kind === 'shore' && c.pub) {
+        if (c.pub.access === 'restricted') { dropped.restricted.push(c.road + ' (' + c.pub.name + ')'); cands.splice(q, 1); continue; }
+        if (STATE_PARK_RX.test(c.pub.name) && !/pacific ocean/i.test(c.waterName || '')) {
+          if (NO_COLLECT_STATE_PARKS.includes(scanState)) { dropped.statepark.push(c.road + ' (' + c.pub.name + ')'); cands.splice(q, 1); continue; }
+          c.s = Math.max(0, c.s - 1);
+          c.rules = (c.rules || []).concat(['State parks often prohibit taking rocks or fossils — check ' + c.pub.name + '\'s rules first.']);
+        }
+      }
+      if (c.kind === 'shore') {
+        const FLb = (FIELD && FIELD.beachFinds) || BEACH_FINDS_BUILTIN;
+        const bf = FLb.filter(b => b.state === scanState && new RegExp(b.water, 'i').test(c.waterName || '') &&
+          (!b.areas || b.areas.some(([la, lo, mi]) => milesBetween(c.lat, c.lon, la, lo) <= mi)));
+        if (bf.length) {
+          const add = bf.flatMap(b => b.finds);
+          const k = x => String(x).toLowerCase().replace(/s\b/g, '').split(' (')[0];
+          c.findsHere = add.concat((c.findsHere || []).filter(f => !add.some(a => k(a) === k(f)))).slice(0, 6);
+          c.s = Math.max(c.s, 1);
+        }
+      }
+      if (land && land.blm.some(b => inRings(c.lat, c.lon, b.rings))) {
+        c.blm = true; c.pri = (c.pri || 0) - 1;
+        c.rules = (c.rules || []).concat(['✓ On BLM public land — open to personal rockhounding under BLM rules (reasonable amounts, hand tools; not on active mining claims).']);
+      }
+    }
+    if (dropped.tribal.length) scanLog.push('skipped on tribal land: ' + dropped.tribal.slice(0, 6).join('; '));
+    if (dropped.restricted.length) scanLog.push('skipped on restricted land: ' + dropped.restricted.slice(0, 6).join('; '));
+    if (dropped.statepark.length) scanLog.push('skipped in state parks (' + scanState + ' parks ban collecting): ' + dropped.statepark.slice(0, 6).join('; '));
+    const nb = cands.filter(c => c.blm).length; if (nb) scanLog.push('on BLM land: ' + nb + ' spots');
+  }
   // "Only crossings" / "no shore": keep just the kinds asked for.
   const KIND_OF = { crossing: 'crossing', through: 'stretch', shore: 'shore', boundary: 'boundary' };
   if (opts.kinds && opts.kinds.length) {
@@ -2898,6 +3089,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
   // Mix the cards: at each level (HOT, then WARM...), up to 2 creek crossings
   // and up to 2 roads-through-good-rock first, then fill. One stretch card per road.
   const pick = [], perRoad = {}, perKind = {};
+  const wantShores = !!(opts.kinds && opts.kinds.includes('shore'));
   const limits = { crossing: 2, through: 2, shore: 2, boundary: 1 };
   const spreadMi = focus ? 1.0 : Math.max(1.0, radius / 5);
   for (const lvl of [2, 1, 0]) {
@@ -2910,6 +3102,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
         if (pick.length >= 4) break;
         if (pick.includes(c)) continue;
         if (pass === 0 && !focus && (perKind[c.kind] || 0) >= limits[c.kind]) continue;
+        if (c.kind === 'shore' && !wantShores && (perKind.shore || 0) >= 2) continue;
         // Spread the cards out: a wider search keeps picks farther apart
         // (about a fifth of the radius), so they don't all cluster by town.
         // (Spacing applies between cards of the same kind; a lake park can sit
@@ -2922,6 +3115,8 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
       }
     }
   }
+  // Still short of 4: allow extra shores after all.
+  if (pick.length < 4 && !wantShores) for (const c of cands) { if (pick.length >= 4) break; if (c.kind === 'shore' && !pick.includes(c) && !pick.some(p => milesBetween(p.lat, p.lon, c.lat, c.lon) < 1.0)) pick.push(c); }
   // Pins go ON the road: snap each card's point to the nearest spot on its road.
   for (const c of pick) {
     const r = roads.find(x => x.road === c.road);
@@ -2996,8 +3191,10 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
   logStage('write-ups (' + written.length + ' of ' + pick.length + ' done)', t0);
   const FL = await loadFieldList();
   const shown = written.map(h => pick[h._order]).filter(Boolean).map(c => ({ lat: c.lat, lon: c.lon, road: c.road, kind: c.kind }));
-  return { written, shown, candidates: cands.length, geoDown, area, focusLabel, focusNote, ratingFailed,
-    stateNote: FL.stateNotes[scanState] || '', generalNote: FL.generalNote || '' };
+  const targetMissing = !!(target && area.length && !area.some(a => a.rating === 'high' || a.rating === 'possible'));
+  if (targetMissing) scanLog.push('no rock known for "' + target + '" in the area');
+  return { written, shown, candidates: cands.length, geoDown, area, focusLabel, focusNote, ratingFailed, targetMissing,
+    stateNote: FL.stateNotes[scanState] || '', generalNote: BLM_STATES.includes(scanState) ? (FL.generalNote || '') : '' };
 }
 
 // One AI write-up for a spot. The app supplies the facts and the score; the
@@ -3010,7 +3207,7 @@ async function writeUpSpot(c, target, town, streamSrc) {
       const mi = milesBetween(tc.lat, tc.lon, c.lat, c.lon);
       const dir = compassFrom(tc.lat, tc.lon, c.lat, c.lon);
       distFact = 'MEASURED LOCATION (computed from coordinates, not a guess): the spot is about ' + (mi < 1 ? 'under 1 mile' : Math.round(mi * 2) / 2 + ' miles') +
-        ' ' + dir + ' of ' + town + ' in a straight line (road miles may be a little longer). In DIRECTIONS you MUST use this distance and direction. Do not state any other compass direction or mileage.';
+        ' ' + dir + ' of ' + town + ' as the crow flies. In DIRECTIONS give this as "about N miles ' + dir + ' of ' + town + ' on ' + c.road + '" -- name ' + c.road + ' as the road to take or follow, never write the words "straight line" or "as the crow flies", and do not state any other compass direction or mileage. The card has a Google Maps button for turn-by-turn driving directions.';
     }
   } catch (e) { /* no distance line */ }
   const u = c.unit || {}, rk = r => r === 'high' ? 'documented producer' : r === 'possible' ? 'possible host rock' : 'not a likely source';
@@ -3049,9 +3246,9 @@ async function writeUpSpot(c, target, town, streamSrc) {
     ratingText = u.name + ': ' + rk(c.rating) + '; ' + u2.name + ': ' + rk(c.rating2);
     names = c.road + ' and ' + town;
   }
-  const keyOf = f => String(f).toLowerCase().split(' (')[0].trim();
+  const keyOf = f => String(f).toLowerCase().split(' (')[0].trim().replace(/(\w{3,})s\b/g, '$1');
   const here = c.findsHere || [];
-  const up = c.kind === 'crossing' ? (c.findsUp || []).filter(f => !here.some(h => keyOf(h) === keyOf(f)))
+  const up = c.kind === 'crossing' ? (c.findsUp || []).filter(f => !/^the rock itself/i.test(f) && !here.some(h => keyOf(h) === keyOf(f)))
     .map(f => /\(possible\)\s*$/i.test(f) ? f.replace(/\s*\(possible\)\s*$/i, '') + ' (in creek gravels, possible)'
       : /\)\s*$/.test(f) ? f.replace(/\)\s*$/, '; in creek gravels)') : f + ' (in creek gravels)') : [];
   const req = here.concat(up);
@@ -3108,7 +3305,11 @@ WHY: one or two sentences per the WHY rule
     if (out.some(o => keyOf(o) === k || keyOf(o).includes(k) || k.includes(keyOf(o)))) continue;
     out.push(m);
   }
-  rec.minerals = out.slice(0, 7);
+  // "The rock itself: loose sand..." only answers "what will I see" - it goes
+  // last, and is dropped when there are at least two real finds.
+  const isRock = m => /^the rock itself/i.test(String(m));
+  const realFinds = out.filter(m => !isRock(m));
+  rec.minerals = (realFinds.length >= 2 ? realFinds : realFinds.concat(out.filter(isRock))).slice(0, 7);
   rec.kind = c.kind;
   rec.rules = c.rules || [];
   rec.road = c.road;
@@ -3299,7 +3500,7 @@ async function writeUpContact(c, target) {
       const mi = milesBetween(tc.lat, tc.lon, c.lat, c.lon);
       const dir = compassFrom(tc.lat, tc.lon, c.lat, c.lon);
       distFact = 'MEASURED LOCATION (computed from coordinates, not a guess): the stretch is about ' + Math.round(mi) +
-        ' miles ' + dir + ' of ' + c.town + ' in a straight line (road miles may be a little longer). ' +
+        ' miles ' + dir + ' of ' + c.town + ' as the crow flies (never write "straight line" or "as the crow flies" in the directions; name the road to take). ' +
         'In DIRECTIONS you MUST use this: say the stretch is roughly ' + Math.round(mi) + ' miles ' + dir + ' of ' + c.town +
         ' along ' + c.road + '. Do not state any other compass direction or mileage.';
     }
@@ -3486,7 +3687,7 @@ function showTestLog() {
       setTimeout(() => { b.textContent = 'Copy'; }, 2000);
     };
   }
-  el.querySelector('#tlText').textContent = scanLog.join('\n') + '\nmap cache: ' + mapCacheStats.saved + ' from saved copy, ' + mapCacheStats.fresh + ' fetched & saved, ' + mapCacheStats.direct + ' asked map server directly';
+  el.querySelector('#tlText').textContent = scanLog.join('\n') + '\nmap cache: ' + mapCacheStats.saved + ' from saved copy, ' + mapCacheStats.fresh + ' fetched & saved, ' + mapCacheStats.direct + ' asked map server directly' + '\nburied basement layers skipped: ' + geoBasementSkipped;
 }
 // TEST: how long each stage of the scan took, shown if a scan times out.
 let scanLog = [];
@@ -3500,6 +3701,7 @@ async function runScout() {
   currentScan = scan;
   scanLog = [];
   mapCacheStats = { saved: 0, fresh: 0, direct: 0 };
+  geoBasementSkipped = 0;
   const bail = () => { if (scan.cancelled) throw new Error('cancelled'); };
   btn.disabled = true;
   setStatus('SCANNING...');
@@ -3635,15 +3837,36 @@ async function runScout() {
         setStatus(res && res.geoDown ? 'SERVER BUSY' : 'NO DATA');
       } else {
         printLabel = 'Custom search: ' + (side ? side.word + ' of ' : '') + place + (res.focusLabel ? ', along ' + res.focusLabel : '') + (target ? ' (' + target + ')' : '');
-        const known = curatedInArea(scanLoc, radius, side, target, kinds, roadWanted, avoid);
-        if (known.length) scanLog.push('known spots added: ' + known.map(k => k.name).join('; '));
+        const kn = await knownInArea(scanLoc, radius, side, target, kinds, roadWanted, avoid);
+        const known = kn.cards;
+        scanLog.push('known sites (' + kn.from + '): ' + (known.length ? known.map(k => k.name).join('; ') : 'none in this area') + (kn.hiddenPay ? ' | ' + kn.hiddenPay + ' pay-to-dig site(s) hidden (toggle off)' : ''));
         const shown = known.concat(written);
+        if (kn.farther && kn.farther.length) setTimeout(() => {
+          const rc = document.getElementById('results'), rb = rc.querySelector('.printbar');
+          const t = document.createElement('div'); t.className = 'paynote';
+          t.innerHTML = '⭐ Known site' + (kn.farther.length > 1 ? 's' : '') + ' a little farther out: ' + kn.farther.map(f =>
+            '<a target="_blank" rel="noopener" style="color:inherit;" href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(f.k.mapQuery || (f.k.lat + ',' + f.k.lon)) + '">' + esc(f.k.name) + '</a> (about ' + Math.round(f.mi) + ' mi ' + f.dir + ')').join('; ') + '.';
+          if (rb && rb.nextSibling) rc.insertBefore(t, rb.nextSibling); else rc.appendChild(t);
+        }, 0);
+        if (kn.hiddenPay) setTimeout(() => {
+          const rc = document.getElementById('results'), rb = rc.querySelector('.printbar');
+          const t = document.createElement('div'); t.className = 'paynote';
+          t.innerHTML = '💲 ' + kn.hiddenPay + ' pay-to-dig site' + (kn.hiddenPay > 1 ? 's are' : ' is') + ' in this area. Turn on <b>Include pay-to-dig sites</b> above the search button to see ' + (kn.hiddenPay > 1 ? 'them' : 'it') + ' next time.';
+          if (rb && rb.nextSibling) rc.insertBefore(t, rb.nextSibling); else rc.appendChild(t);
+        }, 0);
         renderHotspots(shown);
         if (written.length < 4 && (kinds.length || avoid.length)) {
           const kn = { crossing: 'creek crossings', stretch: 'road stretches', shore: 'shores', boundary: 'rock boundaries' };
           showError('Only ' + written.length + ' spot' + (written.length === 1 ? '' : 's') + ' fit' + (written.length === 1 ? 's' : '') + ' what you asked for' +
             (kinds.length ? ' (' + kinds.map(k => kn[k]).join(', ') + ' only)' : '') + (avoid.length ? ', leaving out ' + avoid.length + ' earlier card(s)' : '') +
             ' in this area. Try a wider distance for more.');
+        }
+        if (res.targetMissing) {
+          const tm = document.createElement('div');
+          tm.className = 'accessbanner';
+          tm.innerHTML = '⚠ No rock known to produce <b>' + esc(target) + '</b> is mapped within ' + radius + ' miles of ' + esc(place) + '. These are the best general spots nearby — try a wider distance (up to 30 miles) or a town closer to where ' + esc(target) + ' are found.';
+          const rc = document.getElementById('results'), rb = rc.querySelector('.printbar');
+          if (rb) rc.insertBefore(tm, rb); else rc.prepend(tm);
         }
         showAreaSummary(res.area, place, radius, target, res.focusLabel, res.ratingFailed ? 'Rock ratings were not available this time, so these cards may undersell the area. Try the scan again later.' : res.focusNote, side, res.stateNote, res.generalNote);
         showCostLine();
@@ -3790,11 +4013,14 @@ function renderHotspots(spots, previous, savedAt) {
     if (!previous) setTimeout(() => { try { bar.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} }, 100);
   }
   spots.forEach((h, i) => {
-    const badge = h.score === 'hot' ? ['score-hot', '🔥 HOTSPOT']
+    const badge = h.known ? ['score-hot', h.fee ? '💲 PAY DIG' : '⭐ KNOWN SITE'] : h.score === 'hot' ? ['score-hot', '🔥 HOTSPOT']
                 : h.score === 'cool' ? ['score-cool', '◌ LONG SHOT']
                 : ['score-warm', '◉ WARM'];
     const drains = h.drainages || [];
     const isOwnerConfirmed = h.verified_by === 'owner';
+    const isKnown = isOwnerConfirmed || !!h.known;
+    const knownBanner = isOwnerConfirmed ? '📍 KNOWN PRODUCTIVE SITE — CONFIRMED ON-SITE'
+      : h.fee ? '💲 KNOWN SITE — PAY TO DIG (fee required)' : '📍 KNOWN SITE — FREE PUBLIC COLLECTING';
     const card = document.createElement('div');
     card.className = 'hcard';
     card.style.animationDelay = (i * 0.1) + 's';
@@ -3804,11 +4030,12 @@ function renderHotspots(spots, previous, savedAt) {
         '<span class="hname">' + h.name + '</span>' +
       '</div>' +
       '<div class="hbody">' +
-        (isOwnerConfirmed ?
-          '<div style="font-family:\'Barlow\',sans-serif; font-weight:500; font-size:0.64rem; letter-spacing:0.1em; color:#f4b87a; background:rgba(196,98,45,0.12); border:1px solid rgba(196,98,45,0.35); border-radius:2px; padding:5px 10px; margin-bottom:2px; display:inline-block;">📍 KNOWN PRODUCTIVE SITE — CONFIRMED ON-SITE</div>'
+        (isKnown ?
+          '<div class="knownbanner' + (h.fee ? ' fee' : '') + '" style="font-family:\'Barlow\',sans-serif; font-weight:500; font-size:0.64rem; letter-spacing:0.1em; color:#f4b87a; background:rgba(196,98,45,0.12); border:1px solid rgba(196,98,45,0.35); border-radius:2px; padding:5px 10px; margin-bottom:2px; display:inline-block;">' + knownBanner + '</div>'
           : '') +
         '<div class="contact-strip">' +
           '<span class="clabel">' + (isOwnerConfirmed ? 'Formation (published sources + owner-confirmed location)'
+            : h.known ? (h.fee ? 'Commercial dig — published sources' : 'Public collecting site — published sources')
             : h.kind === 'crossing' ? '✓ Mapped creek crossing — road, stream & ' + (h.source || 'USGS') + ' geologic maps'
             : h.kind === 'through' ? '✓ Road across mapped formation — ' + (h.source || 'USGS') + ' Geologic Map'
             : h.kind === 'shore' ? '✓ Shoreline near a road — ' + (h.source || 'USGS') + ' geologic map'
@@ -3834,13 +4061,16 @@ function renderHotspots(spots, previous, savedAt) {
         '<div class="waze-box">' +
           '<span class="wlabel">Map Destination / Starting Point</span>' +
           '<input type="text" readonly value="' + (h.waze || h.town || '') + '" onclick="this.select()">' +
-          '<span class="winst">' + (h.waze ? 'GPS point of the spot — tap to select, copy, paste into Waze or Google Maps' : 'Tap to select — long press to copy — paste into Waze search') + '</span>' +
+          '<a class="gmapbtn" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(h.mapQuery || h.waze || h.town || '') + '">🧭 Open in Google Maps — turn-by-turn directions</a>' +
+          '<span class="winst">' + (h.mapQuery ? 'Or copy the place name (tap to select) and paste it into Waze' : h.waze ? 'Or copy the GPS point (tap to select) and paste it into Waze' : 'Or tap to select — long press to copy — paste into Waze search') + '</span>' +
         '</div>' +
         '<div class="why">' + h.why + '</div>' +
         ((h.rules || []).length ? '<div class="accessnote" style="color:var(--cream);">📋 ' + h.rules.map(esc).join(' ') + '</div>' : '') +
-        '<div class="accessnote">⚠ Access not verified. Roadside right-of-way may end at or near the pavement, nearby land is often private, and creek banks and bridges can be steep or unstable. It&rsquo;s up to you to confirm legal access and judge safety.</div>' +
+        (h.known ? '<div class="accessnote">⚠ Hours, fees and collecting rules can change — confirm with the site before you go.</div>' :
+        '<div class="accessnote">⚠ Access not verified. Roadside right-of-way may end at or near the pavement, nearby land is often private, and creek banks and bridges can be steep or unstable. It&rsquo;s up to you to confirm legal access and judge safety.</div>') +
         '<div class="src">' + (isOwnerConfirmed
           ? '▸ Location and directions confirmed on-site by the app\'s owner; age and mineralogy from independently published geology sources'
+          : h.known ? '▸ Known site from published sources' + ((h.sources || []).filter(x => /^https?:/.test(x)).length ? ': ' + h.sources.filter(x => /^https?:/.test(x)).slice(0, 2).map(u => '<a href="' + u + '" target="_blank" rel="noopener" style="color:inherit;">' + esc(u.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</a>').join(', ') : '') + '. Hours, fees and rules can change — check before you go.'
           : h.kind === 'crossing' ? '▸ Crossing computed from the Census road map and ' + (h.drainSource || 'stream map') + '; rock from ' + (h.source || 'USGS') + ' geologic map data.'
           : h.kind === 'through' ? '▸ Rock under the road from ' + (h.source || 'USGS') + ' geologic map data; exposure at the surface not verified.'
           : h.kind === 'shore' ? '▸ Shoreline located from the Census water map; public land from the USGS Protected Areas Database; GPS point is on the road nearest the shore.'
