@@ -309,6 +309,19 @@
     .chips { flex-wrap:nowrap; overflow-x:auto; padding-bottom:6px; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
     .chip { flex:none; white-space:nowrap; }
   }
+
+  /* build 50: nothing stretches across a wide screen */
+  @media screen {
+    #customLoc.notes.armed { display:block; max-width:640px; margin:0 auto; }
+    .hero-in .herohead, .hero-in .herosub { text-align:center; }
+    .optsbox { margin:10px auto 0; max-width:640px; border:none; background:transparent; text-align:center; }
+    .optsbox > summary { display:inline-block; padding:6px 14px; font-size:0.85rem; border:1px solid #6e6054; border-radius:999px; background:#433b35; }
+    .optsbox > summary::after { float:none; margin-left:6px; }
+    .optsbox[open] > summary { border-color:#e8a23a; }
+    .optlist { text-align:left; margin-top:8px; padding:10px 14px; border:1px solid #6e6054; border-radius:10px; background:#433b35; }
+    .scoutbtn { width:210px; padding:30px 12px; font-size:1.9rem; line-height:1.05; }
+    .chiplabel, .chips, .herotips { max-width:720px; margin-left:auto; margin-right:auto; }
+  }
   @media print {
     @page { margin:0.5in; }
     html, body { background:#fff !important; color:#111 !important; }
@@ -387,7 +400,7 @@
     <p class="herosub">Just name a place anywhere in the U.S. and we&rsquo;ll find what&rsquo;s there. Know what you&rsquo;re after? Add it too.</p>
     <textarea class="notes armed" id="customLoc" rows="2" placeholder="Try: what can I find near Quartzsite, AZ?"></textarea>
     <details class="optsbox" id="optsBox">
-      <summary>⚙ Search options <span class="optcount" id="optCount"></span></summary>
+      <summary>⚙ Filters <span class="optcount" id="optCount"></span></summary>
       <div class="optlist" id="optList"></div>
     </details>
     <div class="scanwrap">
@@ -405,7 +418,7 @@
       <button type="button" class="chip" onclick="useExample(this)">shark teeth south of Venice, FL</button>
       <button type="button" class="chip" onclick="useExample(this)">Lake Superior agate near Two Harbors, MN</button>
     </div>
-    <div class="herotips"><b>Tips:</b> searches about 20 miles around your place. Add &ldquo;within 10 miles&rdquo;, &ldquo;on Hwy 101&rdquo; or &ldquo;south of Venice&rdquo; to narrow it. A town, hotel or address works too. Use <b>⚙ Search options</b> (or type &ldquo;freestyle&rdquo;) to skip the well-known sites.</div>
+    <div class="herotips"><b>Tips:</b> searches about 20 miles around your place. Add &ldquo;within 10 miles&rdquo;, &ldquo;on Hwy 101&rdquo; or &ldquo;south of Venice&rdquo; to narrow it. A town, hotel or address works too. Use <b>⚙ Filters</b> (or type &ldquo;freestyle&rdquo;) to skip the well-known sites.</div>
    </div>
   </div>
  </div>
@@ -433,7 +446,7 @@
   <div class="noprint" style="font-family:'Barlow',sans-serif; font-weight:500; font-size:0.66rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
-  <div class="verbadge">▸ v7.0 · build 49 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 50 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -3889,7 +3902,7 @@ async function runScout() {
         if (kn.hiddenPay) setTimeout(() => {
           const rc = document.getElementById('results'), rb = rc.querySelector('.printbar');
           const t = document.createElement('div'); t.className = 'paynote';
-          t.innerHTML = '💲 ' + kn.hiddenPay + ' pay-to-dig site' + (kn.hiddenPay > 1 ? 's are' : ' is') + ' in this area. Open <b>⚙ Search options</b> above the search button and turn on <b>Include pay-to-dig sites</b> to see ' + (kn.hiddenPay > 1 ? 'them' : 'it') + ' next time.';
+          t.innerHTML = '💲 ' + kn.hiddenPay + ' pay-to-dig site' + (kn.hiddenPay > 1 ? 's are' : ' is') + ' in this area. Open <b>⚙ Filters</b> above the search button and turn on <b>Include pay-to-dig sites</b> to see ' + (kn.hiddenPay > 1 ? 'them' : 'it') + ' next time.';
           if (rb && rb.nextSibling) rc.insertBefore(t, rb.nextSibling); else rc.appendChild(t);
         }, 0);
         renderHotspots(shown);
