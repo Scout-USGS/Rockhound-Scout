@@ -250,8 +250,13 @@
     .accessbanner { font-size:0.9rem; border-radius:10px; color:#ffc79a; }
     .src { font-size:0.7rem; color:rgba(160,220,190,0.8); }
     .verbadge { font-size:0.62rem; }
-    .printbtn { border-radius:10px; font-size:0.8rem; }
-    .printhint { font-size:0.78rem; }
+    .resultsbar { flex-direction:row; align-items:flex-end; justify-content:space-between; gap:12px; padding-bottom:8px; border-bottom:2px solid var(--accent); }
+    .resultsbar.prev { border-bottom-color:#8b7d6e; }
+    .reshead { min-width:0; }
+    .restitle { font-family:'Bebas Neue',sans-serif; font-size:1.7rem; line-height:1; letter-spacing:0.05em; color:var(--accent); }
+    .resultsbar.prev .restitle { color:var(--feldspar); }
+    .ressub { font-size:0.82rem; color:var(--feldspar); margin-top:4px; line-height:1.35; }
+    .resultsbar .printbtn { width:auto; flex:none; padding:7px 12px; font-size:0.74rem; font-weight:600; letter-spacing:0.06em; border-radius:8px; border-color:#6e6054; background:#453d37; color:var(--cream); }
     .clubcard { background:#4a423c; border-radius:12px; }
     #ackModal .ackbox { background:#3b3430; border-radius:14px; }
     #ackModal button { border-radius:8px; }
@@ -297,7 +302,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 38 — not the live app. Real scans still use your real scan balance.</div>
+<div style="position:relative;z-index:20;background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 39 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -3669,12 +3674,12 @@ function restoreLastResults() {
     const spots = Array.isArray(saved) ? saved : (saved && saved.spots);
     if (!spots || !spots.length) return;
     printLabel = (saved && saved.label) || 'Saved results';
-    renderHotspots(spots);
     let when = '';
     if (saved && saved.t) {
       const d = new Date(saved.t);
       when = ' — ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
     }
+    renderHotspots(spots, true, when);
     setStatus('LAST SEARCH' + when);
     try {
       const a = JSON.parse(localStorage.getItem('lastAreaDirect') || 'null');
@@ -3706,17 +3711,20 @@ function showAreaSummary(area, place, radius, target, focusLabel, focusNote, sid
     (stateNote ? '<div style="font-size:0.78rem;color:#f4b87a;margin-top:8px;"><b>Collecting rules in this state:</b> ' + esc(stateNote) + '</div>' : '') +
     (generalNote ? '<div style="font-size:0.7rem;color:var(--feldspar);margin-top:6px;"><b>Public land:</b> ' + esc(generalNote) + '</div>' : '');
   const bar = c.querySelector('.printbar');
-  if (bar && bar.nextSibling) c.insertBefore(box, bar.nextSibling); else c.prepend(box);
+  if (bar) c.insertBefore(box, bar); else c.prepend(box);
 }
 
-function renderHotspots(spots) {
+// "previous" = cards brought back from the last search (page reopened);
+// otherwise they are the results of the scan that just finished.
+function renderHotspots(spots, previous, savedAt) {
   const c = document.getElementById('results');
   c.innerHTML = '';
   if (spots && spots.length) {
     const bar = document.createElement('div');
-    bar.className = 'printbar';
-    bar.innerHTML = '<button class="printbtn" onclick="printCards()">🖨 PRINT THESE CARDS / SAVE AS PDF</button>' +
-      '<div class="printhint">' + pdfHint() + '</div>';
+    bar.className = 'printbar resultsbar' + (previous ? ' prev' : '');
+    bar.innerHTML = '<div class="reshead"><div class="restitle">' + (previous ? 'Previous Search Results' : 'Current Search Results') + '</div>' +
+        (printLabel || savedAt ? '<div class="ressub">' + esc((printLabel || '').replace(/^Custom search: /, '')) + (savedAt ? esc(savedAt) : '') + '</div>' : '') + '</div>' +
+      '<button class="printbtn" onclick="printCards()" title="Print these cards or save them as a PDF">🖨 Print / PDF</button>';
     c.appendChild(bar);
   }
   if (spots && spots.length) {
