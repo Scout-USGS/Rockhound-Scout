@@ -6,7 +6,7 @@
 <title>Rockhound Scout — TEST</title>
 <meta name="robots" content="noindex, nofollow">
   <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1a1612">
+<meta name="theme-color" content="#2f2925">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Rockhound Scout">
@@ -169,6 +169,100 @@
     .hname { font-size:1.1rem; }
     .field p, .contact-strip .cval, .dir-strip .dirval { font-size:0.92rem; }
   }
+
+  /* ===== Warm Slate look (build 37) — screen only; print styles untouched ===== */
+  @media screen {
+    :root { --stone:#3b3430; --granite:#4a423c; --quartz:#f4e7cc; --copper:#e9773a; --feldspar:#cbbca6; --cream:#f5ecdc; --glow:#7fd3bf; --accent:#f08a4b; }
+    body { background:#2a2420; }
+    body::before { background-image:linear-gradient(rgba(20,16,13,0.45),rgba(20,16,13,0.45)), url('llanite-tile.jpg'); background-size:cover; background-position:center; }
+    .header, .content { width:calc(100% - 20px); max-width:680px; margin-left:auto; margin-right:auto; }
+    .header { margin-top:12px; padding:12px 16px; background:#2f2925; border:1px solid rgba(240,138,75,0.35); border-bottom:3px solid var(--accent); border-radius:18px 18px 0 0; }
+    .content { margin-bottom:24px; padding:16px; gap:14px; background:var(--stone); border:1px solid rgba(240,138,75,0.35); border-top:none; border-radius:0 0 18px 18px; box-shadow:0 14px 50px rgba(0,0,0,0.6); }
+    .logo { width:44px; height:44px; border-radius:9px; }
+    .title h1 { font-size:1.9rem; letter-spacing:0.05em; color:var(--quartz); }
+    .title .sub { font-size:0.8rem; font-weight:600; letter-spacing:0.02em; color:#e8a26b; margin-top:3px; }
+    .status { background:#453d37; border-color:#5c5149; color:var(--feldspar); border-radius:999px; font-size:0.7rem; padding:4px 10px; }
+    .usgs-badge { background:#453d37; border:1px solid #5c5149; border-radius:12px; padding:12px 14px; color:var(--cream); font-size:0.9rem; letter-spacing:0; }
+    .usgs-badge .ihead { color:var(--accent); font-size:1.3rem; border-bottom-color:#5c5149; }
+    .usgs-badge .ilist li::before { background:var(--accent); }
+    .slabel { font-size:0.72rem; font-weight:700; letter-spacing:0.16em; color:var(--accent); }
+    .acct { background:#453d37; border:1px solid #5c5149; border-radius:12px; padding:12px 14px; }
+    .acctinfo { font-size:0.85rem; line-height:1.7; }
+    .acctinfo b { color:var(--glow); font-weight:700; }
+    .acctmsg { font-size:0.8rem; }
+    .acct .notes { font-size:0.95rem; color:var(--cream); background:#3a332e; border:1px solid #6b5d50; border-radius:8px; padding:9px 11px; }
+    .acctbtn { border-radius:8px; background:#3d9e8c; color:#1f1a16; font-size:1.1rem; }
+    .installbtn { border-radius:8px; font-size:0.75rem; }
+    .installnote { font-size:0.8rem; }
+    .notes::placeholder { color:rgba(203,188,166,0.55); }
+
+    /* the hero: Custom box */
+    #customLocWrap { border-radius:18px; padding:3px; background:linear-gradient(120deg,#c4622d,#e8a23a,#3d9e8c,#c4622d); background-size:300% 300%; animation:heroShimmer 6s ease infinite; box-shadow:0 6px 22px rgba(240,138,75,0.3); }
+    @keyframes heroShimmer { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+    .hero-in { background:#4a423c; border-radius:15px; padding:16px; }
+    .herohead { font-family:'Bebas Neue',sans-serif; font-weight:400; font-size:1.75rem; line-height:1; letter-spacing:0.05em; color:var(--accent); }
+    .herosub { font-size:0.92rem; color:var(--feldspar); margin:6px 0 12px; line-height:1.45; }
+    #customLoc.notes.armed { min-height:96px; resize:vertical; font-size:1.08rem; line-height:1.45; font-weight:500; color:var(--cream); background:#3a332e; border:2px solid #6b5d50; border-radius:10px; padding:12px; box-shadow:none; }
+    #customLoc.notes.armed:focus { border-color:var(--accent); box-shadow:0 0 0 4px rgba(240,138,75,0.25); }
+    .chiplabel { font-size:0.74rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--feldspar); margin-top:12px; }
+    .chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:6px; }
+    .chip { font-family:'Barlow',sans-serif; font-size:0.84rem; font-weight:600; text-align:left; padding:6px 12px; border-radius:999px; background:#574c44; color:#f6d9b5; border:1px solid #6e6054; cursor:pointer; }
+    .chip:hover { border-color:var(--accent); }
+    .herotips { font-size:0.85rem; color:var(--feldspar); line-height:1.5; margin-top:12px; }
+    .herotips b { color:var(--cream); }
+    .scoutbtn { margin-top:14px; border-radius:12px; padding:14px; font-size:1.7rem; letter-spacing:0.12em; color:#fff; background:linear-gradient(135deg,#d26a2f,#a6431a); box-shadow:0 5px 0 #7c3010; }
+    .scoutbtn:active:not(:disabled) { transform:translateY(3px); box-shadow:0 2px 0 #7c3010; }
+    .scoutbtn:disabled { box-shadow:none; background:#574c44; color:var(--feldspar); }
+
+    /* loading / errors */
+    .lmsg { font-size:0.85rem; color:var(--glow); }
+    .lprog { font-size:0.82rem; color:var(--feldspar); }
+    .errbox { font-size:0.88rem; border-radius:10px; color:#ffb79a; background:rgba(224,92,42,0.15); }
+
+    /* result cards */
+    .results { gap:16px; }
+    .hcard { background:#4a423c; border:1px solid #5c5149; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,0.25); }
+    .htop { background:#433b35; border-bottom:1px solid #5c5149; padding:10px 14px; align-items:center; }
+    .hname { font-family:'Bebas Neue',sans-serif; font-weight:400; font-size:1.35rem; letter-spacing:0.04em; color:var(--quartz); }
+    .score-hot, .score-warm, .score-cool { font-size:0.72rem; font-weight:700; letter-spacing:0.05em; border-radius:999px; padding:4px 10px; }
+    .score-hot { background:#c4622d; color:#fff; border-color:#c4622d; }
+    .hbody { padding:12px 14px; gap:10px; }
+    .field label, .contact-strip .clabel, .drain-strip .dlabel, .dir-strip .dirlabel, .waze-box .wlabel { font-size:0.68rem; font-weight:700; letter-spacing:0.14em; }
+    .field label, .dir-strip .dirlabel { color:var(--accent); }
+    .field p, .contact-strip .cval, .dir-strip .dirval { font-size:0.92rem; line-height:1.55; }
+    .contact-strip, .drain-strip, .dir-strip, .waze-box { border-radius:8px; padding:9px 11px; }
+    .contact-strip { background:#3f4a40; }
+    .drain-strip { background:#3c4a50; border-left-color:#7cc8de; }
+    .drain-strip .dlabel { color:#7cc8de; }
+    .drain-strip .dval { font-size:0.88rem; color:#a9e0ef; }
+    .dir-strip { background:#4f3f35; }
+    .waze-box { background:#3f4a40; }
+    .waze-box input { font-size:0.9rem; background:#2f2925; border-radius:6px; }
+    .waze-box .winst { font-size:0.76rem; }
+    .mtag { font-size:0.8rem; font-weight:600; padding:3px 9px; border-radius:6px; background:#574c44; color:#f6d9b5; border-color:#6e6054; }
+    .why { font-size:0.8rem; color:var(--feldspar); border-top-color:#5c5149; }
+    .accessnote { font-size:0.8rem; border-radius:8px; color:#ffc79a; }
+    .accessbanner { font-size:0.9rem; border-radius:10px; color:#ffc79a; }
+    .src { font-size:0.7rem; color:rgba(160,220,190,0.8); }
+    .verbadge { font-size:0.62rem; }
+    .printbtn { border-radius:10px; font-size:0.8rem; }
+    .printhint { font-size:0.78rem; }
+    .clubcard { background:#4a423c; border-radius:12px; }
+    #ackModal .ackbox { background:#3b3430; border-radius:14px; }
+    #ackModal button { border-radius:8px; }
+  }
+  @media screen and (max-width:520px) {
+    .title h1 { font-size:1.55rem; }
+    .title .sub { font-size:0.74rem; }
+    .acctrow { flex-wrap:wrap; }
+    .acctrow input { flex:1 1 100%; min-width:0; }
+    .acctbtn { flex:1 1 100%; font-size:1rem; padding:9px 12px; }
+    .herohead { font-size:1.6rem; }
+  }
+  @media screen and (min-width:900px) and (min-height:600px) {
+    .header, .content { max-width:1100px; }
+    .content { padding:18px 28px; }
+  }
   @media print {
     @page { margin:0.5in; }
     html, body { background:#fff !important; color:#111 !important; }
@@ -198,12 +292,12 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 36 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 37 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
     <h1>Rockhound Scout</h1>
-    <div class="sub">▸ DIRECT USGS GEOLOGIC DATA — TEST</div>
+    <div class="sub">Find your Personal Rockhounding Hotspot Now!</div>
   </div>
   <div class="status"><span class="dot"></span><span id="statusTxt">READY</span></div>
 </header>
@@ -213,7 +307,7 @@
     <div class="ihead">Instructions</div>
     <ul class="ilist">
       <li>Enter your email below to sign in.</li>
-      <li>Describe what you're hunting and where &mdash; any town, landmark or address in the U.S.</li>
+      <li>Name a place anywhere in the U.S. &mdash; add what you&rsquo;re hunting only if you know.</li>
       <li>Then press &ldquo;Find My Hotspots&rdquo;. Results usually take 1&ndash;2 minutes to compile.</li>
     </ul>
   </div>
@@ -241,11 +335,25 @@
     </div>
   </div>
   <div id="customLocWrap">
-    <div class="slabel">▸ Describe your area</div>
-    <input type="text" class="notes armed" id="customLoc" placeholder='e.g. "petrified wood near Bryan, TX" or "agate near Quartzsite, AZ" — a town, hotel or address works too; searches ~20 miles around it unless you say otherwise (e.g. "within 10 miles"); add "on FM 306" to stay on one road or "south of La Grange" for one side of town'>
+   <div class="hero-in">
+    <h2 class="herohead">Where do you want to hunt?</h2>
+    <p class="herosub">Just name a place anywhere in the U.S. and we&rsquo;ll find what&rsquo;s there. Know what you&rsquo;re after? Add it too.</p>
+    <textarea class="notes armed" id="customLoc" rows="3" placeholder="Try: what can I find near Llano, TX?"></textarea>
+    <div class="chiplabel">Tap an example to try it</div>
+    <div class="chips">
+      <button type="button" class="chip" onclick="useExample(this)">What can I find near Llano, TX?</button>
+      <button type="button" class="chip" onclick="useExample(this)">spots within 15 miles of Canyon Lake</button>
+      <button type="button" class="chip" onclick="useExample(this)">creek crossings near Fredericksburg</button>
+      <button type="button" class="chip" onclick="useExample(this)">anything on Hwy 281 south of Three Rivers</button>
+      <button type="button" class="chip" onclick="useExample(this)">petrified wood near Bryan, TX</button>
+      <button type="button" class="chip" onclick="useExample(this)">fossils on FM 306 near Canyon Lake</button>
+      <button type="button" class="chip" onclick="useExample(this)">agate near Alpine, TX</button>
+      <button type="button" class="chip" onclick="useExample(this)">geodes near Keokuk, IA</button>
+    </div>
+    <div class="herotips"><b>Tips:</b> searches about 20 miles around your place. Add &ldquo;within 10 miles&rdquo;, &ldquo;on FM 306&rdquo; or &ldquo;south of La Grange&rdquo; to narrow it. A town, hotel or address works too.</div>
+    <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
+   </div>
   </div>
-  <hr>
-  <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
  </div>
   <div class="loading" id="loading">
     <div class="drill">⛏</div>
@@ -995,6 +1103,7 @@ function pick(btn) {
   document.getElementById('customLocWrap').style.display = (region === 'custom') ? 'block' : 'none';
   document.getElementById('customLoc').classList.toggle('armed', region === 'custom');
 }
+function useExample(b) { const t = document.getElementById('customLoc'); t.value = b.textContent; t.focus(); }
 function setStatus(t) { document.getElementById('statusTxt').textContent = t; }
 function showLoading(msg, prog) {
   document.getElementById('loading').classList.add('show');
@@ -1011,7 +1120,31 @@ function setProgress(p) { document.getElementById('lprog').textContent = p; }
 
 // Every outside fetch gets a hard timeout so a slow/unresponsive free public
 // server fails fast with an error instead of hanging the page forever.
+// Map lookups go through our own map cache first (api.rockhoundscout.com
+// keeps a 30-day copy of each answer, so repeat scans of an area don't hit
+// the government map servers again). If the cache can't answer, the app
+// asks the map server directly, same as before.
+const MAP_CACHE_URL = 'https://api.rockhoundscout.com/map?u=';
+const MAP_CACHE_HOSTS = ['macrostrat.org', 'tigerweb.geo.census.gov', 'hydro.nationalmap.gov', 'services.arcgis.com'];
+let mapCacheStats = { saved: 0, fresh: 0, direct: 0 };
 async function fetchWithTimeout(url, ms) {
+  let host = '';
+  try { host = new URL(url, location.href).hostname; } catch (e) { /* relative or odd address */ }
+  if (MAP_CACHE_HOSTS.includes(host)) {
+    try {
+      const r = await plainFetch(MAP_CACHE_URL + encodeURIComponent(url), ms);
+      if (r.ok) {
+        if (r.headers.get('X-Map-Cache') === 'HIT') mapCacheStats.saved++; else mapCacheStats.fresh++;
+        return r;
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw e; // map server is slow either way - don't wait twice
+    }
+    mapCacheStats.direct++;
+  }
+  return plainFetch(url, ms);
+}
+async function plainFetch(url, ms) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
@@ -3267,7 +3400,8 @@ function showTestLog() {
     const box = document.getElementById('errbox');
     box.parentNode.insertBefore(el, box.nextSibling);
     const fullText = () => 'Rockhound Scout TEST diagnostics\n' + document.title + ' | ' + new Date().toLocaleString() +
-      '\nSearch: ' + ((document.getElementById('customLoc') || {}).value || '') + '\n\n' + scanLog.join('\n') + '\n';
+      '\nSearch: ' + ((document.getElementById('customLoc') || {}).value || '') + '\n\n' + scanLog.join('\n') +
+      '\nmap cache: ' + mapCacheStats.saved + ' from saved copy, ' + mapCacheStats.fresh + ' fetched & saved, ' + mapCacheStats.direct + ' asked map server directly\n';
     el.querySelector('#tlSave').onclick = () => {
       const q = ((document.getElementById('customLoc') || {}).value || 'scan').replace(/[^a-z0-9]+/gi, '_').slice(0, 40);
       const a = document.createElement('a');
@@ -3281,7 +3415,7 @@ function showTestLog() {
       setTimeout(() => { b.textContent = 'Copy'; }, 2000);
     };
   }
-  el.querySelector('#tlText').textContent = scanLog.join('\n');
+  el.querySelector('#tlText').textContent = scanLog.join('\n') + '\nmap cache: ' + mapCacheStats.saved + ' from saved copy, ' + mapCacheStats.fresh + ' fetched & saved, ' + mapCacheStats.direct + ' asked map server directly';
 }
 // TEST: how long each stage of the scan took, shown if a scan times out.
 let scanLog = [];
@@ -3294,6 +3428,7 @@ async function runScout() {
   const scan = { cancelled: false, deadline: Date.now() + 150000 };
   currentScan = scan;
   scanLog = [];
+  mapCacheStats = { saved: 0, fresh: 0, direct: 0 };
   const bail = () => { if (scan.cancelled) throw new Error('cancelled'); };
   btn.disabled = true;
   setStatus('SCANNING...');
