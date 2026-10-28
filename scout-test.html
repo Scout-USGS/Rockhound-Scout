@@ -305,7 +305,7 @@
 </style>
 </head>
 <body>
-<div style="position:relative;z-index:20;background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 40 — not the live app. Real scans still use your real scan balance.</div>
+<div style="position:relative;z-index:20;background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 41 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -2332,7 +2332,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
   cells.forEach(c => { areaUnits[c.unit.name] = c.unit; });
   logStage('area survey: ' + grid.done + ' of ' + gridPts.length + ' points every ' + gridSpacing.toFixed(1) + ' mi, ' + grid.failed + ' failed, ' + Object.keys(areaUnits).length + ' rock units', t0);
   t0 = Date.now();
-  setProgress(target ? 'Matching the rocks to ' + target + '...' : 'Rating the rocks — prioritizing desirable minerals and fossils...');
+  setProgress(target ? 'Matching the rocks to ' + target + '...' : 'Prioritizing Rocks/Minerals/Fossils...');
   const ratings = {}, finds = {}, rateNotes = [], ruleNotes = {};
   let ratingFailed = false;
   if (cells.length) {
