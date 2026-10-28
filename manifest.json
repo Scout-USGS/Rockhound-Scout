@@ -2,13 +2,13 @@
   "id": "./scout-usgs-3.html",
   "name": "Rockhound Scout",
   "short_name": "Rockhound Scout",
-  "description": "Find rockhounding hotspots along Texas highways using published geologic map data.",
+  "description": "Find rockhounding hotspots anywhere in the U.S. using published geologic, road and stream maps.",
   "start_url": "./scout-v2.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1a1612",
-  "theme_color": "#1a1612",
+  "background_color": "#3b3430",
+  "theme_color": "#2f2925",
   "icons": [
     {
       "src": "icon-192.png",
