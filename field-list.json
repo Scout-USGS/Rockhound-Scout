@@ -1,5 +1,5 @@
 {
-"version": 4,
+"version": 5,
 "about": "Rockhound Scout field list: which FORMATIONS produce which materials, by state. Not a list of spots. 'high' = documented producer; 'possible' = may contain it. Rows marked authoritative (JT's field knowledge) override the AI; researched rows can only raise the AI's rating. Patterns are case-insensitive text patterns; | means 'or'. Optional 'areas' = [[lat, lon, miles], ...] limits a row to searches near those places. 'review' marks rows that need a stronger source before launch.",
 "generalNote": "Public land rules (most BLM land): reasonable personal amounts of rocks, minerals and common invertebrate or plant fossils; petrified wood up to 25 lb plus 1 piece per day and 250 lb per year; no vertebrate fossils (bones, teeth, tracks); no collecting in national parks, developed recreation sites, or on mining claims without the claimholder's permission.",
 "stateNotes": {
@@ -20,7 +20,13 @@
 "Florida": "Fossil shark and ray teeth, plants and invertebrates: no permit needed. Other vertebrate fossils on state land or in state waters need a Florida Fossil Permit ($5/year). No collecting in state parks, wildlife refuges, national parks or national forests.",
 "Alabama": "Get permission on private land (posting isn't required for trespass to apply). National forests allow casual collecting of rocks and common invertebrate fossils; no vertebrate fossils without a permit.",
 "Mississippi": "No collecting in Mississippi state parks. National forests: 25 lb per day plus one piece, 250 lb per year; vertebrate fossils need a permit.",
-"West Virginia": "Collecting is generally not permitted in state parks or the New River Gorge National Park; don't remove rock from Seneca Rocks."
+"West Virginia": "Collecting is generally not permitted in state parks or the New River Gorge National Park; don't remove rock from Seneca Rocks.",
+"Pennsylvania": "Most collecting sites are road cuts or private land — get permission. The St. Clair fern beds are closed to the public.",
+"Maryland": "Calvert Cliffs State Park: beach collecting only; it's illegal to collect beneath the cliffs.",
+"Connecticut": "Connecticut state parks and forests prohibit removing rocks, minerals or fossils without a DEEP permit.",
+"Massachusetts": "No collecting at Cape Cod National Seashore. Quarries are private. Leave dinosaur tracks in place.",
+"Vermont": "No collecting in Vermont State Parks or state Natural Areas; other state land needs permission. Sluicing for gold needs a state permit.",
+"New Hampshire": "White Mountain National Forest mineral sites need a free one-day collecting permit."
 },
 "rows": [
 {
@@ -1157,6 +1163,305 @@
 "https://rockhounding.org/rockhounding-articles/gem-hunting-in-west-virginia"
 ],
 "review": "unit names are mine except Greenbrier"
+},
+{
+"state": "Pennsylvania",
+"label": "Devonian fossils (brachiopods, corals, trilobites)",
+"target": "fossil|trilobite|brachiopod|bryozoan|crinoid|coral|horn coral|cephalopod|nautiloid|clam|snail|gastropod",
+"high": "mahantango",
+"possible": "marcellus|hamilton|onondaga|selinsgrove|needmore|tully|harrell|brallier",
+"note": "Central Pennsylvania road cuts and borrow pits. Swatara State Park's Suedberg site and the Montour Preserve fossil pit are known public spots — check current rules.",
+"sources": [
+"https://www.fossilguy.com/sites/mahantango/index.htm"
+],
+"review": "'possible' units are mine"
+},
+{
+"state": "Pennsylvania",
+"label": "Pennsylvanian fern and plant fossils",
+"target": "fossil|fern|plant|leaf|leaves|lepidodendron|calamites",
+"high": "llewellyn",
+"possible": "pottsville|allegheny|conemaugh|monongahela",
+"note": "Anthracite region (Schuylkill County). The famous St. Clair fern beds are fenced and closed to the public — some clubs get permission.",
+"sources": [
+"https://www.tgms.org/news-archive/2022/9/29/world-famous-st-clair-fern-fossils"
+],
+"review": "'possible' units are mine"
+},
+{
+"state": "New Jersey",
+"label": "Cretaceous shark teeth, belemnites and oysters (Big Brook)",
+"target": "shark|teeth|tooth|megalodon|meg\\b|fossil|belemnite|oyster|exogyra",
+"possible": "navesink|mount laurel|wenonah|marshalltown|red bank|hornerstown",
+"areas": [
+[
+40.32,
+-74.22,
+25
+]
+],
+"note": "Big Brook (Colts Neck/Marlboro): township rules posted at the 88 Hillsdale Road lot — five fossils per person per day, shovel blade up to 6 inches, groups of 15+ need a permit.",
+"sources": [
+"https://njmonthly.com/articles/jersey-living/sifting-through-the-past-nj-fossils/",
+"https://www.usgs.gov/media/images/nyc-region-base-late-cretaceous-navesink-formation"
+],
+"review": "unit names are mine (standard Monmouth County units); source names none"
+},
+{
+"state": "New Jersey",
+"label": "fluorescent minerals (Franklin–Sterling Hill)",
+"target": "fluorescent|willemite|franklinite|zincite|calcite|crystals?",
+"high": "franklin marble|franklin",
+"possible": "marble",
+"areas": [
+[
+41.12,
+-74.58,
+8
+]
+],
+"note": "Collect at the Buckwheat Dump behind the Franklin Mineral Museum for a small admission and per-pound fee.",
+"sources": [
+"https://www.njskylands.com/attractions-franklin-mineral-museum"
+]
+},
+{
+"state": "Delaware",
+"label": "belemnites (state fossil) and Cretaceous fossils",
+"target": "belemnite|fossil|oyster|exogyra|shark|teeth|tooth",
+"high": "mount laurel",
+"possible": "merchantville|englishtown|marshalltown|navesink",
+"areas": [
+[
+39.55,
+-75.65,
+12
+]
+],
+"note": "Dredge spoil piles on the north side of the Chesapeake & Delaware Canal, west of St. Georges.",
+"sources": [
+"https://www.dgs.udel.edu/delaware-geology/delaware-state-fossil-belemnite"
+],
+"review": "'possible' units are mine"
+},
+{
+"state": "Maryland",
+"label": "Miocene shark teeth and shells (Calvert Cliffs)",
+"target": "shark|teeth|tooth|megalodon|meg\\b|fossil|shell|scallop|ecphora|whale",
+"possible": "calvert|choptank|st\\. marys|chesapeake group",
+"areas": [
+[
+38.5,
+-76.45,
+30
+]
+],
+"note": "Calvert Cliffs State Park: collect on the open beach at the end of the red trail (about 1.8 miles); it's illegal to collect beneath the cliffs, and climbing them is prohibited.",
+"sources": [
+"https://dnr.maryland.gov/publiclands/Pages/southern/CalvertCliffs/Fossil-Hunting.aspx",
+"https://mgs.md.gov/geology/fossils/fossil_collecting.html"
+],
+"review": "unit names from general knowledge (state page says Miocene only)"
+},
+{
+"state": "Connecticut",
+"label": "almandine garnet (state mineral)",
+"target": "garnet|almandine|staurolite|kyanite",
+"possible": "schist|gneiss|alluvium",
+"areas": [
+[
+41.6,
+-73.3,
+25
+]
+],
+"note": "Western highlands schist around Roxbury and Housatonic River gravels. CT state parks and forests prohibit removing rocks and minerals without a DEEP permit.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-connecticut"
+]
+},
+{
+"state": "Connecticut",
+"label": "pegmatite minerals (black tourmaline, beryl)",
+"target": "tourmaline|beryl|aquamarine|apatite|garnet|mica|feldspar|smoky quartz|quartz crystals?|pegmatite|crystals?",
+"high": "pegmatite",
+"possible": "granite|gneiss",
+"areas": [
+[
+41.55,
+-72.55,
+20
+]
+],
+"note": "Portland and Haddam pegmatites (Middlesex County) — old quarries are mostly private.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-connecticut"
+]
+},
+{
+"state": "Connecticut",
+"label": "traprock minerals (prehnite, zeolites)",
+"target": "prehnite|zeolite|datolite|calcite|crystals?",
+"possible": "talcott|holyoke|hampden|basalt",
+"areas": [
+[
+41.5,
+-72.85,
+25
+]
+],
+"note": "Meriden area basalt quarries (private). No collecting at Sleeping Giant State Park.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-connecticut"
+]
+},
+{
+"state": "Rhode Island",
+"label": "cumberlandite (state rock)",
+"target": "cumberlandite|magnetite|iron",
+"high": "cumberlandite",
+"possible": "till|glacial|outwash|drift",
+"areas": [
+[
+41.95,
+-71.45,
+35
+]
+],
+"note": "Source is Iron Mine Hill in Cumberland; pieces are spread through glacial deposits of the Narragansett Bay area.",
+"sources": [
+"https://en.wikipedia.org/wiki/Cumberlandite"
+]
+},
+{
+"state": "Massachusetts",
+"label": "traprock minerals (prehnite, babingtonite, datolite)",
+"target": "prehnite|babingtonite|datolite|zeolite|calcite|crystals?",
+"possible": "holyoke|hampden|talcott|basalt",
+"areas": [
+[
+42.25,
+-72.65,
+30
+]
+],
+"note": "Connecticut Valley basalt quarries (e.g. Lane Quarry, Westfield) are private — permission required.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-massachusetts"
+]
+},
+{
+"state": "Massachusetts",
+"label": "dinosaur tracks (look, don't take)",
+"target": "dinosaur|track",
+"high": "turners falls",
+"possible": "portland|longmeadow|east berlin",
+"note": "Removing tracks from known protected sites is illegal; leave loose track slabs in place.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-massachusetts"
+]
+},
+{
+"state": "Vermont",
+"label": "garnet, kyanite and staurolite",
+"target": "garnet|kyanite|staurolite|crystals?",
+"possible": "schist",
+"areas": [
+[
+43.3,
+-72.6,
+40
+]
+],
+"note": "Gassetts road cut on Route 103 (Williams River) and Windham County brooks. Landowner permission required; no collecting in Vermont State Parks or Natural Areas.",
+"sources": [
+"https://www.uvm.edu/d10-files/documents/2024-11/RockhoundingInVTweb.pdf"
+]
+},
+{
+"state": "Vermont",
+"label": "placer gold",
+"target": "gold",
+"possible": "alluvium|gravel",
+"areas": [
+[
+43.55,
+-72.75,
+15
+],
+[
+44.15,
+-72.8,
+15
+],
+[
+43.0,
+-72.7,
+12
+],
+[
+44.65,
+-72.6,
+12
+],
+[
+44.9,
+-72.4,
+12
+]
+],
+"note": "Broad Brook (Plymouth), Mad River, Rock River, Lamoille and Missisquoi rivers. Hand panning differs from sluicing — sluice boxes need a state permit.",
+"sources": [
+"https://www.uvm.edu/d10-files/documents/2024-11/RockhoundingInVTweb.pdf",
+"https://www.vermontpublic.org/vpr-news/2016-06-27/vermonts-gold-sluice-season-is-underway-but-permits-are-required"
+]
+},
+{
+"state": "Vermont",
+"label": "Ordovician fossils (trilobites, brachiopods, gastropods)",
+"target": "fossil|trilobite|brachiopod|bryozoan|crinoid|coral|horn coral|cephalopod|nautiloid|clam|snail|gastropod",
+"possible": "crown point|chazy|day point|valcour|glens falls|isle la motte|black river|orwell|beekmantown",
+"note": "Lake Champlain shoreline near Chimney Point. The Chazy Reef at Isle La Motte is a protected preserve.",
+"sources": [
+"https://www.uvm.edu/d10-files/documents/2024-11/RockhoundingInVTweb.pdf"
+],
+"review": "unit names other than Crown Point are mine"
+},
+{
+"state": "New Hampshire",
+"label": "smoky quartz, microcline and topaz (Conway granite)",
+"target": "smoky quartz|quartz crystals?|microcline|amazonite|topaz|fluorite|crystals?",
+"high": "conway",
+"possible": "moat|granite|white mountain",
+"areas": [
+[
+44.03,
+-71.2,
+20
+]
+],
+"note": "Moat Mountain Mineral Site (White Mountain National Forest): a free one-day collecting permit from the trailhead is required.",
+"sources": [
+"https://www.fs.usda.gov/r09/whitemountain/recreation/moat-mountain-mineral-site-trailhead"
+]
+},
+{
+"state": "Maine",
+"label": "tourmaline, apatite and pegmatite minerals",
+"target": "tourmaline|beryl|aquamarine|apatite|garnet|mica|feldspar|smoky quartz|quartz crystals?|pegmatite|crystals?",
+"high": "pegmatite",
+"possible": "granite|sebago",
+"areas": [
+[
+44.2,
+-70.5,
+40
+]
+],
+"note": "Mount Apatite Park (Auburn): amateurs may search the old mine tailings for apatite, tourmaline and quartz under the city's posted rules.",
+"sources": [
+"https://auburnmaine.gov/departments/parks/mount_apatite_park.php"
+]
 }
 ]
 }
