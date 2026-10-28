@@ -210,6 +210,8 @@
     .chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:6px; }
     .chip { font-family:'Barlow',sans-serif; font-size:0.84rem; font-weight:600; text-align:left; padding:6px 12px; border-radius:999px; background:#574c44; color:#f6d9b5; border:1px solid #6e6054; cursor:pointer; }
     .chip:hover { border-color:var(--accent); }
+    .swipehint { display:none; letter-spacing:0.06em; text-transform:none; font-weight:600; }
+    @media (max-width:520px) { .swipehint { display:inline; } }
     .herotips { font-size:0.85rem; color:var(--feldspar); line-height:1.5; margin-top:12px; }
     .herotips b { color:var(--cream); }
     .scanwrap { display:flex; flex-direction:column; align-items:center; margin-top:18px; }
@@ -274,6 +276,24 @@
   @media screen and (min-width:900px) and (min-height:600px) {
     .header, .content { max-width:1100px; }
     .content { padding:18px 28px; }
+  }
+  @media screen {
+    body.signedin .usgs-badge { display:none; }
+    #customLoc.notes.armed { min-height:64px; }
+    .hero-in .herosub { margin:4px 0 10px; }
+    .scanwrap { margin-top:12px; margin-bottom:4px; }
+    .scoutbtn { padding:20px 14px; }
+    .chiplabel { margin-top:16px; }
+  }
+  @media screen and (max-width:520px) {
+    .header { margin-top:8px; padding:10px 14px; }
+    .content { padding:12px; gap:12px; }
+    .hero-in { padding:14px; }
+    .herohead { font-size:1.45rem; }
+    .herosub { font-size:0.86rem; }
+    /* examples swipe sideways in one row instead of stacking down the screen */
+    .chips { flex-wrap:nowrap; overflow-x:auto; padding-bottom:6px; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
+    .chip { flex:none; white-space:nowrap; }
   }
   @media print {
     @page { margin:0.5in; }
@@ -351,8 +371,12 @@
    <div class="hero-in">
     <h2 class="herohead">Where do you want to hunt?</h2>
     <p class="herosub">Just name a place anywhere in the U.S. and we&rsquo;ll find what&rsquo;s there. Know what you&rsquo;re after? Add it too.</p>
-    <textarea class="notes armed" id="customLoc" rows="3" placeholder="Try: what can I find near Quartzsite, AZ?"></textarea>
-    <div class="chiplabel">Tap an example to try it</div>
+    <textarea class="notes armed" id="customLoc" rows="2" placeholder="Try: what can I find near Quartzsite, AZ?"></textarea>
+    <div class="scanwrap">
+      <div class="scanflag" aria-hidden="true">▼ Click here to Scan ▼</div>
+      <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
+    </div>
+    <div class="chiplabel">Tap an example to try it<span class="swipehint"> · swipe for more →</span></div>
     <div class="chips">
       <button type="button" class="chip" onclick="useExample(this)">What can I find near Quartzsite, AZ?</button>
       <button type="button" class="chip" onclick="useExample(this)">spots within 15 miles of Mount Ida, AR</button>
@@ -364,10 +388,6 @@
       <button type="button" class="chip" onclick="useExample(this)">Lake Superior agate near Two Harbors, MN</button>
     </div>
     <div class="herotips"><b>Tips:</b> searches about 20 miles around your place. Add &ldquo;within 10 miles&rdquo;, &ldquo;on Hwy 101&rdquo; or &ldquo;west of Delta&rdquo; to narrow it. A town, hotel or address works too.</div>
-    <div class="scanwrap">
-      <div class="scanflag" aria-hidden="true">▼ Click here to Scan ▼</div>
-      <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
-    </div>
    </div>
   </div>
  </div>
@@ -395,7 +415,7 @@
   <div class="noprint" style="font-family:'Barlow',sans-serif; font-weight:500; font-size:0.66rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
-  <div class="verbadge">▸ v7.0 · build 44 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 45 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -442,6 +462,7 @@ function renderAccount() {
   const signedIn = !!currentUser;
   document.getElementById('acctOut').style.display = signedIn ? 'none' : 'block';
   document.getElementById('acctIn').style.display = signedIn ? 'block' : 'none';
+  document.body.classList.toggle('signedin', signedIn);
   if (signedIn) {
     document.getElementById('acctWho').textContent = currentUser.email || 'your account';
     document.getElementById('acctBuy').href = buyUrl();
@@ -3811,7 +3832,7 @@ function renderHotspots(spots, previous, savedAt) {
             : '<span style="font-size:0.8rem;color:var(--feldspar);">Nothing specific documented for this rock</span>') + '</div>' +
         '</div>' +
         '<div class="waze-box">' +
-          '<span class="wlabel">Waze Destination</span>' +
+          '<span class="wlabel">Map Destination / Starting Point</span>' +
           '<input type="text" readonly value="' + (h.waze || h.town || '') + '" onclick="this.select()">' +
           '<span class="winst">' + (h.waze ? 'GPS point of the spot — tap to select, copy, paste into Waze or Google Maps' : 'Tap to select — long press to copy — paste into Waze search') + '</span>' +
         '</div>' +
