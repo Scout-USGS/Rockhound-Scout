@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Rockhound Scout — TEST</title>
-<meta name="robots" content="noindex, nofollow">
+<title>Rockhound Scout</title>
   <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2f2925">
 <meta name="mobile-web-app-capable" content="yes">
@@ -305,7 +304,6 @@
 </style>
 </head>
 <body>
-<div style="position:relative;z-index:20;background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 41 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -397,7 +395,7 @@
   <div class="noprint" style="font-family:'Barlow',sans-serif; font-weight:500; font-size:0.66rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
-  <div class="verbadge">▸ v6.4-direct — verified geologic contacts</div>
+  <div class="verbadge">▸ v7.0 · build 42 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -3403,15 +3401,27 @@ async function scanRoadsForHotspots(roads, defaultTown, wazeTowns, target, scan)
 // that scan cancelled, so its leftover work stops and can't show results,
 // spend the next scan's ticket, or re-enable the button mid-scan.
 let currentScan = null;
-// TEST: show the step-by-step diagnostics under every result or error.
+// Diagnostics are hidden for customers. Open the app with ?diag=1 on the end
+// of the address (e.g. rockhoundscout.com/scout-test.html?diag=1) to see
+// them; ?diag=0 turns them back off. The choice is remembered on that device.
+const DIAG = (() => {
+  try {
+    const q = new URLSearchParams(location.search).get('diag');
+    if (q === '1') localStorage.setItem('scoutDiag', '1');
+    if (q === '0') localStorage.removeItem('scoutDiag');
+    return localStorage.getItem('scoutDiag') === '1';
+  } catch (e) { return false; }
+})();
+document.addEventListener('DOMContentLoaded', () => { const f = document.getElementById('diagFlag'); if (f && DIAG) f.textContent = ' · diagnostics ON'; });
 function showTestLog() {
+  if (!DIAG) return;
   let el = document.getElementById('testLog');
   if (!el) {
     el = document.createElement('div');
     el.id = 'testLog';
     el.style.cssText = 'margin:10px 0;padding:8px 10px;border:1px dashed #b3261e;color:#e8b4a0;font:12px/1.5 monospace;';
     el.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">' +
-      '<b style="flex:1;min-width:140px;">TEST diagnostics</b>' +
+      '<b style="flex:1;min-width:140px;">Diagnostics</b>' +
       '<button type="button" id="tlSave" style="font:12px monospace;padding:4px 8px;cursor:pointer;">Save as text file</button>' +
       '<button type="button" id="tlCopy" style="font:12px monospace;padding:4px 8px;cursor:pointer;">Copy</button></div>' +
       '<details id="tlBox"><summary style="cursor:pointer;">Show / hide details</summary><pre id="tlText" style="white-space:pre-wrap;margin:6px 0 0;font:inherit;"></pre></details>';
@@ -3460,7 +3470,7 @@ async function runScout() {
     scan.cancelled = true;
     hideLoading();
     const ok = await refundScan();
-    showError('This is taking much longer than it should — something likely stalled. Please try again.' + notCharged(ok) + ' [TEST timing — ' + scanLog.join(' | ') + ' | still running at cutoff]');
+    showError('This is taking much longer than it should — something likely stalled. Please try again.' + notCharged(ok) + (DIAG ? ' [timing — ' + scanLog.join(' | ') + ' | still running at cutoff]' : ''));
     setStatus('TIMEOUT');
     document.getElementById('scoutBtn').disabled = false;
   }, 180000);
@@ -3638,7 +3648,7 @@ async function runScout() {
     hideLoading();
     if (hotspots.length === 0) {
       showError((allContacts.length === 0
-        ? 'No formation contacts found along the sampled roads this pass. Try again, or use the original app.'
+        ? 'No formation contacts found along the sampled roads this pass. Try again, or try a different area.'
         : 'Found real formation contacts but the write-up step failed. Try again.') + notCharged(freeScan));
       setStatus(allContacts.length === 0 ? 'NO DATA' : 'ERROR');
     } else {
