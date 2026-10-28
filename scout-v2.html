@@ -210,6 +210,13 @@
     .chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:6px; }
     .chip { font-family:'Barlow',sans-serif; font-size:0.84rem; font-weight:600; text-align:left; padding:6px 12px; border-radius:999px; background:#574c44; color:#f6d9b5; border:1px solid #6e6054; cursor:pointer; }
     .chip:hover { border-color:var(--accent); }
+    .optsbox { margin-top:10px; border:1px solid #6e6054; border-radius:10px; background:#433b35; }
+    .optsbox > summary { cursor:pointer; list-style:none; padding:9px 12px; font-weight:700; font-size:0.92rem; color:var(--cream); }
+    .optsbox > summary::-webkit-details-marker { display:none; }
+    .optsbox > summary::after { content:'▾'; float:right; color:var(--feldspar); }
+    .optsbox[open] > summary::after { content:'▴'; }
+    .optcount { color:#e8a23a; font-weight:700; }
+    .optlist { padding:0 12px 10px; display:flex; flex-direction:column; gap:4px; }
     .paytoggle { display:flex; align-items:center; gap:9px; margin-top:10px; font-size:0.9rem; font-weight:600; color:var(--cream); cursor:pointer; }
     .paytoggle input { width:20px; height:20px; accent-color:#e8a23a; flex:none; }
     .paytoggle small { font-weight:500; color:var(--feldspar); }
@@ -306,7 +313,7 @@
     @page { margin:0.5in; }
     html, body { background:#fff !important; color:#111 !important; }
     body::before { display:none !important; }
-    .paynote, .paytoggle, .header, .usgs-badge, .acct, .noprint, hr, .scoutbtn, .loading, .errbox, .verbadge, .printbar, #clubBox, #customLocWrap, #ackModal, #testLog { display:none !important; }
+    .paynote, .paytoggle, .optsbox, .header, .usgs-badge, .acct, .noprint, hr, .scoutbtn, .loading, .errbox, .verbadge, .printbar, #clubBox, #customLocWrap, #ackModal, #testLog { display:none !important; }
     .content { max-width:none; padding:0; gap:0; display:block !important; }
     .printonly { display:block !important; font-family:Georgia, 'Times New Roman', serif; color:#111; border-bottom:2px solid #c4622d; padding-bottom:8px; margin-bottom:14px; }
     .printonly .ph1 { font-size:20pt; font-weight:bold; letter-spacing:0.04em; }
@@ -379,7 +386,10 @@
     <h2 class="herohead">Where do you want to hunt?</h2>
     <p class="herosub">Just name a place anywhere in the U.S. and we&rsquo;ll find what&rsquo;s there. Know what you&rsquo;re after? Add it too.</p>
     <textarea class="notes armed" id="customLoc" rows="2" placeholder="Try: what can I find near Quartzsite, AZ?"></textarea>
-    <label class="paytoggle"><input type="checkbox" id="payToggle" onchange="setIncludePay(this.checked)"> <span>Include pay-to-dig sites <small>(commercial mines and fee digs)</small></span></label>
+    <details class="optsbox" id="optsBox">
+      <summary>⚙ Search options <span class="optcount" id="optCount"></span></summary>
+      <div class="optlist" id="optList"></div>
+    </details>
     <div class="scanwrap">
       <div class="scanflag" aria-hidden="true">▼ Click here to Scan ▼</div>
       <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
@@ -395,7 +405,7 @@
       <button type="button" class="chip" onclick="useExample(this)">shark teeth south of Venice, FL</button>
       <button type="button" class="chip" onclick="useExample(this)">Lake Superior agate near Two Harbors, MN</button>
     </div>
-    <div class="herotips"><b>Tips:</b> searches about 20 miles around your place. Add &ldquo;within 10 miles&rdquo;, &ldquo;on Hwy 101&rdquo; or &ldquo;south of Venice&rdquo; to narrow it. A town, hotel or address works too.</div>
+    <div class="herotips"><b>Tips:</b> searches about 20 miles around your place. Add &ldquo;within 10 miles&rdquo;, &ldquo;on Hwy 101&rdquo; or &ldquo;south of Venice&rdquo; to narrow it. A town, hotel or address works too. Use <b>⚙ Search options</b> (or type &ldquo;freestyle&rdquo;) to skip the well-known sites.</div>
    </div>
   </div>
  </div>
@@ -423,7 +433,7 @@
   <div class="noprint" style="font-family:'Barlow',sans-serif; font-weight:500; font-size:0.66rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
-  <div class="verbadge">▸ v7.0 · build 47 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 49 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1158,7 +1168,7 @@ async function loadKnownSites() {
   } catch (e) { KNOWN = { sites: KNOWN_SITES_BUILTIN.sites, from: 'built-in v' + KNOWN_SITES_BUILTIN.version + ' (' + errText(e) + ')' }; }
   return KNOWN;
 }
-function includePaySites() { try { return localStorage.getItem('rsIncludePay') === '1'; } catch (e) { return false; } }
+function includePaySites() { return optionOn('pay'); }
 function setIncludePay(on) { try { localStorage.setItem('rsIncludePay', on ? '1' : '0'); } catch (e) {} }
 function knownToCard(k) {
   return {
@@ -1202,7 +1212,29 @@ function pick(btn) {
   document.getElementById('customLocWrap').style.display = (region === 'custom') ? 'block' : 'none';
   document.getElementById('customLoc').classList.toggle('armed', region === 'custom');
 }
-document.addEventListener('DOMContentLoaded', () => { const t = document.getElementById('payToggle'); if (t) t.checked = includePaySites(); });
+// --- Search options dropdown --------------------------------------------
+// Every filter lives in this list. To add one: add an entry here, then read
+// it with optionOn('<id>') where the scan should use it. Each device
+// remembers its own choices.
+const SEARCH_OPTIONS = [
+  { id: 'pay', key: 'rsIncludePay', label: 'Include pay-to-dig sites', hint: 'Commercial mines and fee digs, marked 💲' },
+  { id: 'freestyle', key: 'rsFreestyle', label: 'Freestyle — skip the well-known sites', hint: 'Only the app’s own map finds, for less-visited spots' }
+];
+function optionOn(id) { const o = SEARCH_OPTIONS.find(x => x.id === id); try { return !!o && localStorage.getItem(o.key) === '1'; } catch (e) { return false; } }
+function setOption(id, on) { const o = SEARCH_OPTIONS.find(x => x.id === id); if (!o) return; try { localStorage.setItem(o.key, on ? '1' : '0'); } catch (e) {} showOptionCount(); }
+function showOptionCount() {
+  const n = SEARCH_OPTIONS.filter(o => optionOn(o.id)).length, el = document.getElementById('optCount');
+  if (el) el.textContent = n ? '· ' + n + ' on' : '';
+}
+function buildOptions() {
+  const box = document.getElementById('optList'); if (!box) return;
+  box.innerHTML = SEARCH_OPTIONS.map(o =>
+    '<label class="paytoggle"><input type="checkbox" data-opt="' + o.id + '"' + (optionOn(o.id) ? ' checked' : '') + '> <span>' + o.label + (o.hint ? ' <small>(' + o.hint + ')</small>' : '') + '</span></label>').join('');
+  box.querySelectorAll('input[data-opt]').forEach(i => i.addEventListener('change', () => setOption(i.dataset.opt, i.checked)));
+  showOptionCount();
+  if (SEARCH_OPTIONS.some(o => optionOn(o.id))) document.getElementById('optsBox').open = true;
+}
+document.addEventListener('DOMContentLoaded', buildOptions);
 function useExample(b) { const t = document.getElementById('customLoc'); t.value = b.textContent; t.focus(); }
 function setStatus(t) { document.getElementById('statusTxt').textContent = t; }
 function showLoading(msg, prog) {
@@ -3722,7 +3754,13 @@ async function runScout() {
 
   try {
     if (region === 'custom') {
-      const query = document.getElementById('customLoc').value.trim();
+      let query = document.getElementById('customLoc').value.trim();
+      // "Freestyle sites only": leave the known sites out, so the map scan's
+      // own, less-visited spots get every card. The phrase is removed before
+      // the request is read, so it isn't mistaken for a place or a target.
+      const FREESTYLE_RX = /\b(free[\s-]?style|freestyle)(\s+(sites?|spots?|scan|search))?(\s+only)?\b|\bno known sites\b|\bskip known sites\b/i;
+      const freestyle = FREESTYLE_RX.test(query) || optionOn('freestyle');
+      if (freestyle) query = query.replace(FREESTYLE_RX, ' ').replace(/\s*[,;-]\s*(?=[,;-]|$)/g, '').replace(/\s{2,}/g, ' ').replace(/^[\s,;:.-]+|[\s,;:.-]+$/g, '').trim();
       if (!query) {
         clearTimeout(watchdog);
         showError('Describe your area first — a town, a hotel, or an address.');
@@ -3836,8 +3874,8 @@ async function runScout() {
             : 'Could not build any spots for that area this pass. Try again, or a different area.') + notCharged(ok));
         setStatus(res && res.geoDown ? 'SERVER BUSY' : 'NO DATA');
       } else {
-        printLabel = 'Custom search: ' + (side ? side.word + ' of ' : '') + place + (res.focusLabel ? ', along ' + res.focusLabel : '') + (target ? ' (' + target + ')' : '');
-        const kn = await knownInArea(scanLoc, radius, side, target, kinds, roadWanted, avoid);
+        printLabel = 'Custom search: ' + (side ? side.word + ' of ' : '') + place + (res.focusLabel ? ', along ' + res.focusLabel : '') + (target ? ' (' + target + ')' : '') + (freestyle ? ' — Freestyle' : '');
+        const kn = freestyle ? { cards: [], hiddenPay: 0, from: 'freestyle — known sites left out', farther: [] } : await knownInArea(scanLoc, radius, side, target, kinds, roadWanted, avoid);
         const known = kn.cards;
         scanLog.push('known sites (' + kn.from + '): ' + (known.length ? known.map(k => k.name).join('; ') : 'none in this area') + (kn.hiddenPay ? ' | ' + kn.hiddenPay + ' pay-to-dig site(s) hidden (toggle off)' : ''));
         const shown = known.concat(written);
@@ -3851,7 +3889,7 @@ async function runScout() {
         if (kn.hiddenPay) setTimeout(() => {
           const rc = document.getElementById('results'), rb = rc.querySelector('.printbar');
           const t = document.createElement('div'); t.className = 'paynote';
-          t.innerHTML = '💲 ' + kn.hiddenPay + ' pay-to-dig site' + (kn.hiddenPay > 1 ? 's are' : ' is') + ' in this area. Turn on <b>Include pay-to-dig sites</b> above the search button to see ' + (kn.hiddenPay > 1 ? 'them' : 'it') + ' next time.';
+          t.innerHTML = '💲 ' + kn.hiddenPay + ' pay-to-dig site' + (kn.hiddenPay > 1 ? 's are' : ' is') + ' in this area. Open <b>⚙ Search options</b> above the search button and turn on <b>Include pay-to-dig sites</b> to see ' + (kn.hiddenPay > 1 ? 'them' : 'it') + ' next time.';
           if (rb && rb.nextSibling) rc.insertBefore(t, rb.nextSibling); else rc.appendChild(t);
         }, 0);
         renderHotspots(shown);
