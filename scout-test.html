@@ -198,7 +198,7 @@
 </style>
 </head>
 <body>
-<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 35 — not the live app. Real scans still use your real scan balance.</div>
+<div style="background:#b3261e;color:#fff;text-align:center;font:bold 13px/1.4 sans-serif;padding:6px 8px;">TEST VERSION · BUILD 36 — not the live app. Real scans still use your real scan balance.</div>
 <header class="header">
   <a href="index.html" aria-label="Rockhound Scout home"><img class="logo" src="icon-192.png" alt="Rockhound Scout logo"></a>
   <div class="title">
@@ -1951,15 +1951,16 @@ async function rateFormations(units, target) {
     'Include fossils by type (e.g. oysters, echinoids, ammonites, rudists, shark teeth), agate, jasper, chert/flint, petrified wood, collectible crystals (calcite or quartz crystals in vugs and fractures, celestine, selenite), geodes, concretions, and ore minerals (e.g. hematite, pyrite or marcasite nodules). ' +
     'Do NOT list a mineral just because the rock is made of it (limestone is calcite -- list "calcite crystals" only where crystals are found). Up to 4 items, most notable first; "none" if nothing collectible.\n' +
     'RATING ' + (target ? 'for the target' : 'for collecting in general') + ': h = this formation is documented to produce it; p = this rock type commonly hosts it but it is not documented here; l = not expected. ' +
-    'Rate modern alluvium, terrace deposits, residuum, soil and water "l" unless they are themselves documented sources (creek gravels are handled separately). Never rate h from the general region alone.\n\n' +
-    lines + '\n\nReply with ONLY one line per unit in exactly this format and nothing else:\n1|h|fossils (oysters, echinoids); calcite crystals\n2|l|none';
+    'Rate modern alluvium, terrace deposits, residuum, soil and water "l" unless they are themselves documented sources (creek gravels are handled separately). Never rate h from the general region alone.\n' +
+    'ROCK: the rock itself in plain words a rockhound would recognize, with its main visible minerals -- e.g. "granite (pink feldspar, quartz, black mica)", "basalt (dark lava rock, may have gas holes)", "sandstone (quartz sand grains)", "limestone (gray calcite rock)". Keep it under 60 characters; for water write "water".\n\n' +
+    lines + '\n\nReply with ONLY one line per unit in exactly this format and nothing else:\n1|h|fossils (oysters, echinoids); calcite crystals|limestone (gray calcite rock)\n2|l|none|sandstone (quartz sand grains)';
   const ask = async (p) => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 25000);
     try {
       const resp = await fetch(WORKER_URL + '/', {
         method: 'POST', headers: aiHeaders(), signal: ctrl.signal,
-        body: JSON.stringify({ model: AI_MODEL, max_tokens: 900, messages: [{ role: 'user', content: p }] })
+        body: JSON.stringify({ model: AI_MODEL, max_tokens: 1400, messages: [{ role: 'user', content: p }] })
       });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const data = await resp.json();
@@ -1972,7 +1973,7 @@ async function rateFormations(units, target) {
     const got = {};
     for (const line of String(raw).split('\n')) {
       const m = line.match(/^\s*(\d+)\s*[|.:)]\s*(h|p|l)\w*\s*\|\s*(.*)$/i);
-      if (m) got[+m[1]] = { r: m[2].toLowerCase(), f: m[3].trim() };
+      if (m) { const parts = m[3].split('|'); got[+m[1]] = { r: m[2].toLowerCase(), f: parts[0].trim(), rock: (parts[1] || '').trim() }; }
     }
     return got;
   };
@@ -2007,6 +2008,12 @@ async function rateFormations(units, target) {
         if (i >= 0) { if (f.length > items[i].length) items[i] = f; } // keep the more detailed version
         else if (!items.some(x => f.toLowerCase().includes(x.toLowerCase()))) items.push(f);
       }
+    }
+    // Nothing collectible documented: tell them what the rock itself is,
+    // so "You may find" always answers "what will I see here".
+    if (!items.length) {
+      const rock = (a && a.rock && !/^water$/i.test(a.rock)) ? a.rock.slice(0, 70) : (u.lith ? String(u.lith).split(/[,;]/).slice(0, 3).map(x => x.trim()).filter(Boolean).join(', ') : '');
+      if (rock && !/water/i.test(u.name)) items.push('the rock itself: ' + rock);
     }
     finds[u.name] = items.slice(0, 5);
   });

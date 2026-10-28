@@ -1,5 +1,5 @@
 {
-"version": 5,
+"version": 6,
 "about": "Rockhound Scout field list: which FORMATIONS produce which materials, by state. Not a list of spots. 'high' = documented producer; 'possible' = may contain it. Rows marked authoritative (JT's field knowledge) override the AI; researched rows can only raise the AI's rating. Patterns are case-insensitive text patterns; | means 'or'. Optional 'areas' = [[lat, lon, miles], ...] limits a row to searches near those places. 'review' marks rows that need a stronger source before launch.",
 "generalNote": "Public land rules (most BLM land): reasonable personal amounts of rocks, minerals and common invertebrate or plant fossils; petrified wood up to 25 lb plus 1 piece per day and 250 lb per year; no vertebrate fossils (bones, teeth, tracks); no collecting in national parks, developed recreation sites, or on mining claims without the claimholder's permission.",
 "stateNotes": {
@@ -26,7 +26,9 @@
 "Connecticut": "Connecticut state parks and forests prohibit removing rocks, minerals or fossils without a DEEP permit.",
 "Massachusetts": "No collecting at Cape Cod National Seashore. Quarries are private. Leave dinosaur tracks in place.",
 "Vermont": "No collecting in Vermont State Parks or state Natural Areas; other state land needs permission. Sluicing for gold needs a state permit.",
-"New Hampshire": "White Mountain National Forest mineral sites need a free one-day collecting permit."
+"New Hampshire": "White Mountain National Forest mineral sites need a free one-day collecting permit.",
+"California": "BLM land: 25 lb per day plus one piece, 250 lb per year, hand tools only. No collecting in California state parks (gold panning allowed in some units), Death Valley, Joshua Tree, Pinnacles or any national park or monument. Suction dredging is banned.",
+"New York": "State parks generally prohibit collecting; NYS forests allow personal hand-tool collecting. Adirondack Forest Preserve land is constitutionally protected."
 },
 "rows": [
 {
@@ -1462,6 +1464,209 @@
 "sources": [
 "https://auburnmaine.gov/departments/parks/mount_apatite_park.php"
 ]
+},
+{
+"state": "New York",
+"label": "Devonian fossils (trilobites, brachiopods, crinoids, corals)",
+"target": "fossil|trilobite|brachiopod|bryozoan|crinoid|coral|horn coral|cephalopod|nautiloid|clam|snail|gastropod",
+"high": "hamilton|moscow|windom|ludlowville|skaneateles|marcellus|ithaca",
+"possible": "genesee|sonyea|west falls|tully|onondaga",
+"note": "Finger Lakes and western NY shale belt (Eighteenmile Creek, Penn Yan, Tully, near Canandaigua). Penn Dixie Fossil Park (Hamburg) is a fee site where you keep what you find. No collecting on gorge trails without permission; state parks generally prohibit collecting.",
+"sources": [
+"https://www.museumoftheearth.org/ny-rocks/devonian-geology",
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-new-york"
+],
+"review": "Moscow/Ludlowville/Skaneateles (Hamilton Group members) and 'possible' units are mine"
+},
+{
+"state": "New York",
+"label": "almandine garnet (state gem)",
+"target": "garnet|almandine",
+"possible": "gneiss|amphibolite|manhattan|schist|anorthosite",
+"areas": [
+[
+43.68,
+-74.05,
+25
+],
+[
+40.78,
+-73.96,
+15
+]
+],
+"note": "Gore Mountain's Barton Mine (North Creek) is private — guided seasonal tours only. NYC's Manhattan Schist has small garnets, but collecting in city parks isn't allowed.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-new-york"
+]
+},
+{
+"state": "New York",
+"label": "Adirondack minerals (labradorite, tourmaline, diopside, wollastonite)",
+"target": "labradorite|tourmaline|dravite|diopside|wollastonite|titanite|tremolite|crystals?",
+"possible": "anorthosite|marble|calc-silicate|gneiss",
+"areas": [
+[
+44.1,
+-74.0,
+70
+],
+[
+44.3,
+-75.1,
+30
+]
+],
+"note": "Adirondack Forest Preserve land is constitutionally protected (Article XIV); NYS forests allow hand-tool personal collecting. Pierrepont (St. Lawrence County) mixes private land and state forest.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-new-york"
+]
+},
+{
+"state": "California",
+"label": "pink and green tourmaline (pegmatite)",
+"target": "tourmaline|beryl|aquamarine|apatite|garnet|mica|feldspar|amazonite|microcline|smoky quartz|quartz crystals?|pegmatite|crystals?|kunzite|morganite",
+"high": "pegmatite",
+"possible": "gabbro|tonalite|granite|peninsular",
+"areas": [
+[
+33.37,
+-117.05,
+30
+]
+],
+"note": "Pala and Mesa Grande (San Diego County) — fee digs such as the Himalaya Mine on private land.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-california"
+]
+},
+{
+"state": "California",
+"label": "placer gold (Mother Lode)",
+"target": "gold",
+"possible": "alluvium|gravel|terrace|calaveras|shoo fly|mariposa|quartz vein",
+"areas": [
+[
+38.3,
+-120.6,
+90
+],
+[
+39.3,
+-121.0,
+40
+]
+],
+"note": "Gold panning is allowed in some state park units such as South Yuba River State Park; suction dredging is banned statewide. Many creeks have active mining claims — don't pan on a claim.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-california"
+]
+},
+{
+"state": "California",
+"label": "geodes and agate nodules (Colorado Desert)",
+"target": "geode|thunderegg|agate|chalcedony|nodule",
+"possible": "tuff|rhyolite|volcanic",
+"areas": [
+[
+33.45,
+-114.95,
+40
+]
+],
+"note": "Hauser Geode Beds, Wiley Well and Pebble Terrace (BLM): 25 lb per day plus one piece, 250 lb per year, hand tools only. Stay out of the Chocolate Mountains Aerial Gunnery Range and off posted mining claims.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/where-to-find-geodes-in-california"
+]
+},
+{
+"state": "California",
+"label": "agate and jasper (Mojave)",
+"target": "agate|jasper|chalcedony",
+"possible": "basalt|volcanic|alluvial fan|gravel",
+"areas": [
+[
+34.66,
+-116.3,
+40
+]
+],
+"note": "Lavic Siding area (San Bernardino County), BLM land.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-california"
+]
+},
+{
+"state": "California",
+"label": "obsidian",
+"target": "obsidian|apache tear|volcanic glass",
+"high": "obsidian",
+"possible": "rhyolite",
+"areas": [
+[
+33.17,
+-115.64,
+20
+]
+],
+"note": "Obsidian Butte (Imperial County) — a young rhyolite dome near the Salton Sea.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-california"
+]
+},
+{
+"state": "California",
+"label": "benitoite (state gem)",
+"target": "benitoite|neptunite|joaquinite",
+"possible": "serpentin|franciscan",
+"areas": [
+[
+36.37,
+-120.62,
+15
+]
+],
+"note": "Only known gem locality on Earth (San Benito County); collecting is at a private fee dig.",
+"sources": [
+"https://rockhounding.org/rockhounding-articles/gem-hunting-in-california"
+]
+},
+{
+"state": "Virginia",
+"label": "Amelia pegmatite minerals (amazonite, garnet, beryl)",
+"target": "tourmaline|beryl|aquamarine|apatite|garnet|mica|feldspar|amazonite|microcline|smoky quartz|quartz crystals?|pegmatite|crystals?",
+"high": "pegmatite",
+"possible": "gneiss|granite",
+"areas": [
+[
+37.34,
+-77.98,
+20
+]
+],
+"note": "The Amelia mines are private; the Morefield Mine is no longer producing — check current status before going.",
+"sources": [
+"https://energy.virginia.gov/geology/Amelia.shtml"
+]
+},
+{
+"state": "Virginia",
+"label": "Miocene–Pliocene shells and shark teeth (Coastal Plain)",
+"target": "fossil|shell|scallop|chesapecten|shark|teeth|tooth",
+"possible": "yorktown|eastover|st\\. marys|choptank|calvert|chesapeake group",
+"areas": [
+[
+37.15,
+-76.75,
+50
+]
+],
+"note": "Chippokes and York River State Parks have fossil beaches — each park sets its own rules, so check before collecting.",
+"sources": [
+"https://energy.virginia.gov/geology/images/fossils/VaFossilHunting.pdf",
+"https://depositsmag.com/2021/11/24/miocene-pliocene-shallow-water-marine-fossils-at-chippokes-plantation-state-park-virginia-usa/"
+],
+"review": "unit names from Deposits Magazine/general knowledge; state brochure names only the parks"
 }
 ]
 }
