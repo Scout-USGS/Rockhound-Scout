@@ -131,6 +131,23 @@
   #buyPop .bp-t { font-size:0.82rem; color:#cbbca6; margin:2px 0 10px; line-height:1.35; }
   #buyPop .bp-b { display:block; text-align:center; text-decoration:none; color:#fff; font-weight:700; font-size:0.95rem; padding:9px 10px; border-radius:8px; background:linear-gradient(135deg,var(--copper),#9e3e18); margin-top:7px; }
   #buyPop .bp-b small { display:block; font-size:0.62rem; letter-spacing:0.14em; opacity:0.85; }
+  /* build 64: Search Help button + panel; tips hidden on phones (they're in Search Help) */
+  .optrow { display:flex; align-items:flex-start; gap:8px; max-width:640px; margin:10px auto 0; }
+  .optrow .optsbox { margin:0; flex:1 1 auto; max-width:none; }
+  .helpbtn { flex:none; font-family:'Barlow',sans-serif; font-weight:600; font-size:0.85rem; padding:6px 14px; border:1px solid #6e6054; border-radius:8px; background:#433b35; color:var(--cream); cursor:pointer; }
+  .helpbtn:hover { border-color:#e8a23a; }
+  @media screen and (max-width:520px) { .herotips { display:none; } }
+  #helpModal { position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; padding:14px; }
+  #helpModal.show { display:flex; }
+  #helpModal .helpbox { position:relative; width:100%; max-width:480px; max-height:88vh; overflow-y:auto; background:#3b3430; border:2px solid var(--copper); border-radius:12px; padding:18px 18px 16px; font-family:'Barlow',sans-serif; color:#f5ecdc; }
+  #helpModal h3 { font-family:'Bebas Neue',sans-serif; font-size:1.6rem; letter-spacing:0.06em; color:#f08a4b; margin:0 0 4px; }
+  #helpModal h4 { font-family:'Barlow',sans-serif; font-size:0.78rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#e8a23a; margin:14px 0 4px; }
+  #helpModal p { font-size:0.92rem; line-height:1.45; margin:0; color:#cbbca6; }
+  #helpModal ul { margin:0; padding-left:18px; }
+  #helpModal li { font-size:0.9rem; line-height:1.45; margin:3px 0; }
+  #helpModal i { color:#7fd3bf; font-style:normal; }
+  #helpModal .hx { position:absolute; top:8px; right:10px; background:none; border:0; color:#cbbca6; font-size:1.1rem; cursor:pointer; padding:4px; }
+  #helpModal .hdone { display:block; margin:16px auto 0; font-family:'Barlow',sans-serif; font-weight:700; font-size:0.95rem; padding:9px 26px; border-radius:8px; border:0; color:#fff; background:linear-gradient(135deg,var(--copper),#9e3e18); cursor:pointer; }
   @media (max-width:500px) { #buyPop { width:210px; right:10px; bottom:10px; padding:11px 11px 10px; } #buyPop .bp-h { font-size:1.15rem; } #buyPop .bp-t { display:none; } #buyPop .bp-b { font-size:0.85rem; padding:7px 8px; } }
   #buyPop .bp-b2 { background:#574c44; border:1px solid #6e6054; }
   .buybtn { display:inline-block; margin:10px 8px 0 0; background:linear-gradient(135deg,var(--copper),#9e3e18); color:var(--cream); font-family:'Bebas Neue',sans-serif; letter-spacing:0.12em; font-size:1.1rem; padding:8px 16px; border-radius:3px; text-decoration:none; }
@@ -448,10 +465,13 @@
     <h2 class="herohead">Where do you want to hunt?</h2>
     <p class="herosub">Just name a place anywhere in the U.S. and we&rsquo;ll find what&rsquo;s there. Know what you&rsquo;re after? Add it too.</p>
     <textarea class="notes armed" id="customLoc" rows="2" placeholder="Try: what can I find near Quartzsite, AZ?"></textarea>
+    <div class="optrow">
     <details class="optsbox" id="optsBox">
       <summary>⚙ Filters <span class="optcount" id="optCount"></span></summary>
       <div class="optlist" id="optList"></div>
     </details>
+    <button type="button" class="helpbtn" onclick="openHelp()">? Search Help</button>
+    </div>
     <div class="scanwrap">
       <div class="scanflag" aria-hidden="true">▼ Click here to Scan ▼</div>
       <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
@@ -497,7 +517,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 63 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 64 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1400,6 +1420,9 @@ function buildOptions() {
   if (SEARCH_OPTIONS.some(o => optionOn(o.id))) document.getElementById('optsBox').open = true;
 }
 document.addEventListener('DOMContentLoaded', buildOptions);
+function openHelp() { document.getElementById('helpModal').classList.add('show'); }
+function closeHelp() { document.getElementById('helpModal').classList.remove('show'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHelp(); });
 function useExample(b) { if (window.stopTypingHint) window.stopTypingHint(); const t = document.getElementById('customLoc'); t.value = b.textContent; t.focus(); }
 // Typing hint: the empty search box "types" an example over and over so it's
 // obvious where to type. Stops for good once the box is clicked or an example is
@@ -4345,6 +4368,44 @@ window.addEventListener('load',h);window.addEventListener('resize',h);document.a
   <div class="bp-t">Get more to keep exploring. Scans never expire.</div>
   <a id="buyPop200" class="bp-b" href="#" target="_blank" rel="noopener">200 scans &mdash; $25<small>BEST VALUE</small></a>
   <a id="buyPop25" class="bp-b bp-b2" href="#" target="_blank" rel="noopener">25 scans &mdash; $10</a>
+</div>
+<div id="helpModal" onclick="if(event.target===this)closeHelp()">
+  <div class="helpbox" role="dialog" aria-label="Search help">
+    <button class="hx" onclick="closeHelp()" aria-label="Close">✕</button>
+    <h3>How to search</h3>
+    <p>Just type it the way you&rsquo;d tell a friend. Only a place is required.</p>
+    <h4>Pick a place</h4>
+    <ul>
+      <li>A town: <i>near Mount Ida, AR</i></li>
+      <li>A hotel, landmark or address works too</li>
+      <li>We search about <b>20 miles</b> around it</li>
+    </ul>
+    <h4>Narrow it down</h4>
+    <ul>
+      <li>Distance: <i>within 10 miles of Glendive, MT</i></li>
+      <li>A road: <i>on Hwy 101</i> or <i>on FM 306</i></li>
+      <li>A direction: <i>south of Venice, FL</i></li>
+      <li>Creeks: <i>creek crossings near Keokuk, IA</i></li>
+    </ul>
+    <h4>Say what you&rsquo;re after (optional)</h4>
+    <ul>
+      <li><i>Herkimer diamonds near Herkimer, NY</i></li>
+      <li><i>shark teeth</i>, <i>agate</i>, <i>geodes</i>, <i>petrified wood</i>, <i>fossils</i>&hellip;</li>
+      <li>Not sure? Ask <i>what can I find near&hellip;</i></li>
+    </ul>
+    <h4>⚙ Filters</h4>
+    <ul>
+      <li><b>Include pay-to-dig sites</b> adds fee digs and commercial mines (marked 💲)</li>
+      <li><b>Freestyle</b> skips the well-known sites so you get less-visited spots. You can also just type <i>freestyle</i> in your search.</li>
+    </ul>
+    <h4>Good to know</h4>
+    <ul>
+      <li>A scan takes a minute or two</li>
+      <li>A scan that errors or finds no hotspots isn&rsquo;t counted</li>
+      <li>Tap any example under the button to try it</li>
+    </ul>
+    <button class="hdone" onclick="closeHelp()">Got it</button>
+  </div>
 </div>
 </body>
 </html>
