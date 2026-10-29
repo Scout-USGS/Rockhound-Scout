@@ -133,6 +133,15 @@
   #buyPop .bp-b small { display:block; font-size:0.62rem; letter-spacing:0.14em; opacity:0.85; }
   /* build 65: search box border matches the heading color; a bit more room under the heading */
   @media screen { #customLoc.notes.armed { border-color:var(--accent) !important; } .hero-in .herohead { margin-bottom:12px; } }
+  /* build 66: on phones the search box stretches to fill the first screen, with just the
+     top of the results heading peeking out below so people can tell the page scrolls */
+  @media screen and (max-width:520px) {
+    .hero-in.fill { display:flex; flex-direction:column; justify-content:space-evenly; }
+    .hero-in.fill .herohead { margin-bottom:0; }
+    .hero-in.fill > * { width:100%; }
+    .hero-in.fill .optrow { margin-top:0; }
+    .hero-in.fill #customLoc.notes.armed { min-height:110px; }
+  }
   /* build 64: Search Help button + panel; tips hidden on phones (they're in Search Help) */
   .optrow { display:flex; align-items:flex-start; gap:8px; max-width:640px; margin:10px auto 0; }
   .optrow .optsbox { margin:0; flex:1 1 auto; max-width:none; }
@@ -477,6 +486,7 @@
       <div class="scanflag" aria-hidden="true">▼ Click here to Scan ▼</div>
       <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
     </div>
+    <div class="chipgroup">
     <div class="chiplabel">Tap an example to try it<span class="swipehint"> · swipe for more →</span></div>
     <div class="chips">
       <button type="button" class="chip" onclick="useExample(this)">What can I find near Quartzsite, AZ?</button>
@@ -487,6 +497,7 @@
       <button type="button" class="chip" onclick="useExample(this)">Montana agate on Hwy 16 near Glendive, MT</button>
       <button type="button" class="chip" onclick="useExample(this)">shark teeth south of Venice, FL</button>
       <button type="button" class="chip" onclick="useExample(this)">Lake Superior agate near Two Harbors, MN</button>
+    </div>
     </div>
     <div class="herotips"><b>Tips:</b> searches about 20 miles around your place. Add &ldquo;within 10 miles&rdquo;, &ldquo;on Hwy 101&rdquo; or &ldquo;south of Venice&rdquo; to narrow it. A town, hotel or address works too. Use <b>⚙ Filters</b> (or type &ldquo;freestyle&rdquo;) to skip the well-known sites.</div>
    </div>
@@ -518,7 +529,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 65 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 66 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -588,6 +599,7 @@ function renderAccount() {
     if (signedIn && box.parentNode !== bottom) bottom.appendChild(box);
     else if (!signedIn && box.parentNode === bottom) top.parentNode.insertBefore(box, top);
   }
+  if (window.refitPhoneScreen) setTimeout(window.refitPhoneScreen, 0);
   if (signedIn) {
     document.getElementById('acctWho').textContent = currentUser.email || 'your account';
     document.getElementById('acctBuy').href = buyUrl();
@@ -1421,6 +1433,33 @@ function buildOptions() {
   if (SEARCH_OPTIONS.some(o => optionOn(o.id))) document.getElementById('optsBox').open = true;
 }
 document.addEventListener('DOMContentLoaded', buildOptions);
+// Phones: size the search box so it fills the first screen down to a peek of the
+// next heading. Only re-measured when the width changes (not when the phone's
+// address bar slides in and out while scrolling).
+(function fillPhoneScreen() {
+  const PEEK = 46;  // px of the next section left showing at the bottom
+  let lastW = 0;
+  function fit() {
+    const box = document.querySelector('#customLocWrap .hero-in');
+    if (!box) return;
+    const w = window.innerWidth;
+    if (w === lastW) return;
+    lastW = w;
+    box.style.minHeight = '';
+    box.classList.remove('fill');
+    if (w > 520) return;
+    const top = box.getBoundingClientRect().top + window.scrollY;
+    const want = window.innerHeight - top - PEEK - 3;   // 3 = the glowing border
+    if (want > box.offsetHeight && top < window.innerHeight * 0.45) {
+      box.style.minHeight = want + 'px';
+      box.classList.add('fill');
+    }
+  }
+  window.refitPhoneScreen = () => { lastW = 0; fit(); };
+  window.addEventListener('load', fit);
+  window.addEventListener('resize', fit);
+  document.addEventListener('DOMContentLoaded', fit);
+})();
 function openHelp() { document.getElementById('helpModal').classList.add('show'); }
 function closeHelp() { document.getElementById('helpModal').classList.remove('show'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHelp(); });
