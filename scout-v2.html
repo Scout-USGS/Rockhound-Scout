@@ -351,6 +351,8 @@
   @media screen and (min-width:900px) and (min-height:600px) { .topfold { min-height:0; } }
   /* build 53: "Where do you want to hunt?" as big as the scan button */
   @media screen { .hero-in .herohead { font-size:2rem; letter-spacing:0.08em; } }
+  /* build 59: sign-in box as narrow as the search box */
+  @media screen { #acctOut { max-width:640px; margin:0 auto; } }
   /* build 56: free-scan promo banner */
   @media screen { .promomsg { font-size:0.98rem; line-height:1.45; color:#ffe2a8; background:rgba(244,197,66,0.12); border:1px solid rgba(244,197,66,0.5); border-radius:10px; padding:10px 14px; } .promomsg.good { color:#c8f3df; background:rgba(61,158,140,0.15); border-color:rgba(61,158,140,0.6); } }
   /* build 55: welcome line at the top of the search progress */
@@ -460,7 +462,7 @@
   </div>
  </div>
   <div class="loading" id="loading">
-    <div class="lquote">If you view deep research as impressive rather than annoying &mdash; welcome, you&rsquo;re among friends.</div>
+    <div class="lquote">A true Geolocational IntelliScan takes a minute or two. If you find that impressive rather than annoying &mdash; welcome, you&rsquo;re among friends.</div>
     <div class="drill">⛏</div>
     <div class="lmsg" id="lmsg">READING REAL USGS GEOLOGIC MAP...</div>
     <div class="lprog" id="lprog">Sampling road corridors against verified map data — 20-40 seconds</div>
@@ -485,7 +487,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 58 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 59 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
