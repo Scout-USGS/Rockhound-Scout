@@ -123,6 +123,16 @@
   .acct a { color:var(--glow); }
   .installbtn { display:none; width:100%; margin-top:10px; background:transparent; border:1px solid var(--turquoise); color:var(--glow); font-family:'Barlow',sans-serif; font-weight:500; font-size:0.66rem; letter-spacing:0.12em; padding:9px; border-radius:3px; cursor:pointer; }
   .installnote { display:none; font-family:'Barlow',sans-serif; font-weight:500; font-size:0.62rem; color:var(--quartz); line-height:1.7; margin-top:8px; }
+  #buyPop { display:none; position:fixed; right:16px; bottom:16px; z-index:50; width:250px; max-width:calc(100vw - 32px); background:#3b3430; border:2px solid var(--copper); border-radius:12px; padding:14px 14px 12px; box-shadow:0 8px 28px rgba(0,0,0,0.45); font-family:'Barlow',sans-serif; color:#f5ecdc; }
+  #buyPop.show { display:block; animation:bpIn .35s ease-out; }
+  @keyframes bpIn { from { transform:translateY(20px); opacity:0; } to { transform:none; opacity:1; } }
+  #buyPop .bp-x { position:absolute; top:6px; right:8px; background:none; border:0; color:#cbbca6; font-size:1rem; cursor:pointer; padding:4px; }
+  #buyPop .bp-h { padding-right:20px; font-family:'Bebas Neue',sans-serif; font-size:1.35rem; letter-spacing:0.06em; color:#f08a4b; }
+  #buyPop .bp-t { font-size:0.82rem; color:#cbbca6; margin:2px 0 10px; line-height:1.35; }
+  #buyPop .bp-b { display:block; text-align:center; text-decoration:none; color:#fff; font-weight:700; font-size:0.95rem; padding:9px 10px; border-radius:8px; background:linear-gradient(135deg,var(--copper),#9e3e18); margin-top:7px; }
+  #buyPop .bp-b small { display:block; font-size:0.62rem; letter-spacing:0.14em; opacity:0.85; }
+  @media (max-width:500px) { #buyPop { width:210px; right:10px; bottom:10px; padding:11px 11px 10px; } #buyPop .bp-h { font-size:1.15rem; } #buyPop .bp-t { display:none; } #buyPop .bp-b { font-size:0.85rem; padding:7px 8px; } }
+  #buyPop .bp-b2 { background:#574c44; border:1px solid #6e6054; }
   .buybtn { display:inline-block; margin:10px 8px 0 0; background:linear-gradient(135deg,var(--copper),#9e3e18); color:var(--cream); font-family:'Bebas Neue',sans-serif; letter-spacing:0.12em; font-size:1.1rem; padding:8px 16px; border-radius:3px; text-decoration:none; }
 
   /* --- Print / Save as PDF ------------------------------------------------ */
@@ -487,7 +497,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 60 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 61 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -530,9 +540,25 @@ function buyUrl(link) {
 }
 function setScansShown(n) {
   document.getElementById('acctScans').textContent = (typeof n === 'number') ? String(n) : '…';
+  showBuyPop(n === 0 && !!currentUser);
 }
+// Small corner box with both packs, shown only when a signed-in customer has 0 scans.
+// It sits in the bottom corner so it never covers the hotspot cards; the ✕ hides it
+// (the buy links at the bottom of the page stay available).
+let buyPopClosed = false;
+function showBuyPop(on) {
+  const pop = document.getElementById('buyPop');
+  if (!pop) return;
+  if (on) {
+    document.getElementById('buyPop200').href = buyUrl();
+    document.getElementById('buyPop25').href = buyUrl(STRIPE_PAYMENT_LINK_25);
+  }
+  pop.classList.toggle('show', on && !buyPopClosed);
+}
+function closeBuyPop() { buyPopClosed = true; showBuyPop(false); }
 function renderAccount() {
   const signedIn = !!currentUser;
+  if (!signedIn) showBuyPop(false);
   document.getElementById('acctOut').style.display = signedIn ? 'none' : 'block';
   document.getElementById('acctIn').style.display = signedIn ? 'block' : 'none';
   document.body.classList.toggle('signedin', signedIn);
@@ -4267,5 +4293,12 @@ function renderHotspots(spots, previous, savedAt) {
 (function(){function h(){var e=document.querySelector('.header');if(e)document.documentElement.style.setProperty('--hdrH',e.offsetHeight+'px');}
 window.addEventListener('load',h);window.addEventListener('resize',h);document.addEventListener('DOMContentLoaded',h);})();
 </script>
+<div id="buyPop" role="dialog" aria-label="Out of scans">
+  <button class="bp-x" onclick="closeBuyPop()" aria-label="Close">✕</button>
+  <div class="bp-h">You&rsquo;re out of scans</div>
+  <div class="bp-t">Get more to keep exploring. Scans never expire.</div>
+  <a id="buyPop200" class="bp-b" href="#" target="_blank" rel="noopener">200 scans &mdash; $25<small>BEST VALUE</small></a>
+  <a id="buyPop25" class="bp-b bp-b2" href="#" target="_blank" rel="noopener">25 scans &mdash; $10</a>
+</div>
 </body>
 </html>
