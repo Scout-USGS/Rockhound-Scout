@@ -138,9 +138,8 @@
   @media screen and (max-width:520px) {
     .hero-in.fill { display:flex; flex-direction:column; justify-content:flex-start; }
     .hero-in.fill .scanwrap, .hero-in.fill .chipgroup { margin-top:auto; }
-    .hero-in.fill .chipgroup { margin-bottom:auto; }
-    .hero-in.fill .searchgroup { flex:1 1 auto; display:flex; flex-direction:column; max-height:330px; }
-    .hero-in.fill #customLoc.notes.armed { flex:1 1 auto; max-height:170px; }
+    .hero-in.fill .searchgroup { display:flex; flex-direction:column; }
+    .hero-in.fill #customLoc.notes.armed { min-height:150px; }
     .hero-in.fill .searchgroup > * { width:100%; max-width:none; }
     .hero-in.fill .herohead { margin-bottom:0; }
     .hero-in.fill > * { width:100%; }
@@ -549,7 +548,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 68 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 69 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
