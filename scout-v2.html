@@ -351,6 +351,10 @@
   @media screen and (min-width:900px) and (min-height:600px) { .topfold { min-height:0; } }
   /* build 53: "Where do you want to hunt?" as big as the scan button */
   @media screen { .hero-in .herohead { font-size:2rem; letter-spacing:0.08em; } }
+  /* build 56: free-scan promo banner */
+  @media screen { .promomsg { font-size:0.98rem; line-height:1.45; color:#ffe2a8; background:rgba(244,197,66,0.12); border:1px solid rgba(244,197,66,0.5); border-radius:10px; padding:10px 14px; } .promomsg.good { color:#c8f3df; background:rgba(61,158,140,0.15); border-color:rgba(61,158,140,0.6); } }
+  /* build 55: welcome line at the top of the search progress */
+  @media screen { .lquote { max-width:560px; text-align:center; font-size:1.02rem; font-style:italic; font-weight:600; line-height:1.45; color:#f6d9b5; margin-bottom:4px; } .lmsg { font-size:0.95rem; } .lprog { font-size:0.9rem; } }
   /* build 54: name, logo and tagline 25% larger */
   @media screen { .logo { width:80px; height:80px; border-radius:14px; } .title h1 { font-size:3.4rem; } .title .sub { font-size:1.35rem; } }
   @media screen and (max-width:520px) { .logo { width:62px; height:62px; border-radius:11px; } .title h1 { font-size:2.55rem; } .title .sub { font-size:1.1rem; } .header .status { display:none; } }
@@ -359,7 +363,7 @@
     @page { margin:0.5in; }
     html, body { background:#fff !important; color:#111 !important; }
     body::before { display:none !important; }
-    #acctBottom, .paynote, .paytoggle, .optsbox, .header, .usgs-badge, .acct, .noprint, hr, .scoutbtn, .loading, .errbox, .verbadge, .printbar, #clubBox, #customLocWrap, #ackModal, #testLog { display:none !important; }
+    #promoMsg, #acctBottom, .paynote, .paytoggle, .optsbox, .header, .usgs-badge, .acct, .noprint, hr, .scoutbtn, .loading, .errbox, .verbadge, .printbar, #clubBox, #customLocWrap, #ackModal, #testLog { display:none !important; }
     .content { max-width:none; padding:0; gap:0; display:block !important; }
     .printonly { display:block !important; font-family:Georgia, 'Times New Roman', serif; color:#111; border-bottom:2px solid #c4622d; padding-bottom:8px; margin-bottom:14px; }
     .printonly .ph1 { font-size:20pt; font-weight:bold; letter-spacing:0.04em; }
@@ -456,6 +460,7 @@
   </div>
  </div>
   <div class="loading" id="loading">
+    <div class="lquote">If you view deep research as impressive rather than annoying &mdash; welcome, you&rsquo;re among friends.</div>
     <div class="drill">⛏</div>
     <div class="lmsg" id="lmsg">READING REAL USGS GEOLOGIC MAP...</div>
     <div class="lprog" id="lprog">Sampling road corridors against verified map data — 20-40 seconds</div>
@@ -480,7 +485,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 54 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 56 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -537,6 +542,65 @@ function renderAccount() {
     document.getElementById('acctWho').textContent = currentUser.email || 'your account';
     document.getElementById('acctBuy').href = buyUrl();
   }
+  showPromoState(signedIn);
+}
+
+// --- Free-scan promos (business card QR, sales-page email signup) --------
+// A link like scout-v2.html?promo=CARD3 (or ?promo=WELCOME2&join=1&email=..)
+// is remembered on the device until the person signs in, then the Worker
+// adds the scans (each account can use each code once).
+const PROMO_SCANS = { CARD1: 1, WELCOME2: 2 };
+(function rememberPromo() {
+  try {
+    const q = new URLSearchParams(location.search);
+    const code = (q.get('promo') || '').trim().toUpperCase();
+    if (code) {
+      localStorage.setItem('rsPendingPromo', JSON.stringify({ code, join: q.get('join') === '1', email: q.get('email') || '' }));
+      ['promo', 'join', 'email'].forEach(k => q.delete(k));
+      history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
+    }
+  } catch (e) {}
+})();
+function pendingPromo() { try { return JSON.parse(localStorage.getItem('rsPendingPromo') || 'null'); } catch (e) { return null; } }
+function promoBanner(html, kind) {
+  let el = document.getElementById('promoMsg');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'promoMsg';
+    const content = document.querySelector('.content'); content.insertBefore(el, content.firstChild);
+  }
+  el.className = 'promomsg' + (kind ? ' ' + kind : '');
+  el.innerHTML = html; el.style.display = html ? 'block' : 'none';
+}
+let promoBusy = false;
+async function showPromoState(signedIn) {
+  const p = pendingPromo();
+  if (!p || !p.code) return;
+  const n = PROMO_SCANS[p.code];
+  if (!signedIn) {
+    promoBanner('🎁 <b>' + (n === 1 ? 'Your free scan is' : n ? n + ' free scans are' : 'Free scans are') + ' waiting for you.</b> Enter your email below and we&rsquo;ll send a sign-in code — no password, no credit card.');
+    const em = document.getElementById('acctEmail'); if (em && p.email && !em.value) em.value = p.email;
+    return;
+  }
+  if (promoBusy) return;
+  promoBusy = true;
+  try {
+    const { data } = await sb.auth.getSession();
+    const token = data && data.session && data.session.access_token;
+    const resp = await fetch(WORKER_URL + '/promo/claim', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ code: p.code, join: !!p.join })
+    });
+    const r = await resp.json().catch(() => ({}));
+    if (r.added) promoBanner('🎁 <b>' + (r.added === 1 ? 'Your free scan was added!' : r.added + ' free scans added!') + '</b> Type a place below and press Find My Hotspots.' + (r.subscribed ? ' You&rsquo;re also on the weekly email list.' : ''), 'good');
+    else if (r.already) promoBanner('This free-scan offer was already used on this account.' + (r.subscribed ? ' You&rsquo;re on the weekly email list.' : ''));
+    else if (r.error === 'bad_code') promoBanner('That free-scan link isn&rsquo;t valid any more.');
+    else { promoBanner('Couldn&rsquo;t add the free scans just now — reload the page to try again.'); promoBusy = false; return; }
+    localStorage.removeItem('rsPendingPromo');
+    refreshBalance();
+  } catch (e) {
+    promoBanner('Couldn&rsquo;t add the free scans just now — reload the page to try again.');
+  }
+  promoBusy = false;
 }
 async function refreshBalance() {
   if (!sb || !currentUser) return;
