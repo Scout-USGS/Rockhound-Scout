@@ -341,11 +341,19 @@
     .header { padding:12px 14px; gap:12px; }
     .scoutbtn { min-width:0; width:100%; max-width:300px; padding:20px 12px; font-size:1.6rem; letter-spacing:0.06em; white-space:normal; }
   }
+
+  /* build 52: no home-screen button (app stores coming); account info at the bottom */
+  @media screen {
+    #installBtn, #installNote { display:none !important; }
+    #acctBottom .acct { margin-top:8px; }
+    #acctBottom:empty { display:none; }
+  }
+  @media screen and (min-width:900px) and (min-height:600px) { .topfold { min-height:0; } }
   @media print {
     @page { margin:0.5in; }
     html, body { background:#fff !important; color:#111 !important; }
     body::before { display:none !important; }
-    .paynote, .paytoggle, .optsbox, .header, .usgs-badge, .acct, .noprint, hr, .scoutbtn, .loading, .errbox, .verbadge, .printbar, #clubBox, #customLocWrap, #ackModal, #testLog { display:none !important; }
+    #acctBottom, .paynote, .paytoggle, .optsbox, .header, .usgs-badge, .acct, .noprint, hr, .scoutbtn, .loading, .errbox, .verbadge, .printbar, #clubBox, #customLocWrap, #ackModal, #testLog { display:none !important; }
     .content { max-width:none; padding:0; gap:0; display:block !important; }
     .printonly { display:block !important; font-family:Georgia, 'Times New Roman', serif; color:#111; border-bottom:2px solid #c4622d; padding-bottom:8px; margin-bottom:14px; }
     .printonly .ph1 { font-size:20pt; font-weight:bold; letter-spacing:0.04em; }
@@ -465,7 +473,8 @@
   <div class="noprint" style="font-family:'Barlow',sans-serif; font-weight:500; font-size:0.66rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
-  <div class="verbadge">▸ v7.0 · build 51 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div id="acctBottom"></div>
+  <div class="verbadge">▸ v7.0 · build 52 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -513,6 +522,11 @@ function renderAccount() {
   document.getElementById('acctOut').style.display = signedIn ? 'none' : 'block';
   document.getElementById('acctIn').style.display = signedIn ? 'block' : 'none';
   document.body.classList.toggle('signedin', signedIn);
+  const box = document.getElementById('acctBox'), bottom = document.getElementById('acctBottom'), top = document.getElementById('customLocWrap');
+  if (box && bottom && top) {
+    if (signedIn && box.parentNode !== bottom) bottom.appendChild(box);
+    else if (!signedIn && box.parentNode === bottom) top.parentNode.insertBefore(box, top);
+  }
   if (signedIn) {
     document.getElementById('acctWho').textContent = currentUser.email || 'your account';
     document.getElementById('acctBuy').href = buyUrl();
