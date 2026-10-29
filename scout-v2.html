@@ -485,7 +485,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 56 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 57 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -583,22 +583,35 @@ async function showPromoState(signedIn) {
   }
   if (promoBusy) return;
   promoBusy = true;
+  let why = '';
   try {
-    const { data } = await sb.auth.getSession();
-    const token = data && data.session && data.session.access_token;
-    const resp = await fetch(WORKER_URL + '/promo/claim', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ code: p.code, join: !!p.join })
-    });
-    const r = await resp.json().catch(() => ({}));
+    // Right after a phone opens the link, the sign-in can still be loading -
+    // so try up to 3 times, a couple of seconds apart.
+    let r = {}, resp = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt) await new Promise(res => setTimeout(res, 2000));
+      const { data } = await sb.auth.getSession();
+      const token = data && data.session && data.session.access_token;
+      if (!token) { why = 'no sign-in token yet'; continue; }
+      try {
+        resp = await fetch(WORKER_URL + '/promo/claim', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ code: p.code, join: !!p.join })
+        });
+        r = await resp.json().catch(() => ({}));
+      } catch (e) { why = 'could not reach the server (' + errText(e) + ')'; continue; }
+      why = 'HTTP ' + resp.status + (r.error ? ' ' + r.error : '');
+      if (r.added || r.already || r.error === 'bad_code') break;
+      if (resp.status !== 401 && resp.status < 500) break;
+    }
     if (r.added) promoBanner('🎁 <b>' + (r.added === 1 ? 'Your free scan was added!' : r.added + ' free scans added!') + '</b> Type a place below and press Find My Hotspots.' + (r.subscribed ? ' You&rsquo;re also on the weekly email list.' : ''), 'good');
     else if (r.already) promoBanner('This free-scan offer was already used on this account.' + (r.subscribed ? ' You&rsquo;re on the weekly email list.' : ''));
     else if (r.error === 'bad_code') promoBanner('That free-scan link isn&rsquo;t valid any more.');
-    else { promoBanner('Couldn&rsquo;t add the free scans just now — reload the page to try again.'); promoBusy = false; return; }
+    else { promoBanner('Couldn&rsquo;t add the free scan just now — reload the page to try again. <small style="opacity:.7">(' + esc(why) + ')</small>'); promoBusy = false; return; }
     localStorage.removeItem('rsPendingPromo');
     refreshBalance();
   } catch (e) {
-    promoBanner('Couldn&rsquo;t add the free scans just now — reload the page to try again.');
+    promoBanner('Couldn&rsquo;t add the free scan just now — reload the page to try again. <small style="opacity:.7">(' + esc(why || errText(e)) + ')</small>');
   }
   promoBusy = false;
 }
