@@ -136,11 +136,26 @@
   /* build 66: on phones the search box stretches to fill the first screen, with just the
      top of the results heading peeking out below so people can tell the page scrolls */
   @media screen and (max-width:520px) {
-    .hero-in.fill { display:flex; flex-direction:column; justify-content:space-evenly; }
+    .hero-in.fill { display:flex; flex-direction:column; justify-content:flex-start; }
+    .hero-in.fill .scanwrap, .hero-in.fill .chipgroup { margin-top:auto; }
+    .hero-in.fill .chipgroup { margin-bottom:auto; }
+    .hero-in.fill .searchgroup { flex:1 1 auto; display:flex; flex-direction:column; max-height:330px; }
+    .hero-in.fill #customLoc.notes.armed { flex:1 1 auto; max-height:170px; }
+    .hero-in.fill .searchgroup > * { width:100%; max-width:none; }
     .hero-in.fill .herohead { margin-bottom:0; }
     .hero-in.fill > * { width:100%; }
-    .hero-in.fill .optrow { margin-top:0; }
+    .hero-in.fill .optrow { margin-top:10px; }
+    .hero-in.fill .herohead { margin:2px 0 10px; }
     .hero-in.fill #customLoc.notes.armed { min-height:110px; }
+  }
+  /* build 67: example buttons 25% bigger with brighter borders; heading 25% bigger */
+  @media screen {
+    .hero-in .chip { font-size:1.05rem; padding:8px 15px; border:1.5px solid #b8946a; }
+    .hero-in .chip:hover { border-color:#e8a23a; }
+    .hero-in .herohead { font-size:2.5rem !important; }
+  }
+  @media screen and (max-width:520px) {
+    .hero-in .herohead { font-size:2rem !important; }
   }
   /* build 64: Search Help button + panel; tips hidden on phones (they're in Search Help) */
   .optrow { display:flex; align-items:flex-start; gap:8px; max-width:640px; margin:10px auto 0; }
@@ -473,6 +488,7 @@
   </div>
   <div id="customLocWrap">
    <div class="hero-in">
+    <div class="searchgroup">
     <h2 class="herohead">Where do you want to hunt?</h2>
     <textarea class="notes armed" id="customLoc" rows="2" placeholder="Try: what can I find near Quartzsite, AZ?"></textarea>
     <div class="optrow">
@@ -481,6 +497,7 @@
       <div class="optlist" id="optList"></div>
     </details>
     <button type="button" class="helpbtn" onclick="openHelp()">? Search Help</button>
+    </div>
     </div>
     <div class="scanwrap">
       <div class="scanflag" aria-hidden="true">▼ Click here to Scan ▼</div>
@@ -529,7 +546,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 66 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 67 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
