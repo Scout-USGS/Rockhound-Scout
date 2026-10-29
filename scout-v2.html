@@ -131,6 +131,8 @@
   #buyPop .bp-t { font-size:0.82rem; color:#cbbca6; margin:2px 0 10px; line-height:1.35; }
   #buyPop .bp-b { display:block; text-align:center; text-decoration:none; color:#fff; font-weight:700; font-size:0.95rem; padding:9px 10px; border-radius:8px; background:linear-gradient(135deg,var(--copper),#9e3e18); margin-top:7px; }
   #buyPop .bp-b small { display:block; font-size:0.62rem; letter-spacing:0.14em; opacity:0.85; }
+  /* build 65: search box border matches the heading color; a bit more room under the heading */
+  @media screen { #customLoc.notes.armed { border-color:var(--accent) !important; } .hero-in .herohead { margin-bottom:12px; } }
   /* build 64: Search Help button + panel; tips hidden on phones (they're in Search Help) */
   .optrow { display:flex; align-items:flex-start; gap:8px; max-width:640px; margin:10px auto 0; }
   .optrow .optsbox { margin:0; flex:1 1 auto; max-width:none; }
@@ -463,7 +465,6 @@
   <div id="customLocWrap">
    <div class="hero-in">
     <h2 class="herohead">Where do you want to hunt?</h2>
-    <p class="herosub">Just name a place anywhere in the U.S. and we&rsquo;ll find what&rsquo;s there. Know what you&rsquo;re after? Add it too.</p>
     <textarea class="notes armed" id="customLoc" rows="2" placeholder="Try: what can I find near Quartzsite, AZ?"></textarea>
     <div class="optrow">
     <details class="optsbox" id="optsBox">
@@ -517,7 +518,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 64 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 65 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
