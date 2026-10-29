@@ -409,7 +409,7 @@
   <div class="acct" id="acctBox">
     <div id="acctOut">
       <div class="slabel">▸ Sign in to scan</div>
-      <div class="acctinfo">Use the email you bought your scans with. We'll email you a sign-in code — no password.</div>
+      <div class="acctinfo">Enter your email and we&rsquo;ll send you a 6-digit sign-in code — no password. (Already bought scans? Use that same email.)</div>
       <div class="acctrow">
         <input type="email" class="notes" id="acctEmail" placeholder="you@example.com" autocomplete="email">
         <button class="acctbtn" id="acctSend" onclick="sendCode()">EMAIL ME A CODE</button>
@@ -485,7 +485,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 57 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 58 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -590,6 +590,10 @@ async function showPromoState(signedIn) {
     let r = {}, resp = null;
     for (let attempt = 0; attempt < 3; attempt++) {
       if (attempt) await new Promise(res => setTimeout(res, 2000));
+      // Make sure the sign-in pass is fresh: right after the page opens it
+      // may still be the expired one from last time. getUser() checks it with
+      // the server; on a retry, ask for a brand-new pass.
+      try { if (attempt) await sb.auth.refreshSession(); else await sb.auth.getUser(); } catch (e) {}
       const { data } = await sb.auth.getSession();
       const token = data && data.session && data.session.access_token;
       if (!token) { why = 'no sign-in token yet'; continue; }
