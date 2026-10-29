@@ -497,7 +497,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 61 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 63 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1400,7 +1400,53 @@ function buildOptions() {
   if (SEARCH_OPTIONS.some(o => optionOn(o.id))) document.getElementById('optsBox').open = true;
 }
 document.addEventListener('DOMContentLoaded', buildOptions);
-function useExample(b) { const t = document.getElementById('customLoc'); t.value = b.textContent; t.focus(); }
+function useExample(b) { if (window.stopTypingHint) window.stopTypingHint(); const t = document.getElementById('customLoc'); t.value = b.textContent; t.focus(); }
+// Typing hint: the empty search box "types" an example over and over so it's
+// obvious where to type. Stops for good once the box is clicked or an example is
+// picked. People who turned off motion on their device just see the plain hint.
+(function typingHint() {
+  const t = document.getElementById('customLoc');
+  if (!t) return;
+  const STATIC = t.getAttribute('placeholder');
+  const PHRASES = [
+    'What can I find near Quartzsite, AZ?',
+    'Herkimer diamonds near Herkimer, NY',
+    'shark teeth south of Venice, FL',
+    'Montana agate on Hwy 16 near Glendive, MT',
+    'creek crossings near Keokuk, IA',
+    'Lake Superior agate near Two Harbors, MN',
+    'spots within 15 miles of Mount Ida, AR',
+    'anything on Hwy 101 south of Newport, OR'
+  ];
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let stopped = false, timer = null, p = 0, i = 0, erasing = false;
+  function stop() {
+    if (stopped) return;
+    stopped = true; clearTimeout(timer);
+    t.setAttribute('placeholder', STATIC);
+  }
+  function tick() {
+    if (stopped) return;
+    if (t.value) { timer = setTimeout(tick, 800); return; }
+    const full = PHRASES[p];
+    let wait;
+    if (!erasing) {
+      i++;
+      wait = i >= full.length ? 2200 : 55 + Math.random() * 70;
+      if (i >= full.length) erasing = true;
+    } else {
+      i -= 2;
+      wait = 22;
+      if (i <= 0) { i = 0; erasing = false; p = (p + 1) % PHRASES.length; wait = 700; }
+    }
+    t.setAttribute('placeholder', full.slice(0, i) + (erasing && i >= full.length ? '' : '▏'));
+    timer = setTimeout(tick, wait);
+  }
+  t.addEventListener('focus', stop);
+  t.addEventListener('input', stop);
+  window.stopTypingHint = stop;
+  timer = setTimeout(tick, 600);
+})();
 function setStatus(t) { document.getElementById('statusTxt').textContent = t; }
 function showLoading(msg, prog) {
   const ld = document.getElementById('loading');
