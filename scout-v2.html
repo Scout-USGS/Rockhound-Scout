@@ -351,6 +351,9 @@
   @media screen and (min-width:900px) and (min-height:600px) { .topfold { min-height:0; } }
   /* build 53: "Where do you want to hunt?" as big as the scan button */
   @media screen { .hero-in .herohead { font-size:2rem; letter-spacing:0.08em; } }
+  /* build 54: name, logo and tagline 25% larger */
+  @media screen { .logo { width:80px; height:80px; border-radius:14px; } .title h1 { font-size:3.4rem; } .title .sub { font-size:1.35rem; } }
+  @media screen and (max-width:520px) { .logo { width:62px; height:62px; border-radius:11px; } .title h1 { font-size:2.55rem; } .title .sub { font-size:1.1rem; } .header .status { display:none; } }
   @media screen and (max-width:520px) { .hero-in .herohead { font-size:1.6rem; letter-spacing:0.05em; } }
   @media print {
     @page { margin:0.5in; }
@@ -477,7 +480,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 53 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 54 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
