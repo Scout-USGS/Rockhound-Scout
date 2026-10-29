@@ -146,6 +146,9 @@
     .hero-in.fill > * { width:100%; }
     .hero-in.fill .optrow { margin-top:10px; }
     .hero-in.fill .herohead { margin:2px 0 10px; }
+  }
+  @media screen and (max-width:520px) {
+    .hero-in .herohead { white-space:nowrap; letter-spacing:0.03em !important; }
     .hero-in.fill #customLoc.notes.armed { min-height:110px; }
   }
   /* build 67: example buttons 25% bigger with brighter borders; heading 25% bigger */
@@ -546,7 +549,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 67 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 68 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1450,6 +1453,23 @@ function buildOptions() {
   if (SEARCH_OPTIONS.some(o => optionOn(o.id))) document.getElementById('optsBox').open = true;
 }
 document.addEventListener('DOMContentLoaded', buildOptions);
+// Phones: keep "Where do you want to hunt?" on one line, shrinking it only if needed.
+function fitHeroHead() {
+  const h = document.querySelector('.hero-in .herohead');
+  if (!h) return;
+  h.style.fontSize = '';
+  if (window.innerWidth > 520) return;
+  let size = parseFloat(getComputedStyle(h).fontSize);
+  let guard = 40;
+  while (h.scrollWidth > h.clientWidth + 1 && size > 16 && guard--) {
+    size -= 1;
+    h.style.setProperty('font-size', size + 'px', 'important');
+  }
+}
+window.addEventListener('resize', fitHeroHead);
+window.addEventListener('load', fitHeroHead);
+document.addEventListener('DOMContentLoaded', fitHeroHead);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitHeroHead);
 // Phones: size the search box so it fills the first screen down to a peek of the
 // next heading. Only re-measured when the width changes (not when the phone's
 // address bar slides in and out while scrolling).
