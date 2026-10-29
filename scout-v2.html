@@ -123,7 +123,7 @@
   .acct a { color:var(--glow); }
   .installbtn { display:none; width:100%; margin-top:10px; background:transparent; border:1px solid var(--turquoise); color:var(--glow); font-family:'Barlow',sans-serif; font-weight:500; font-size:0.66rem; letter-spacing:0.12em; padding:9px; border-radius:3px; cursor:pointer; }
   .installnote { display:none; font-family:'Barlow',sans-serif; font-weight:500; font-size:0.62rem; color:var(--quartz); line-height:1.7; margin-top:8px; }
-  .buybtn { display:inline-block; margin-top:10px; background:linear-gradient(135deg,var(--copper),#9e3e18); color:var(--cream); font-family:'Bebas Neue',sans-serif; letter-spacing:0.12em; font-size:1.1rem; padding:8px 16px; border-radius:3px; text-decoration:none; }
+  .buybtn { display:inline-block; margin:10px 8px 0 0; background:linear-gradient(135deg,var(--copper),#9e3e18); color:var(--cream); font-family:'Bebas Neue',sans-serif; letter-spacing:0.12em; font-size:1.1rem; padding:8px 16px; border-radius:3px; text-decoration:none; }
 
   /* --- Print / Save as PDF ------------------------------------------------ */
   .printbar { display:flex; flex-direction:column; align-items:stretch; }
@@ -421,12 +421,12 @@
         <button class="acctbtn" id="acctVerify" onclick="verifyCode()">SIGN IN</button>
       </div>
       <div class="acctmsg" id="acctMsg"></div>
-      <div class="acctinfo">No scans yet? <a href="index.html#pricing">Get 200 scans for $25</a></div>
+      <div class="acctinfo">No scans yet? <a href="index.html#pricing">200 scans for $25 or 25 for $10</a></div>
     </div>
     <div id="acctIn" style="display:none;">
       <div class="acctinrow">
         <div class="acctinfo">Signed in as <b id="acctWho"></b><br>Scans left: <b id="acctScans">…</b>
-          &nbsp;·&nbsp; <a href="#" id="acctBuy" target="_blank" rel="noopener">Buy 200 more</a>
+          &nbsp;·&nbsp; Buy more: <a href="#" id="acctBuy" target="_blank" rel="noopener">200 for $25</a> or <a href="#" id="acctBuy25" target="_blank" rel="noopener">25 for $10</a>
           &nbsp;·&nbsp; <a href="#" onclick="signOut(); return false;">Sign out</a></div>
         <button class="installbtn" id="installBtn" onclick="installApp()">📲 Add to<br>home screen</button>
       </div>
@@ -487,7 +487,7 @@
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 59 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 60 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -506,7 +506,8 @@ const WORKER_URL = 'https://hidden-mud-13fc.tightloop2.workers.dev';
 const AI_MODEL = 'claude-sonnet-4-6';
 const SUPABASE_URL = 'https://qqjpsqaklhujhfnzbjfl.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_RCDnFzCuGaQKkXXzcexkTw_mboCKWZ_';
-const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/14AcN65Al90YfxkcGfcMM00';
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/14AcN65Al90YfxkcGfcMM00';     // $25 = 200 scans
+const STRIPE_PAYMENT_LINK_25 = 'https://buy.stripe.com/00w8wQe6Ra524SG21BcMM01';  // $10 = 25 scans
 
 const sb = (window.supabase && window.supabase.createClient)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
@@ -519,9 +520,9 @@ function acctMsg(text, bad) {
   m.textContent = text || '';
   m.classList.toggle('bad', !!bad);
 }
-function buyUrl() {
+function buyUrl(link) {
   try {
-    const u = new URL(STRIPE_PAYMENT_LINK);
+    const u = new URL(link || STRIPE_PAYMENT_LINK);
     if (currentUser && currentUser.email) u.searchParams.set('prefilled_email', currentUser.email);
     if (currentUser && currentUser.id) u.searchParams.set('client_reference_id', currentUser.id);
     return u.toString();
@@ -543,6 +544,7 @@ function renderAccount() {
   if (signedIn) {
     document.getElementById('acctWho').textContent = currentUser.email || 'your account';
     document.getElementById('acctBuy').href = buyUrl();
+    document.getElementById('acctBuy25').href = buyUrl(STRIPE_PAYMENT_LINK_25);
   }
   showPromoState(signedIn);
 }
@@ -766,7 +768,7 @@ async function beginScan(kind) {
   }
   if (resp.status === 402) {
     setScansShown(0);
-    showOutOfScans((data && data.buy_url) || buyUrl());
+    showOutOfScans();
     return false;
   }
   if (resp.status === 401) {
@@ -811,18 +813,20 @@ async function refundScan(reason) {
 }
 function notCharged(ok) { return ok ? ' (This scan was not charged.)' : ''; }
 
-function showOutOfScans(url) {
+function showOutOfScans() {
   const b = document.getElementById('errbox');
   b.innerHTML = '';
-  b.appendChild(document.createTextNode('⚠ You have used all your scans. Get 200 more to keep exploring.'));
+  b.appendChild(document.createTextNode('⚠ You have used all your scans. Get more to keep exploring.'));
   b.appendChild(document.createElement('br'));
-  const a = document.createElement('a');
-  a.className = 'buybtn';
-  a.href = url;
-  a.target = '_blank';
-  a.rel = 'noopener';
-  a.textContent = 'BUY 200 SCANS — $25';
-  b.appendChild(a);
+  [[buyUrl(), 'BUY 200 SCANS — $25 · BEST VALUE'], [buyUrl(STRIPE_PAYMENT_LINK_25), 'BUY 25 SCANS — $10']].forEach(([href, text]) => {
+    const a = document.createElement('a');
+    a.className = 'buybtn';
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = text;
+    b.appendChild(a);
+  });
   b.classList.add('show');
 }
 
