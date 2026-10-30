@@ -163,6 +163,11 @@
   @media screen { .hero-in .chiplabel { font-size:0.925rem; color:#f4c542; } }
   .swipeline { display:none; }
   @media screen and (max-width:520px) { .hero-in .chiplabel { letter-spacing:0.1em; white-space:nowrap; } .swipeline { display:block; text-align:right; font-family:'Barlow',sans-serif; font-size:0.78rem; font-weight:600; color:var(--feldspar); margin-top:2px; } }
+  /* build 74: compact map box — field sized to its text, button sized to its words */
+  @media screen {
+    .waze-box input { width:auto; max-width:100%; display:block; }
+    .waze-box .gmapbtn { display:inline-block; padding:8px 16px; font-size:0.88rem; }
+  }
   /* build 71: Suggestion Box above the account info */
   .suggest { text-align:center; margin:18px auto 4px; }
   .suggest .sg-h { font-family:'Bebas Neue',sans-serif; font-size:1.25rem; letter-spacing:0.06em; line-height:1.05; color:var(--accent, #f08a4b); margin-bottom:8px; }
@@ -572,7 +577,7 @@
     </a>
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 73 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 74 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -4432,8 +4437,8 @@ function renderHotspots(spots, previous, savedAt) {
         '</div>' +
         '<div class="waze-box">' +
           '<span class="wlabel">Map Destination / Starting Point</span>' +
-          '<input type="text" readonly value="' + (h.waze || h.town || '') + '" onclick="this.select()">' +
-          '<a class="gmapbtn" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(h.mapQuery || h.waze || h.town || '') + '">🧭 Open in Google Maps — turn-by-turn directions</a>' +
+          '<input type="text" readonly size="' + Math.max(12, String(h.waze || h.town || '').length + 2) + '" value="' + (h.waze || h.town || '') + '" onclick="this.select()">' +
+          '<a class="gmapbtn" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(h.mapQuery || h.waze || h.town || '') + '">🧭 Google Maps Directions</a>' +
           '<span class="winst">' + (h.mapQuery ? 'Or copy the place name (tap to select) and paste it into Waze' : h.waze ? 'Or copy the GPS point (tap to select) and paste it into Waze' : 'Or tap to select — long press to copy — paste into Waze search') + '</span>' +
         '</div>' +
         '<div class="why">' + h.why + '</div>' +
@@ -4478,7 +4483,7 @@ window.addEventListener('load',h);window.addEventListener('resize',h);document.a
     <ul>
       <li>A town: <i>near Mount Ida, AR</i></li>
       <li>A hotel, landmark or address works too</li>
-      <li>We search about <b>20 miles</b> around it</li>
+      <li>We search about <b>20 miles</b> around it &mdash; unless you specify</li>
     </ul>
     <h4>Narrow it down</h4>
     <ul>
@@ -4502,7 +4507,7 @@ window.addEventListener('load',h);window.addEventListener('resize',h);document.a
     <ul>
       <li>A scan takes a minute or two</li>
       <li>A scan that errors or finds no hotspots isn&rsquo;t counted</li>
-      <li>Tap any example under the button to try it</li>
+      <li>Tap any example under the button to try it, or describe your target area</li>
     </ul>
     <button class="hdone" onclick="closeHelp()">Got it</button>
   </div>
