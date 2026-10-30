@@ -188,6 +188,8 @@
   .mapthumb .mt-cap { position:absolute; left:6px; bottom:5px; font-family:'Barlow',sans-serif; font-size:0.72rem; font-weight:700; color:#fff; background:rgba(0,0,0,0.55); padding:2px 7px; border-radius:4px; }
   .mapthumb .mt-attr { position:absolute; right:5px; bottom:4px; font-family:'Barlow',sans-serif; font-size:0.55rem; color:#fff; opacity:0.75; text-shadow:0 0 3px #000; }
   @media screen and (max-width:520px) { .mapthumb { flex:1 1 100%; } .mapthumb .mt-in { width:100%; } }
+  .promobtn { margin:8px 8px 0 0; font-family:'Barlow',sans-serif; font-weight:700; font-size:0.9rem; padding:8px 14px; border-radius:8px; border:0; cursor:pointer; color:#fff; background:linear-gradient(135deg,var(--copper),#9e3e18); }
+  .promobtn.alt { background:#433b35; border:1px solid #6e6054; color:var(--cream); }
   /* build 80: empty search box -> hint right under the box */
   .emptyhint { display:none; margin-top:8px; padding:9px 12px; border-radius:8px; background:rgba(244,197,66,0.14); border:1.5px solid #f4c542; color:#f6e3a8; font-family:'Barlow',sans-serif; font-size:0.95rem; line-height:1.4; }
   .emptyhint.show { display:block; }
@@ -605,7 +607,7 @@
     </a>
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 80 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 81 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -711,6 +713,12 @@ function promoBanner(html, kind) {
   el.innerHTML = html; el.style.display = html ? 'block' : 'none';
 }
 let promoBusy = false;
+async function promoSwitchAccount() { await signOut(); }
+function promoUseCurrent() {
+  const p = pendingPromo(); if (!p) return;
+  p.email = ''; try { localStorage.setItem('rsPendingPromo', JSON.stringify(p)); } catch (e) {}
+  showPromoState(!!currentUser);
+}
 async function showPromoState(signedIn) {
   const p = pendingPromo();
   if (!p || !p.code) return;
@@ -721,6 +729,16 @@ async function showPromoState(signedIn) {
     return;
   }
   if (promoBusy) return;
+  // The offer was asked for with a different email than the account that's
+  // signed in on this device: ask which one should get it, instead of
+  // quietly giving it to whoever is signed in.
+  const me = (currentUser && currentUser.email || '').toLowerCase();
+  if (p.email && me && p.email.toLowerCase() !== me) {
+    promoBanner('🎁 <b>' + (n === 1 ? 'A free scan' : (n || 'Free') + ' free scans') + ' for ' + esc(p.email) + '</b> &mdash; but this device is signed in as ' + esc(me) + '.<br>' +
+      '<button type="button" class="promobtn" onclick="promoSwitchAccount()">Sign out and use ' + esc(p.email) + '</button> ' +
+      '<button type="button" class="promobtn alt" onclick="promoUseCurrent()">Add to ' + esc(me) + ' instead</button>');
+    return;
+  }
   promoBusy = true;
   let why = '';
   try {
