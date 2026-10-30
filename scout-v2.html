@@ -535,7 +535,7 @@
    <div class="hero-in">
     <div class="searchgroup">
     <h2 class="herohead">Where do you want to hunt?</h2>
-    <textarea class="notes armed" id="customLoc" rows="2" placeholder="Try: what can I find near Quartzsite, AZ?"></textarea>
+    <textarea class="notes armed" id="customLoc" rows="2" autocomplete="off" placeholder="Try: what can I find near Quartzsite, AZ?"></textarea>
     <div class="emptyhint" id="emptyHint" role="alert">👆 First, type where you want to hunt &mdash; a town, road or address. Or tap an example below. <b>Nothing was charged.</b></div>
     <div class="optrow">
     <details class="optsbox" id="optsBox">
@@ -607,7 +607,7 @@
     </a>
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 82 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 83 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1699,12 +1699,17 @@ function useExample(b) { if (window.stopTypingHint) window.stopTypingHint(); { c
     'spots within 15 miles of Mount Ida, AR',
     'anything on Hwy 101 south of Newport, OR'
   ];
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   let stopped = false, timer = null, p = 0, i = 0, erasing = false;
   function stop() {
     if (stopped) return;
     stopped = true; clearTimeout(timer);
     t.setAttribute('placeholder', STATIC);
+  }
+  // Tapped in and left without typing (or cleared the box): start again.
+  function resume() {
+    if (!stopped || t.value.trim() || document.activeElement === t) return;
+    stopped = false; i = 0; erasing = false;
+    timer = setTimeout(tick, 1200);
   }
   function tick() {
     if (stopped) return;
@@ -1725,6 +1730,10 @@ function useExample(b) { if (window.stopTypingHint) window.stopTypingHint(); { c
   }
   t.addEventListener('focus', stop);
   t.addEventListener('input', stop);
+  t.addEventListener('blur', () => setTimeout(resume, 300));
+  // A phone may put back text from an earlier visit; start clean.
+  window.addEventListener('pageshow', () => { if (document.activeElement !== t && !t.dataset.userTyped) { t.value = ''; } });
+  t.addEventListener('input', () => { t.dataset.userTyped = '1'; });
   window.stopTypingHint = stop;
   timer = setTimeout(tick, 600);
 })();
