@@ -595,7 +595,7 @@
     </a>
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 77 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 78 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1571,7 +1571,8 @@ function pick(btn) {
 // remembers its own choices.
 const SEARCH_OPTIONS = [
   { id: 'pay', key: 'rsIncludePay', label: 'Include pay-to-dig sites', hint: 'Commercial mines and fee digs, marked 💲' },
-  { id: 'freestyle', key: 'rsFreestyle', label: 'Freestyle — skip the well-known sites', hint: 'Only the app’s own map finds, for less-visited spots' }
+  { id: 'freestyle', key: 'rsFreestyle', label: 'Freestyle — skip the well-known sites', hint: 'Only the app’s own map finds, for less-visited spots' },
+  { id: 'nostretch', key: 'rsNoStretch', label: 'Skip road stretches', hint: 'No “drive slowly” Stretch cards — just spots you can stop at' }
 ];
 function optionOn(id) { const o = SEARCH_OPTIONS.find(x => x.id === id); try { return !!o && localStorage.getItem(o.key) === '1'; } catch (e) { return false; } }
 function setOption(id, on) { const o = SEARCH_OPTIONS.find(x => x.id === id); if (!o) return; try { localStorage.setItem(o.key, on ? '1' : '0'); } catch (e) {} showOptionCount(); }
@@ -3145,7 +3146,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
     const runs = focus && focus.has(r.road)
       ? dedupeRuns(samplesAlongRoad(r, 40, 0.5), 0.2)   // the requested road: closer checks
       : dedupeRuns(samplesAlongRoad(r, 12, 0.75), 0.2);
-    for (const run of runs) { roadRuns.push({ road: r.road, run }); roadPtCount += run.length; }
+    for (const run of runs) { roadRuns.push({ road: r.road, run, lines: r.segs }); roadPtCount += run.length; }
   }
   const points = crossings.map(c => [c.lat, c.lon])
     .concat(streamPts.map(s => s.p))
@@ -3222,7 +3223,7 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
       const halfway = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
       const pStart = i > 0 ? halfway(rr.run[i - 1], rr.run[i]) : rr.run[i];
       const pEnd = j + 1 < rr.run.length ? halfway(rr.run[j], rr.run[j + 1]) : rr.run[j];
-      const path = [pStart].concat(rr.run.slice(i, j + 1), [pEnd]).map(q => [+q[0].toFixed(5), +q[1].toFixed(5)]);
+      const path = traceAlongRoad(rr.lines, [pStart].concat(rr.run.slice(i, j + 1), [pEnd])).map(q => [+q[0].toFixed(5), +q[1].toFixed(5)]);
       cands.push({ kind: 'through', s: base(rate(u)), pri: 2, lat: mid[0], lon: mid[1], dist: milesBetween(lat, lon, mid[0], mid[1]),
         road: rr.road, unit: u, rating: rate(u), miles, path, findsHere: finds[u.name] || [], rules: ruleNotes[u.name] || [] });
       i = j + 1;
@@ -3560,6 +3561,12 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
     for (let q = cands.length - 1; q >= 0; q--) if (!opts.kinds.includes(KIND_OF[cands[q].kind])) cands.splice(q, 1);
     scanLog.push('kinds asked for: ' + opts.kinds.join(', ') + ' — kept ' + cands.length + ' of ' + before + ' spots');
   }
+  // Filter: "Skip road stretches".
+  if (optionOn('nostretch')) {
+    const before = cands.length;
+    for (let q = cands.length - 1; q >= 0; q--) if (cands[q].kind === 'through') cands.splice(q, 1);
+    scanLog.push('filter: skip road stretches — kept ' + cands.length + ' of ' + before + ' spots');
+  }
   // "Different spots than last time": skip anything near the last cards.
   if (opts.avoid && opts.avoid.length) {
     const before = cands.length;
@@ -3840,6 +3847,36 @@ WHY: one or two sentences per the WHY rule
 // road so a long road can't blow up the scan time. Returns one list of
 // points per continuous stretch of road.
 const MAX_CHECKS_PER_ROAD = 40;
+// Follow the road's real shape between check points (for the line drawn on a
+// Stretch card's picture). Each leg uses the road line that passes closest to
+// both ends; if none is close, that leg stays a straight line.
+function traceAlongRoad(lines, pts) {
+  if (!Array.isArray(lines) || !lines.length) return pts;
+  const out = [pts[0]];
+  for (let k = 1; k < pts.length; k++) {
+    const a = pts[k - 1], b = pts[k];
+    let best = null;
+    for (const line of lines) {
+      let ia = -1, ib = -1, da = Infinity, db = Infinity;
+      for (let v = 0; v < line.length; v++) {
+        const d1 = milesBetween(a[0], a[1], line[v][0], line[v][1]); if (d1 < da) { da = d1; ia = v; }
+        const d2 = milesBetween(b[0], b[1], line[v][0], line[v][1]); if (d2 < db) { db = d2; ib = v; }
+      }
+      if (da < 0.25 && db < 0.25 && (!best || da + db < best.d)) best = { d: da + db, line, ia, ib };
+    }
+    if (best) {
+      const seg = best.ia <= best.ib ? best.line.slice(best.ia, best.ib + 1) : best.line.slice(best.ib, best.ia + 1).reverse();
+      for (const q of seg) out.push(q);
+    }
+    out.push(b);
+  }
+  // Keep the drawing light: at most ~120 points.
+  if (out.length <= 120) return out;
+  const step = out.length / 119, thin = [];
+  for (let q = 0; q < 119; q++) thin.push(out[Math.floor(q * step)]);
+  thin.push(out[out.length - 1]);
+  return thin;
+}
 function samplesAlongRoad(road, maxChecks = MAX_CHECKS_PER_ROAD, minSpacing = 0.8) {
   const lines = road.segs || [densify(road.pts, 0.012)]; // presets still use hand-drawn pts
   const total = lines.reduce((m, l) => m + lineMiles(l), 0);
@@ -4610,10 +4647,19 @@ window.addEventListener('load',h);window.addEventListener('resize',h);document.a
       <li><i>shark teeth</i>, <i>agate</i>, <i>geodes</i>, <i>petrified wood</i>, <i>fossils</i>&hellip;</li>
       <li>Not sure? Ask <i>what can I find near&hellip;</i></li>
     </ul>
+    <h4>Kinds of hotspot cards</h4>
+    <ul>
+      <li><b>Crossing</b> &mdash; where a creek or river passes under the road. Stop at the bridge and check the gravel bars and banks. One <b>target spot</b>.</li>
+      <li><b>Stretch</b> &mdash; a length of road that runs across rock known to produce what you&rsquo;re after. There&rsquo;s no single spot: drive it slowly from the <span style="color:#3cc46a">green pin</span> to the <span style="color:#e9473a">red pin</span> and check road cuts, bar ditches and small washes along the way.</li>
+      <li><b>Contact</b> &mdash; where the road passes from one rock formation into another. The change can be anywhere in a short stretch, so check both shoulders near the marked spot.</li>
+      <li><b>Shore</b> &mdash; a lake, river or beach shoreline where waves and water sort out loose stones.</li>
+      <li><b>⭐ Known site</b> / <b>💲 Pay dig</b> &mdash; well-known collecting spots and fee digs.</li>
+    </ul>
     <h4>⚙ Filters</h4>
     <ul>
       <li><b>Include pay-to-dig sites</b> adds fee digs and commercial mines (marked 💲)</li>
       <li><b>Freestyle</b> skips the well-known sites so you get less-visited spots. You can also just type <i>freestyle</i> in your search.</li>
+      <li><b>Skip road stretches</b> leaves out Stretch cards, so every card is a spot you can stop at.</li>
     </ul>
     <h4>Good to know</h4>
     <ul>
