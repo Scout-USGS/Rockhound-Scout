@@ -50,6 +50,17 @@ ul,ol{padding-left:22px;margin-bottom:12px}
 .btn{display:inline-block;font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.14em;padding:12px 30px;border-radius:3px;text-decoration:none;color:var(--cream);background:linear-gradient(135deg,var(--copper),#9e3e18);border:0}
 .btn-sm{font-size:1.15rem;padding:9px 20px;margin-top:10px}
 .smallpack{margin-top:18px;padding-top:14px;border-top:1px dashed rgba(139,111,78,.5);font-size:.95rem;line-height:1.5}
+.freebox{border-color:#f4c542;background:rgba(244,197,66,.08);text-align:center;padding:24px 20px}
+.fb-big{font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;color:#f4c542;letter-spacing:.06em}
+.fb-sub{margin:8px auto 14px;max-width:460px}
+.fb-form{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
+.fb-form input{flex:0 1 280px;min-width:0;font:500 1rem 'Barlow',sans-serif;padding:11px 12px;border-radius:6px;border:1.5px solid #b8946a;background:#2f2925;color:var(--cream)}
+.fb-form input:focus{outline:none;border-color:#f4c542}
+.fb-form .btn-sm{margin-top:0}
+.fb-err{color:#f4b87a;font-size:.9rem;min-height:1.2em;margin-top:6px}
+.fb-fine{font-size:.8rem;color:var(--feld);max-width:460px;margin:4px auto 0;line-height:1.45}
+.freelink{text-align:center;margin:6px 0 18px}
+.freelink a{display:inline-block;font-weight:700;color:#1f1a16;background:#f4c542;padding:9px 18px;border-radius:8px;text-decoration:none}
 .btn.off{background:var(--granite);color:var(--feld);cursor:not-allowed;border:1px dashed rgba(139,111,78,.5)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid .card{margin:0}
@@ -140,6 +151,7 @@ main>.wrap{background:var(--stone);isolation:isolate}
 <li>Scans never expire</li>
 <li>Custom Scans (the secret sauce) included with purchase &mdash; no upgrade required</li>
 </ul>
+<p class="freelink"><a href="#free">🎁 Try it first &mdash; get 2 free scans with your email &darr;</a></p>
 
 <div class="showcase">
 <figure><h3>Simple Search Controls</h3><img src="app-home-v7.png" alt="The Rockhound Scout app search screen: type any place in the U.S., tap an example, and press Find My Hotspots." onclick="openLB(this.src,this.alt)"></figure>
@@ -182,6 +194,31 @@ main>.wrap{background:var(--stone);isolation:isolate}
 <figure><img src="gallery/glen-rose-limestone.jpg" alt="Vuggy limestone from the Glen Rose Formation with a small ring-shaped piece in front." onclick="openLB(this.src,this.alt)"><figcaption><strong>Limestone, honeycombed by time</strong>Every hole here is where a softer streak of Glen Rose limestone simply dissolved away. The little ring in front formed the same way &mdash; a natural stone donut.</figcaption></figure>
 <figure><img src="gallery/chert-rudist.jpg" alt="Chert nodules and a fossilized rudist clam shell." onclick="openLB(this.src,this.alt)"><figcaption><strong>Chert &amp; a 100-million-year-old clam cluster</strong>The large ribbed fossil is a cluster of rudists &mdash; extinct reef-building bi-valves from the sea that once covered Texas. Far left: a river-tumbled rudist fossil. Chert fossils (bottom stones) in a variety of Hill Country colors.</figcaption></figure>
 </div>
+
+<h2 id="free">Try it free</h2>
+<div class="card freebox">
+<div class="fb-big">2 FREE SCANS</div>
+<p class="fb-sub">Enter your email and we&rsquo;ll send you to the app with two free custom scans waiting &mdash; no card needed.</p>
+<form class="fb-form" id="freeForm" novalidate>
+<input type="email" id="freeEmail" placeholder="you@example.com" autocomplete="email" required aria-label="Your email">
+<button type="submit" class="btn btn-sm">GET MY 2 FREE SCANS</button>
+</form>
+<div class="fb-err" id="freeErr"></div>
+<p class="fb-fine">You&rsquo;ll also get our weekly Rockhound Scout email with new hotspot ideas. Unsubscribe anytime with one click. One free offer per email.</p>
+</div>
+<script>
+(function(){
+  var f=document.getElementById('freeForm'); if(!f) return;
+  f.addEventListener('submit',function(e){
+    e.preventDefault();
+    var v=(document.getElementById('freeEmail').value||'').trim();
+    var err=document.getElementById('freeErr');
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){ err.textContent='Please enter a valid email address.'; return; }
+    err.textContent='';
+    location.href='scout-v2.html?promo=WELCOME2&join=1&src=email2&email='+encodeURIComponent(v);
+  });
+})();
+</script>
 
 <div class="bg-llanite">
 <h2 id="pricing">Pricing</h2>
