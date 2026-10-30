@@ -169,8 +169,8 @@
     .waze-box .gmapbtn { display:inline-block; padding:8px 16px; font-size:0.88rem; }
   }
   /* build 75: framed aerial picture beside the map buttons */
-  .wz-row { display:flex; flex-wrap:wrap; gap:14px; align-items:flex-start; }
-  .wz-left { flex:1 1 220px; min-width:0; }
+  .wz-row { display:flex; flex-wrap:wrap; gap:22px; align-items:center; justify-content:center; }
+  .wz-left { flex:0 1 auto; min-width:0; max-width:340px; }
   .mapthumb { position:relative; display:block; flex:0 1 260px; max-width:100%; border:3px solid #f5ecdc; border-radius:8px; box-shadow:0 3px 12px rgba(0,0,0,0.45); text-decoration:none; overflow:hidden; background:#2f2925; }
   .mapthumb .mt-in { position:relative; width:260px; height:180px; max-width:100%; overflow:hidden; }
   .mapthumb .mt-tiles { position:absolute; left:50%; top:0; width:440px; height:180px; margin-left:-220px; }
@@ -588,7 +588,7 @@
     </a>
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 75 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 76 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1453,10 +1453,10 @@ function mapThumbHtml(h) {
         'onerror="var t=this.closest(\'.mapthumb\');if(t)t.style.display=\'none\'">';
     }
   }
-  const g = 'https://www.google.com/maps/@?api=1&map_action=map&basemap=satellite&zoom=16&center=' + ll.lat.toFixed(5) + ',' + ll.lon.toFixed(5);
-  return '<a class="mapthumb" href="' + g + '" target="_blank" rel="noopener" title="Open satellite view">' +
+  const g = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(h.mapQuery || h.waze || h.town || '');
+  return '<a class="mapthumb" href="' + g + '" target="_blank" rel="noopener" title="Google Maps directions">' +
     '<div class="mt-in"><div class="mt-tiles">' + tiles + '</div><span class="mt-pin"></span></div>' +
-    '<span class="mt-cap">Satellite view &rsaquo;</span><span class="mt-attr">USGS</span></a>';
+    '<span class="mt-cap">🧭 Tap for directions &rsaquo;</span><span class="mt-attr">USGS</span></a>';
 }
 function knownToCard(k) {
   return {
