@@ -188,6 +188,13 @@
   .mapthumb .mt-cap { position:absolute; left:6px; bottom:5px; font-family:'Barlow',sans-serif; font-size:0.72rem; font-weight:700; color:#fff; background:rgba(0,0,0,0.55); padding:2px 7px; border-radius:4px; }
   .mapthumb .mt-attr { position:absolute; right:5px; bottom:4px; font-family:'Barlow',sans-serif; font-size:0.55rem; color:#fff; opacity:0.75; text-shadow:0 0 3px #000; }
   @media screen and (max-width:520px) { .mapthumb { flex:1 1 100%; } .mapthumb .mt-in { width:100%; } }
+  /* build 80: empty search box -> hint right under the box */
+  .emptyhint { display:none; margin-top:8px; padding:9px 12px; border-radius:8px; background:rgba(244,197,66,0.14); border:1.5px solid #f4c542; color:#f6e3a8; font-family:'Barlow',sans-serif; font-size:0.95rem; line-height:1.4; }
+  .emptyhint.show { display:block; }
+  .emptyhint b { color:#fff; }
+  #customLoc.needinput { border-color:#f4c542 !important; animation:needIn 0.5s ease 2, needGlow 1.6s ease-in-out 1.0s infinite; }
+  @keyframes needIn { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-6px); } 75% { transform:translateX(6px); } }
+  @keyframes needGlow { 0%,100% { box-shadow:0 0 0 3px rgba(244,197,66,0.25); } 50% { box-shadow:0 0 0 6px rgba(244,197,66,0.5); } }
   /* build 71: Suggestion Box above the account info */
   .suggest { text-align:center; margin:18px auto 4px; }
   .suggest .sg-h { font-family:'Bebas Neue',sans-serif; font-size:1.25rem; letter-spacing:0.06em; line-height:1.05; color:var(--accent, #f08a4b); margin-bottom:8px; }
@@ -527,6 +534,7 @@
     <div class="searchgroup">
     <h2 class="herohead">Where do you want to hunt?</h2>
     <textarea class="notes armed" id="customLoc" rows="2" placeholder="Try: what can I find near Quartzsite, AZ?"></textarea>
+    <div class="emptyhint" id="emptyHint" role="alert">👆 First, type where you want to hunt &mdash; a town, road or address. Or tap an example below. <b>Nothing was charged.</b></div>
     <div class="optrow">
     <details class="optsbox" id="optsBox">
       <summary>⚙ Filters <span class="optcount" id="optCount"></span></summary>
@@ -597,7 +605,7 @@
     </a>
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 79 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 80 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1635,10 +1643,27 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitHeroHea
   window.addEventListener('resize', fit);
   document.addEventListener('DOMContentLoaded', fit);
 })();
+// Empty search box: point the customer at the box (right where they are
+// looking), instead of an error down in the results area. Nothing is charged.
+function askForInput() {
+  const t = document.getElementById('customLoc'), h = document.getElementById('emptyHint');
+  if (h) h.classList.add('show');
+  if (t) {
+    t.classList.remove('needinput'); void t.offsetWidth; t.classList.add('needinput');
+    try { t.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    setTimeout(() => { try { t.focus({ preventScroll: true }); } catch (e) { t.focus(); } }, 350);
+  }
+}
+document.addEventListener('input', e => {
+  if (e.target && e.target.id === 'customLoc' && e.target.value.trim()) {
+    const h = document.getElementById('emptyHint'); if (h) h.classList.remove('show');
+    e.target.classList.remove('needinput');
+  }
+});
 function openHelp() { document.getElementById('helpModal').classList.add('show'); }
 function closeHelp() { document.getElementById('helpModal').classList.remove('show'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHelp(); });
-function useExample(b) { if (window.stopTypingHint) window.stopTypingHint(); const t = document.getElementById('customLoc'); t.value = b.textContent; t.focus(); }
+function useExample(b) { if (window.stopTypingHint) window.stopTypingHint(); { const hh = document.getElementById('emptyHint'); if (hh) hh.classList.remove('show'); } const t = document.getElementById('customLoc'); t.classList.remove('needinput'); t.value = b.textContent; t.focus(); }
 // Typing hint: the empty search box "types" an example over and over so it's
 // obvious where to type. Stops for good once the box is clicked or an example is
 // picked. People who turned off motion on their device just see the plain hint.
@@ -4285,7 +4310,7 @@ async function runScout() {
       if (freestyle) query = query.replace(FREESTYLE_RX, ' ').replace(/\s*[,;-]\s*(?=[,;-]|$)/g, '').replace(/\s{2,}/g, ' ').replace(/^[\s,;:.-]+|[\s,;:.-]+$/g, '').trim();
       if (!query) {
         clearTimeout(watchdog);
-        showError('Describe your area first — a town, a hotel, or an address.');
+        askForInput();
         setStatus('READY');
         btn.disabled = false;
         return;
