@@ -159,6 +159,10 @@
   @media screen and (max-width:520px) {
     .hero-in .herohead { font-size:2rem !important; }
   }
+  /* build 73: example heading 25% bigger, scan-flag yellow */
+  @media screen { .hero-in .chiplabel { font-size:0.925rem; color:#f4c542; } }
+  .swipeline { display:none; }
+  @media screen and (max-width:520px) { .hero-in .chiplabel { letter-spacing:0.1em; white-space:nowrap; } .swipeline { display:block; text-align:right; font-family:'Barlow',sans-serif; font-size:0.78rem; font-weight:600; color:var(--feldspar); margin-top:2px; } }
   /* build 71: Suggestion Box above the account info */
   .suggest { text-align:center; margin:18px auto 4px; }
   .suggest .sg-h { font-family:'Bebas Neue',sans-serif; font-size:1.25rem; letter-spacing:0.06em; line-height:1.05; color:var(--accent, #f08a4b); margin-bottom:8px; }
@@ -511,7 +515,7 @@
       <button class="scoutbtn" id="scoutBtn" onclick="runScout()">⛏ FIND MY HOTSPOTS</button>
     </div>
     <div class="chipgroup">
-    <div class="chiplabel">Tap an example to try it<span class="swipehint"> · swipe for more →</span></div>
+    <div class="chiplabel">Tap an example to try it</div>
     <div class="chips">
       <button type="button" class="chip" onclick="useExample(this)">What can I find near Quartzsite, AZ?</button>
       <button type="button" class="chip" onclick="useExample(this)">spots within 15 miles of Mount Ida, AR</button>
@@ -522,6 +526,7 @@
       <button type="button" class="chip" onclick="useExample(this)">shark teeth south of Venice, FL</button>
       <button type="button" class="chip" onclick="useExample(this)">Lake Superior agate near Two Harbors, MN</button>
     </div>
+    <div class="swipeline">swipe for more →</div>
     </div>
     <div class="herotips"><b>Tips:</b> searches about 20 miles around your place. Add &ldquo;within 10 miles&rdquo;, &ldquo;on Hwy 101&rdquo; or &ldquo;south of Venice&rdquo; to narrow it. A town, hotel or address works too. Use <b>⚙ Filters</b> (or type &ldquo;freestyle&rdquo;) to skip the well-known sites.</div>
    </div>
@@ -567,7 +572,7 @@
     </a>
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 72 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 73 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
