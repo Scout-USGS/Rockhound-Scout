@@ -175,7 +175,14 @@
   .mapthumb .mt-in { position:relative; width:260px; height:180px; max-width:100%; overflow:hidden; }
   .mapthumb .mt-tiles { position:absolute; left:50%; top:0; width:440px; height:180px; margin-left:-220px; }
   .mapthumb img { position:absolute; width:256px; height:256px; max-width:none; }
-  .mapthumb .mt-pin { position:absolute; left:50%; top:50%; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%; background:#e9473a; border:3px solid #fff; box-shadow:0 0 0 2px rgba(0,0,0,0.4), 0 0 14px rgba(233,71,58,0.8); }
+  .mapthumb .mt-pin { position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 0 2px rgba(0,0,0,0.4), 0 0 12px rgba(0,0,0,0.5); z-index:2; }
+  .mapthumb .mt-pin.stop { background:#e9473a; }
+  .mapthumb .mt-pin.go { background:#3cc46a; }
+  .mapthumb .mt-line { position:absolute; left:0; top:0; z-index:1; }
+  .navhead { font-family:'Bebas Neue',sans-serif; font-size:1.35rem; letter-spacing:0.08em; color:#f4c542; line-height:1; margin-bottom:8px; }
+  .navdot { display:inline-block; width:10px; height:10px; border-radius:50%; border:2px solid #fff; margin-right:6px; vertical-align:-1px; }
+  .navdot.go { background:#3cc46a; } .navdot.stop { background:#e9473a; }
+  .navtip { font-family:'Barlow',sans-serif; font-size:0.85rem; line-height:1.45; color:var(--cream); margin-top:9px; }
   .mapthumb .mt-cap { position:absolute; left:6px; bottom:5px; font-family:'Barlow',sans-serif; font-size:0.72rem; font-weight:700; color:#fff; background:rgba(0,0,0,0.55); padding:2px 7px; border-radius:4px; }
   .mapthumb .mt-attr { position:absolute; right:5px; bottom:4px; font-family:'Barlow',sans-serif; font-size:0.55rem; color:#fff; opacity:0.75; text-shadow:0 0 3px #000; }
   @media screen and (max-width:520px) { .mapthumb { flex:1 1 100%; } .mapthumb .mt-in { width:100%; } }
@@ -588,7 +595,7 @@
     </a>
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 76 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 77 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1431,6 +1438,40 @@ function setIncludePay(on) { try { localStorage.setItem('rsIncludePay', on ? '1'
 // USGS National Map aerial photo tiles (U.S. government, public domain, with
 // road names). Skipped for approximate locations. If the pictures can't load,
 // the frame simply hides itself. Tapping it opens Google Maps in satellite view.
+// --- Navigation box ----------------------------------------------------------
+// Stretch cards ("drive slowly") get a start and an end point, a line along the
+// road on the picture, and a Google Maps route that drives the whole stretch.
+// Every other card gets one "Target spot".
+function isStretchNav(h) { return h.kind === 'through' && Array.isArray(h.path) && h.path.length >= 2; }
+function llText(q) { return q[0].toFixed(5) + ', ' + q[1].toFixed(5); }
+function gpsField(v) { return '<input type="text" readonly size="' + Math.max(12, String(v).length + 2) + '" value="' + esc(v) + '" onclick="this.select()">'; }
+function navUrl(h) {
+  if (isStretchNav(h)) {
+    const a = h.path[0], b = h.path[h.path.length - 1];
+    return 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(llText(b)) + '&waypoints=' + encodeURIComponent(llText(a));
+  }
+  return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(h.mapQuery || h.waze || h.town || '');
+}
+function navBoxHtml(h) {
+  let left = '<div class="navhead">Navigation</div>';
+  if (isStretchNav(h)) {
+    const a = h.path[0], b = h.path[h.path.length - 1];
+    const mi = h.stretchMiles ? 'about ' + h.stretchMiles + ' mile' + (h.stretchMiles === 1 ? '' : 's') + ' of ' : '';
+    left +=
+      '<span class="wlabel"><span class="navdot go"></span>Start of stretch</span>' + gpsField(llText(a)) +
+      '<span class="wlabel" style="margin-top:8px"><span class="navdot stop"></span>End of stretch</span>' + gpsField(llText(b)) +
+      '<div class="navtip">Drive slowly from the green pin to the red pin &mdash; ' + esc(mi + (h.road || 'the road')) + '. Check road cuts, bar ditches and small washes along the way.</div>' +
+      '<a class="gmapbtn" target="_blank" rel="noopener" href="' + navUrl(h) + '">🧭 Google Maps Directions</a>' +
+      '<span class="winst">Google Maps routes you to the start, then along the stretch. For Waze, copy the start point (tap to select).</span>';
+  } else {
+    const v = h.waze || h.town || '';
+    left +=
+      '<span class="wlabel">Target spot</span>' + gpsField(v) +
+      '<a class="gmapbtn" target="_blank" rel="noopener" href="' + navUrl(h) + '">🧭 Google Maps Directions</a>' +
+      '<span class="winst">' + (h.mapQuery ? 'Or copy the place name (tap to select) and paste it into Waze' : h.waze ? 'Or copy the GPS point (tap to select) and paste it into Waze' : 'Or tap to select — long press to copy — paste into Waze search') + '</span>';
+  }
+  return '<div class="waze-box"><div class="wz-row"><div class="wz-left">' + left + '</div>' + mapThumbHtml(h) + '</div></div>';
+}
 function spotLatLon(h) {
   if (h.approx) return null;
   if (typeof h.lat === 'number' && typeof h.lon === 'number') return { lat: h.lat, lon: h.lon };
@@ -1438,13 +1479,27 @@ function spotLatLon(h) {
   return m ? { lat: parseFloat(m[1]), lon: parseFloat(m[2]) } : null;
 }
 function mapThumbHtml(h) {
-  const ll = spotLatLon(h);
-  if (!ll) return '';
-  const Z = 14, W = 440, H = 180, T = 256, n = Math.pow(2, Z);
-  const px = (ll.lon + 180) / 360 * n * T;
-  const rad = ll.lat * Math.PI / 180;
-  const py = (1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2 * n * T;
-  const left = px - W / 2, top = py - H / 2;
+  const stretch = isStretchNav(h);
+  const ll = stretch ? null : spotLatLon(h);
+  if (!stretch && !ll) return '';
+  const W = 440, H = 180, T = 256;
+  const wx = (lon, n) => (lon + 180) / 360 * n * T;
+  const wy = (lat, n) => { const rad = lat * Math.PI / 180; return (1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2 * n * T; };
+  let Z = 14, cx, cy;
+  if (stretch) {
+    // Zoom in as far as possible while the whole stretch fits the visible frame.
+    const lats = h.path.map(q => q[0]), lons = h.path.map(q => q[1]);
+    const n0 = 1, x0 = wx(Math.min(...lons), n0), x1 = wx(Math.max(...lons), n0), y0 = wy(Math.max(...lats), n0), y1 = wy(Math.min(...lats), n0);
+    Z = 16;
+    while (Z > 9 && ((x1 - x0) * Math.pow(2, Z) > 210 || (y1 - y0) * Math.pow(2, Z) > 135)) Z--;
+    const n = Math.pow(2, Z);
+    cx = (x0 + x1) / 2 * n; cy = (y0 + y1) / 2 * n;
+  } else {
+    const n = Math.pow(2, Z);
+    cx = wx(ll.lon, n); cy = wy(ll.lat, n);
+  }
+  const n = Math.pow(2, Z);
+  const left = cx - W / 2, top = cy - H / 2;
   let tiles = '';
   for (let ty = Math.floor(top / T); ty <= Math.floor((top + H) / T); ty++) {
     for (let tx = Math.floor(left / T); tx <= Math.floor((left + W) / T); tx++) {
@@ -1453,9 +1508,19 @@ function mapThumbHtml(h) {
         'onerror="var t=this.closest(\'.mapthumb\');if(t)t.style.display=\'none\'">';
     }
   }
-  const g = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(h.mapQuery || h.waze || h.town || '');
-  return '<a class="mapthumb" href="' + g + '" target="_blank" rel="noopener" title="Google Maps directions">' +
-    '<div class="mt-in"><div class="mt-tiles">' + tiles + '</div><span class="mt-pin"></span></div>' +
+  let marks;
+  if (stretch) {
+    const pts = h.path.map(q => [wx(q[1], n) - left, wy(q[0], n) - top]);
+    const pin = (q, cls) => '<span class="mt-pin ' + cls + '" style="left:' + q[0].toFixed(1) + 'px;top:' + q[1].toFixed(1) + 'px"></span>';
+    marks = '<svg class="mt-line" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"><polyline points="' +
+      pts.map(q => q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(' ') + '" fill="none" stroke="#000" stroke-opacity="0.45" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="' +
+      pts.map(q => q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(' ') + '" fill="none" stroke="#f4c542" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      pin(pts[0], 'go') + pin(pts[pts.length - 1], 'stop');
+  } else {
+    marks = '<span class="mt-pin stop" style="left:' + (W / 2) + 'px;top:' + (H / 2) + 'px"></span>';
+  }
+  return '<a class="mapthumb" href="' + navUrl(h) + '" target="_blank" rel="noopener" title="Google Maps directions">' +
+    '<div class="mt-in"><div class="mt-tiles">' + tiles + marks + '</div></div>' +
     '<span class="mt-cap">🧭 Tap for directions &rsaquo;</span><span class="mt-attr">USGS</span></a>';
 }
 function knownToCard(k) {
@@ -3152,8 +3217,14 @@ async function crossingScan(loc, radius, target, town, scan, roadWanted, side, o
       const mid = rr.run[Math.floor((i + j) / 2)];
       let miles = 0.75;
       for (let q = i + 1; q <= j; q++) miles += milesBetween(rr.run[q - 1][0], rr.run[q - 1][1], rr.run[q][0], rr.run[q][1]);
+      // Start/end of the stretch: halfway to the neighboring check points
+      // (where the rock changes), plus the road points in between.
+      const halfway = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      const pStart = i > 0 ? halfway(rr.run[i - 1], rr.run[i]) : rr.run[i];
+      const pEnd = j + 1 < rr.run.length ? halfway(rr.run[j], rr.run[j + 1]) : rr.run[j];
+      const path = [pStart].concat(rr.run.slice(i, j + 1), [pEnd]).map(q => [+q[0].toFixed(5), +q[1].toFixed(5)]);
       cands.push({ kind: 'through', s: base(rate(u)), pri: 2, lat: mid[0], lon: mid[1], dist: milesBetween(lat, lon, mid[0], mid[1]),
-        road: rr.road, unit: u, rating: rate(u), miles, findsHere: finds[u.name] || [], rules: ruleNotes[u.name] || [] });
+        road: rr.road, unit: u, rating: rate(u), miles, path, findsHere: finds[u.name] || [], rules: ruleNotes[u.name] || [] });
       i = j + 1;
     }
     // Formation boundaries (the old kind of card) -- fallback only.
@@ -3732,6 +3803,10 @@ WHY: one or two sentences per the WHY rule
   rec.from_formation = u.name || '';
   rec.to_formation = c.kind === 'boundary' ? ((c.unit2 || {}).name || '') : '';
   rec.waze = c.lat.toFixed(5) + ', ' + c.lon.toFixed(5);
+  if (c.kind === 'through' && c.path && c.path.length >= 2) {
+    rec.path = c.path;
+    rec.stretchMiles = +c.miles.toFixed(1);
+  }
   if (c.kind === 'crossing') {
     rec.headline = c.stream + ' at ' + c.road;
     rec.detail = 'Rock at the crossing: ' + u.name + '.' + (c.carryNames.length ? ' ' + c.stream + ' also runs through ' + c.carryNames.slice(0, 2).join(' and ') + '.' : '');
@@ -4477,12 +4552,7 @@ function renderHotspots(spots, previous, savedAt) {
           '<div class="minerals">' + ((h.minerals || []).length ? h.minerals.map(m => '<span class="mtag">' + m + '</span>').join('')
             : '<span style="font-size:0.8rem;color:var(--feldspar);">Nothing specific documented for this rock</span>') + '</div>' +
         '</div>' +
-        '<div class="waze-box"><div class="wz-row"><div class="wz-left">' +
-          '<span class="wlabel">Map Destination / Starting Point</span>' +
-          '<input type="text" readonly size="' + Math.max(12, String(h.waze || h.town || '').length + 2) + '" value="' + (h.waze || h.town || '') + '" onclick="this.select()">' +
-          '<a class="gmapbtn" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(h.mapQuery || h.waze || h.town || '') + '">🧭 Google Maps Directions</a>' +
-          '<span class="winst">' + (h.mapQuery ? 'Or copy the place name (tap to select) and paste it into Waze' : h.waze ? 'Or copy the GPS point (tap to select) and paste it into Waze' : 'Or tap to select — long press to copy — paste into Waze search') + '</span>' +
-        '</div>' + mapThumbHtml(h) + '</div></div>' +
+        navBoxHtml(h) +
         '<div class="why">' + h.why + '</div>' +
         ((h.rules || []).length ? '<div class="accessnote" style="color:var(--cream);">📋 ' + h.rules.map(esc).join(' ') + '</div>' : '') +
         (h.known ? '<div class="accessnote">⚠ Hours, fees and collecting rules can change — confirm with the site before you go.</div>' :
