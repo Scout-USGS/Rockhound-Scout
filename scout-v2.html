@@ -607,7 +607,7 @@
     </a>
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 83 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 84 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2605,7 +2605,8 @@ async function fetchWaterBodies(lat, lon, radiusMiles) {
   for (const f of res.features) {
     const name = String((f.attributes || {})[nf] || '').trim();
     if (!name || !f.geometry || !f.geometry.rings) continue;
-    const type = (tf && WATER_TYPES[(f.attributes || {})[tf]]) || 'lake';
+    // Census often leaves a wide river's outline without a river code; go by its name too.
+    const type = /\b(river|creek|fork|branch|run|bayou|slough)\b/i.test(name) ? 'river' : ((tf && WATER_TYPES[(f.attributes || {})[tf]]) || 'lake');
     const b = byName[name] || (byName[name] = { name, type, rings: [], area: 0 });
     for (const ring of f.geometry.rings) {
       const r = ring.map(([x, y]) => [y, x]);
@@ -3767,12 +3768,14 @@ async function writeUpSpot(c, target, town, streamSrc) {
     ratingText = 'rock at the crossing: ' + rk(c.rating) + '; producing rock the stream runs through: ' + (c.carryNames.length ? c.carryNames.slice(0, 3).join('; ') : 'none found');
     names = c.road + ', ' + c.stream + ' and ' + town;
   } else if (c.kind === 'shore') {
-    kindText = 'shoreline of a ' + (c.waterType || 'lake') + ' reached from a road';
-    facts = 'The shore of ' + c.waterName + ' is about ' + (c.shoreMi < 0.2 ? 'right beside' : c.shoreMi.toFixed(1) + ' mile ' + c.shoreDir + ' of') + ' this point on ' + c.road +
+    const riv = c.waterType === 'river';
+    kindText = riv ? 'river bank and gravel bars reached from a road' : 'shoreline of a ' + (c.waterType || 'lake') + ' reached from a road';
+    facts = (riv ? 'The bank of ' : 'The shore of ') + c.waterName + ' is about ' + (c.shoreMi < 0.2 ? 'right beside' : c.shoreMi.toFixed(1) + ' mile ' + c.shoreDir + ' of') + ' this point on ' + c.road +
       ' (lat ' + c.lat.toFixed(4) + ', lon ' + c.lon.toFixed(4) + '), located from the Census water map. Rock and deposits mapped on land near this shore: ' + c.landNames.slice(0, 5).join('; ') + '.\n' +
       (c.pub ? 'Public land at the shore (USGS Protected Areas Database): ' + c.pub.name + ', access listed as ' + c.pub.access + '. Say the reader must check that land\'s collecting rules; do not say collecting is allowed.\n' : '') +
       (c.city ? 'This point is inside ' + c.city + ' city limits.\n' : '') +
-      'Shores and beaches sort and wash out cobbles from the nearby bedrock and glacial or river deposits, so beach gravel here can hold material from those units.';
+      (riv ? 'This is a river, not a lake: call it a river bank or gravel bar, never a shore or beach. Rivers sort and drop gravel on bars and inside bends, so the gravel here can hold material washed from upstream units. The card\'s GPS point is at the water\'s edge; the reader drives there with the Google Maps button.'
+           : 'Shores and beaches sort and wash out cobbles from the nearby bedrock and glacial or river deposits, so beach gravel here can hold material from those units. The card\'s GPS point is at the water\'s edge; the reader drives there with the Google Maps button.');
     ratingText = 'best nearby land rock: ' + (c.landNames.length ? c.landNames[0] : u.name);
     names = c.road + ', ' + c.waterName + ' and ' + town;
   } else if (c.kind === 'through') {
@@ -3818,7 +3821,7 @@ HONESTY RULES:
 - ACCESS: tell the reader to confirm they have legal access before stopping (do not assume the roadside is public or that collecting there is allowed), to park only where it is legal and safe, and never to cross fences or enter private land without the landowner's permission. Never say or imply that a spot is public, legal or safe to collect.
 
 Write ONE record in EXACTLY this format (no markdown, no extra commentary):
-NAME: short catchy name for this spot${c.kind === 'through' ? ' that ends with the word "Stretch"' : c.kind === 'crossing' ? ' that ends with the word "Crossing"' : c.kind === 'shore' ? ' that ends with the word "Shore"' : ''}
+NAME: short catchy name for this spot${c.kind === 'through' ? ' that ends with the word "Stretch"' : c.kind === 'crossing' ? ' that ends with the word "Crossing"' : c.kind === 'shore' ? (c.waterType === 'river' ? ' that ends with the words "River Bank" or "Gravel Bar"' : ' that ends with the word "Shore"') : ''}
 WHERE: one sentence describing the spot in general terms
 MINERALS: comma-separated, per the rule above
 DIRECTIONS: plain-English directions from ${town} using the MEASURED LOCATION; name only ${names} — never invent any other road, turn or landmark; include the ACCESS rule
@@ -3877,11 +3880,15 @@ WHY: one or two sentences per the WHY rule
     rec.drainSource = streamSrc || 'stream map';
   } else if (c.kind === 'shore') {
     rec.headline = c.waterName + (c.waterType === 'river' ? ' bank off ' : ' shore off ') + c.road;
-    rec.detail = 'Shoreline about ' + (c.shoreMi < 0.15 ? 'right beside the road' : c.shoreMi.toFixed(1) + ' mile ' + c.shoreDir + ' of this point') + '. Nearby land rock: ' + c.landNames.slice(0, 3).join(', ') + '.' +
+    rec.detail = (c.waterType === 'river' ? 'River bank' : 'Shoreline') + ' about ' + (c.shoreMi < 0.15 ? 'right beside the road' : c.shoreMi.toFixed(1) + ' mile ' + c.shoreDir + ' of ' + c.road) + '. Nearby land rock: ' + c.landNames.slice(0, 3).join(', ') + '.' +
       (c.pub ? ' On or next to public land: ' + c.pub.name + (c.pub.access === 'open' ? ' (listed as open to the public)' : c.pub.access === 'restricted' ? ' (listed as restricted access)' : '') + '.' : '') +
       (c.city ? ' Inside ' + c.city + ' city limits.' : '');
     rec.drainages = [c.waterName];
     rec.drainSource = 'geologic & Census water maps';
+    rec.waterType = c.waterType || '';
+    if (c.pub) rec.pubName = c.pub.name;
+    // Navigation goes to the water itself, not the highway point nearest it.
+    if (typeof c.shoreLat === 'number') rec.waze = c.shoreLat.toFixed(5) + ', ' + c.shoreLon.toFixed(5);
     rec.rules = (rec.rules || []).concat([c.pub
       ? 'Public land status is from the USGS Protected Areas Database. Many parks and preserves do not allow rock or fossil collecting — check ' + c.pub.name + '\'s rules before you collect.'
       : 'Beaches and shorelines are often private, or part of parks and preserves with their own collecting rules — check before you collect.']
@@ -4650,7 +4657,7 @@ function renderHotspots(spots, previous, savedAt) {
             : h.known ? (h.fee ? 'Commercial dig — published sources' : 'Public collecting site — published sources')
             : h.kind === 'crossing' ? '✓ Mapped creek crossing — road, stream & ' + (h.source || 'USGS') + ' geologic maps'
             : h.kind === 'through' ? '✓ Road across mapped formation — ' + (h.source || 'USGS') + ' Geologic Map'
-            : h.kind === 'shore' ? '✓ Shoreline near a road — ' + (h.source || 'USGS') + ' geologic map'
+            : h.kind === 'shore' ? (h.waterType === 'river' ? '✓ River bank near a road — ' : '✓ Shoreline near a road — ') + (h.source || 'USGS') + ' geologic map'
             : '✓ Verified Formation Contact — ' + (h.source || 'USGS') + ' Geologic Map') + '</span>' +
           '<span class="cval">' + (h.headline || (h.from_formation + (h.to_formation ? ' ▸ ' + h.to_formation : ''))) + '</span>' +
           (h.detail ? '<span style="font-size:0.78rem;color:var(--cream);display:block;margin-top:3px;">' + h.detail + '</span>' : '') +
@@ -4658,7 +4665,7 @@ function renderHotspots(spots, previous, savedAt) {
         '</div>' +
         (drains.length > 0 ?
           '<div class="drain-strip">' +
-            '<span class="dlabel">' + (h.kind === 'crossing' ? 'Creek / river crossed' : h.kind === 'shore' ? 'Shoreline' : 'Named Drainages Nearby') + ' (' + (h.drainSource || 'OpenStreetMap') + ')</span>' +
+            '<span class="dlabel">' + (h.kind === 'crossing' ? 'Creek / river crossed' : h.kind === 'shore' ? (h.waterType === 'river' ? 'River bank' : 'Shoreline') : 'Named Drainages Nearby') + ' (' + (h.drainSource || 'OpenStreetMap') + ')</span>' +
             '<span class="dval">〰 ' + drains.join('  〰 ') + '</span>' +
           '</div>' : '') +
         '<div class="dir-strip">' +
@@ -4680,7 +4687,7 @@ function renderHotspots(spots, previous, savedAt) {
           : h.known ? '▸ Known site from published sources' + ((h.sources || []).filter(x => /^https?:/.test(x)).length ? ': ' + h.sources.filter(x => /^https?:/.test(x)).slice(0, 2).map(u => '<a href="' + u + '" target="_blank" rel="noopener" style="color:inherit;">' + esc(u.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</a>').join(', ') : '') + '. Hours, fees and rules can change — check before you go.'
           : h.kind === 'crossing' ? '▸ Crossing computed from the Census road map and ' + (h.drainSource || 'stream map') + '; rock from ' + (h.source || 'USGS') + ' geologic map data.'
           : h.kind === 'through' ? '▸ Rock under the road from ' + (h.source || 'USGS') + ' geologic map data; exposure at the surface not verified.'
-          : h.kind === 'shore' ? '▸ Shoreline located from the Census water map; public land from the USGS Protected Areas Database; GPS point is on the road nearest the shore.'
+          : h.kind === 'shore' ? '▸ Shoreline located from the Census water map; public land from the USGS Protected Areas Database; GPS point is at the water\'s edge' + (h.pubName ? ' on ' + h.pubName : '') + '.'
           : '▸ Formation contact verified directly against ' + (h.source || 'USGS') + ' geologic map data; check both shoulders near the marked stretch') + '</div>' +
       '</div>';
     c.appendChild(card);
