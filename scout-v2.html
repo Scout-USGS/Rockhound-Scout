@@ -484,7 +484,20 @@
     .waze-box input { background:#fff !important; color:#111 !important; border:1px solid #999 !important; }
     .waze-box .winst, .gmapbtn { display:none !important; }
     .hcard .why, .hcard .src { color:#444 !important; }
+    /* build 85: printed as separate pages — one card per page, then a last page with
+       the search title, rocks-in-area summary and access notes. */
+    #printHead, #results { display:none !important; }
+    #printPages { display:block !important; }
+    .ppage { break-before:page; page-break-before:always; }
+    .ppage:first-child { break-before:auto; page-break-before:auto; }
+    .ppage .hcard { break-inside:auto; page-break-inside:auto; }
+    .ppage .hcard ~ .hcard { break-before:auto; page-break-before:auto; }
+    .pmini { font-family:Georgia, 'Times New Roman', serif; font-size:9pt; color:#444; border-bottom:1px solid #c4622d; padding-bottom:4px; margin-bottom:8px; }
+    .ppage .printonly { display:block !important; }
+    .ppage .areabox, .ppage .accessbanner { background:#fff !important; border:1px solid #999 !important; color:#111 !important; margin:0 0 12px !important; }
+    .ppage .areabox *, .ppage .accessbanner * { color:#111 !important; }
   }
+  @media screen { #printPages { display:none; } }
 </style>
 </head>
 <body>
@@ -589,6 +602,7 @@
     <div class="ph3">Spots are picked from geologic and road maps, not visited or verified. Confirm you can legally and safely access a spot before you stop; get the landowner&rsquo;s permission before collecting. RockhoundScout.com</div>
   </div>
   <div class="results" id="results"></div>
+  <div id="printPages"></div>
   <div class="noprint" style="font-family:'Barlow',sans-serif; font-weight:500; font-size:0.66rem; color:var(--feldspar); text-align:center; line-height:1.6; padding:0 8px;">
     ✓ Formation contacts are verified against the real geologic map. The map can't resolve every small local vein, so still check both shoulders near the marked stretch.
   </div>
@@ -607,7 +621,7 @@
     </a>
   </div>
   <div id="acctBottom"></div>
-  <div class="verbadge">▸ v7.0 · build 84 — verified geologic contacts<span id="diagFlag"></span></div>
+  <div class="verbadge">▸ v7.0 · build 85 — verified geologic contacts<span id="diagFlag"></span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1043,8 +1057,43 @@ function pdfHint() {
 function printCards() {
   const when = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
   document.getElementById('printSub').textContent = (printLabel ? printLabel + ' — ' : '') + 'printed ' + when;
+  buildPrintPages();
   window.print();
 }
+// build 85: lays the printout out as pages — each hotspot card on its own page,
+// then one last page with the search title, the rocks-in-area summary and the
+// access notes. Copies are used, so the on-screen results are left untouched.
+function buildPrintPages() {
+  const out = document.getElementById('printPages'), rc = document.getElementById('results');
+  if (!out || !rc) return;
+  out.innerHTML = '';
+  const cards = Array.from(rc.querySelectorAll('.hcard'));
+  if (!cards.length) return;
+  const sub = document.getElementById('printSub').textContent || printLabel || '';
+  const strip = el => { el.removeAttribute('id'); el.querySelectorAll('[id]').forEach(x => x.removeAttribute('id')); return el; };
+  cards.forEach((cd, i) => {
+    const pg = document.createElement('div'); pg.className = 'ppage';
+    const top = document.createElement('div'); top.className = 'pmini';
+    top.textContent = 'Rockhound Scout — Card ' + (i + 1) + ' of ' + cards.length + (sub ? ' — ' + sub : '');
+    pg.appendChild(top);
+    const cc = strip(cd.cloneNode(true)); cc.style.animation = 'none';
+    pg.appendChild(cc);
+    out.appendChild(pg);
+  });
+  const last = document.createElement('div'); last.className = 'ppage';
+  const head = document.getElementById('printHead');
+  if (head) last.appendChild(strip(head.cloneNode(true)));
+  Array.from(rc.children).forEach(el => {
+    if (el.classList.contains('areabox') || el.classList.contains('accessbanner')) last.appendChild(strip(el.cloneNode(true)));
+  });
+  out.appendChild(last);
+}
+// Printing from the browser's own menu (not the app's button) gets the same layout.
+window.addEventListener('beforeprint', () => {
+  const ps = document.getElementById('printSub');
+  if (ps && !ps.textContent) ps.textContent = (printLabel ? printLabel + ' — ' : '') + 'printed ' + new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  buildPrintPages();
+});
 
 
 // Running token count for the current scan, so the real cost of a Custom
