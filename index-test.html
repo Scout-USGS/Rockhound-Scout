@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rockhound Scout — Rockhounding Hotspot Finder for All 50 States</title>
+<meta name="description" content="Rockhound Scout finds rockhounding hotspots anywhere in the U.S. using published geologic, road and stream maps. $25 for 200 scans or $10 for 25 — one-time, no subscription.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--stone:#2b221a;--granite:#3a2f26;--quartz:#e8d5a3;--copper:#c4622d;--turq:#3d9e8c;--feld:#a58a68;--cream:#f2e8d0;--glow:#5bbfa8;--head:#f2915a}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--stone);color:var(--cream);font-family:'Barlow',system-ui,sans-serif;font-weight:400;line-height:1.65;font-size:17px;overflow-x:hidden}
+a{color:var(--glow)}
+.wrap{max-width:780px;margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid rgba(196,98,45,.35);background:rgba(26,22,18,.98)}
+header .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;padding:14px 20px}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.08em;color:var(--quartz);text-decoration:none;line-height:1;display:flex;align-items:center;gap:10px}
+.brand-logo{height:34px;width:34px;display:block}
+nav{display:flex;flex-wrap:wrap;gap:6px 18px;margin-left:auto}
+nav a{font-family:'Barlow',sans-serif;font-weight:600;font-size:.88rem;letter-spacing:.08em;color:var(--feld);text-decoration:none;text-transform:uppercase}
+nav a:hover,nav a[aria-current]{color:var(--cream)}
+main{padding:34px 0 50px}
+h1{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:clamp(2.2rem,7vw,3.4rem);letter-spacing:.05em;color:var(--head);line-height:1.05;margin-bottom:14px;text-shadow:0 2px 8px rgba(0,0,0,.85)}
+h2{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:1.75rem;letter-spacing:.06em;color:var(--head);margin:38px 0 10px;text-shadow:0 2px 8px rgba(0,0,0,.85)}
+h3{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:1.2rem;letter-spacing:.08em;text-transform:uppercase;color:var(--copper);margin:22px 0 6px}
+p,li{margin-bottom:12px}
+ul,ol{padding-left:22px;margin-bottom:12px}
+.lead{font-size:1.15rem;color:var(--cream)}
+.punch{border-left:3px solid var(--copper);background:rgba(26,22,18,.72);padding:14px 18px;margin:4px 0 18px;border-radius:2px}
+.punch .hook{font-size:1.35rem;line-height:1.35;font-weight:600;color:var(--quartz);margin-bottom:10px}
+.punch p:last-child{margin-bottom:0}
+.bigquote{font-size:clamp(1.2rem,4vw,1.6rem);line-height:1.25;font-weight:600;font-style:italic;color:#ffffff;text-align:center;margin:6px 0 22px;padding:6px 10px;text-shadow:0 2px 3px #000,0 0 14px rgba(0,0,0,.9)}
+.bigquote::before,.bigquote::after{font-family:Georgia,'Times New Roman',serif;font-style:normal;color:#ffffff;font-size:1.5em;line-height:0;vertical-align:-0.3em}
+.bigquote::before{content:'\201C';margin-right:4px}
+.perks{list-style:none;padding:14px 18px;margin:0 auto 24px;max-width:460px;background:rgba(26,22,18,.72);border:1px solid rgba(196,98,45,.45);border-radius:3px}
+.perks li{position:relative;padding-left:32px;margin-bottom:8px;font-size:1.12rem;font-weight:600;color:var(--cream)}
+.perks li:last-child{margin-bottom:0}
+.perks li::before{content:'\2713';position:absolute;left:4px;top:0;color:var(--glow);font-size:1.2rem;font-weight:600}
+.bigquote::after{content:'\201D';margin-left:4px}
+.tag{display:inline-block;font-family:'Barlow',sans-serif;font-weight:600;font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;color:var(--glow);border:1px solid rgba(61,158,140,.5);background:rgba(61,158,140,.1);padding:4px 10px;border-radius:2px;margin-bottom:16px}
+.card{background:rgba(42,36,32,.8);border:1px solid rgba(139,111,78,.35);border-radius:3px;padding:18px 20px;margin:16px 0}
+.price{border-color:var(--copper);background:rgba(196,98,45,.12);text-align:center;padding:26px 20px}
+.price .amt{font-family:'Bebas Neue',sans-serif;font-size:4rem;line-height:1;color:var(--quartz);letter-spacing:.04em}
+.price .sub{font-family:'Barlow',sans-serif;font-weight:600;font-size:.85rem;letter-spacing:.1em;color:var(--feld);margin-bottom:14px}
+.price ul{list-style:none;padding:0;text-align:left;max-width:420px;margin:14px auto}
+.price li{padding-left:24px;position:relative;margin-bottom:8px}
+.price li::before{content:'\2713';position:absolute;left:0;color:var(--glow)}
+.btn{display:inline-block;font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.14em;padding:12px 30px;border-radius:3px;text-decoration:none;color:var(--cream);background:linear-gradient(135deg,var(--copper),#9e3e18);border:0}
+.btn-sm{font-size:1.15rem;padding:9px 20px;margin-top:10px}
+.smallpack{margin-top:18px;padding-top:14px;border-top:1px dashed rgba(139,111,78,.5);font-size:.95rem;line-height:1.5}
+.freebox{border-color:#f4c542;background:rgba(244,197,66,.08);text-align:center;padding:24px 20px}
+.fb-big{font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;color:#f4c542;letter-spacing:.06em}
+.fb-sub{margin:8px auto 14px;max-width:460px}
+.fb-form{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
+.fb-form input{flex:0 1 280px;min-width:0;font:500 1rem 'Barlow',sans-serif;padding:11px 12px;border-radius:6px;border:1.5px solid #b8946a;background:#2f2925;color:var(--cream)}
+.fb-form input:focus{outline:none;border-color:#f4c542}
+.fb-form .btn-sm{margin-top:0}
+.fb-err{color:#f4b87a;font-size:.9rem;min-height:1.2em;margin-top:6px}
+.fb-fine{font-size:.8rem;color:var(--feld);max-width:460px;margin:4px auto 0;line-height:1.45}
+.freelink{text-align:center;margin:6px 0 18px}
+.freelink a{display:inline-block;font-weight:700;color:#1f1a16;background:#f4c542;padding:9px 18px;border-radius:8px;text-decoration:none}
+.buybar{position:fixed;left:0;right:0;bottom:0;z-index:900;background:rgba(26,22,18,.96);border-top:1px solid rgba(196,98,45,.55);box-shadow:0 -4px 18px rgba(0,0,0,.6);padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px;justify-content:center}
+.bb-half{flex:1 1 0;max-width:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;border-radius:8px;padding:7px 10px;line-height:1.1}
+.bb-half .bb-main{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.12em}
+.bb-half .bb-sub{font-family:'Barlow',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:.03em;margin-top:2px}
+.bb-free{background:#f4c542;color:#1f1a16}
+.bb-buy{background:linear-gradient(135deg,var(--copper),#9e3e18);color:var(--cream)}
+.bb-free:hover,.bb-buy:hover{filter:brightness(1.08)}
+.btn.off{background:var(--granite);color:var(--feld);cursor:not-allowed;border:1px dashed rgba(139,111,78,.5)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid .card{margin:0}
+.grid h3{margin-top:0;font-size:1.35rem}
+.note{font-size:.92rem;color:var(--cream)}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps li{counter-increment:s;position:relative;padding-left:46px;margin-bottom:16px}
+.steps li::before{content:counter(s);position:absolute;left:0;top:-2px;width:32px;height:32px;border:1px solid var(--copper);color:var(--copper);font-family:'Bebas Neue',sans-serif;font-size:1.3rem;display:flex;align-items:center;justify-content:center;border-radius:2px}
+details{border-bottom:1px solid rgba(139,111,78,.25);padding:12px 0}
+summary{cursor:pointer;font-weight:600;color:var(--quartz)}
+details p{margin:10px 0 0}
+footer{border-top:1px solid rgba(139,111,78,.3);padding:26px 0 40px;font-size:.88rem;color:var(--feld)}
+footer a{color:var(--feld)}
+footer p{margin-bottom:8px}
+@media(max-width:600px){body{font-size:16px}.grid{grid-template-columns:1fr}nav{margin-left:0}.punch .hook{font-size:1.2rem}}
+.card-shot{display:block;max-width:380px;width:100%;margin:18px auto;border-radius:4px;border:1px solid rgba(139,111,78,.4)}
+.photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}
+.photo-grid figure{margin:0;background:rgba(58,47,38,.9);border:1px solid rgba(139,111,78,.35);border-radius:3px;overflow:hidden}
+.photo-grid img{display:block;width:100%;height:210px;object-fit:cover;cursor:zoom-in}
+.photo-grid figcaption{padding:10px 12px;font-size:.85rem;color:var(--feld);line-height:1.45}
+.photo-grid figcaption strong{color:var(--cream);display:block;margin-bottom:3px;font-size:.92rem}
+@media(max-width:600px){.photo-grid{grid-template-columns:1fr}.photo-grid img{height:230px}}
+.quote{border-left:3px solid var(--copper);background:rgba(42,36,32,.6);padding:18px 22px;margin:22px 0;font-style:italic;font-size:1.05rem;color:var(--cream)}
+.quote cite{display:block;margin-top:10px;font-style:normal;font-family:'Barlow',sans-serif;font-weight:600;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--feld)}
+.showcase{display:grid;grid-template-columns:0.85fr 1.15fr;gap:14px;margin:20px 0;align-items:start}
+.showcase video{display:block;width:100%;height:auto;border-radius:3px}
+.showcase figure.tall{grid-row:span 2}
+.showcase figure{margin:0;background:rgba(42,36,32,.8);border:1px solid rgba(139,111,78,.35);border-radius:4px;overflow:hidden;padding:8px;display:flex;flex-direction:column;align-items:center}
+.showcase h3{margin:0 0 8px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.08em;text-transform:none}
+.showcase img{display:block;width:100%;height:auto;border-radius:3px;cursor:zoom-in}
+@media(max-width:600px){.showcase{grid-template-columns:1fr}}
+.bg-fade{position:relative}
+.bg-fade::before{content:'';position:absolute;top:0;left:0;right:0;aspect-ratio:1100/2500;max-height:100%;background-image:url('gallery/llanite-bg.jpg');background-size:100% auto;background-repeat:no-repeat;background-position:top center;opacity:.6;-webkit-mask-image:linear-gradient(to bottom,#000 65%,transparent 100%);mask-image:linear-gradient(to bottom,#000 65%,transparent 100%);z-index:-2}
+.bg-fade::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(to bottom, transparent 0%, transparent 55%, var(--stone) 100%);z-index:-1}
+.bg-llanite{position:relative;isolation:isolate;padding:8px 0 24px}.bg-llanite::before{content:'';position:absolute;inset:0 -20px;background-image:url('llanite-tile.jpg');background-size:100% auto;background-repeat:repeat-y;background-position:top center;opacity:.55;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 120px,#000 calc(100% - 120px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 120px,#000 calc(100% - 120px),transparent 100%);z-index:-1}
+.bg-llanite .price{background:linear-gradient(rgba(196,98,45,.12),rgba(196,98,45,.12)),rgba(26,22,18,.9)}.bg-llanite details{background:rgba(26,22,18,.82);padding:12px 14px;border:1px solid rgba(139,111,78,.3);border-radius:3px;margin:6px 0}.bg-llanite h2{text-shadow:0 2px 8px rgba(0,0,0,.85)}
+#lightbox{display:none;position:fixed;inset:0;background:rgba(10,8,6,.94);z-index:999;align-items:center;justify-content:center;padding:24px}
+#lightbox.open{display:flex}
+#lightbox img{max-width:92vw;max-height:88vh;object-fit:contain;border-radius:4px;cursor:zoom-in;transition:transform .15s ease}
+#lightbox img.zoomed{transform:scale(1.8);cursor:zoom-out}
+#lightbox .lb-close{position:fixed;top:16px;right:20px;font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--cream);background:rgba(42,36,32,.95);border:1px solid rgba(139,111,78,.5);border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1}
+#lightbox .lb-close:hover{color:var(--copper)}
+.brandbox{container-type:inline-size;background:#1a1612;border:1px solid rgba(196,98,45,.55);border-radius:4px;margin:4px 0 22px;box-shadow:0 4px 18px rgba(0,0,0,.5);overflow:hidden}
+.brandbox-in{display:flex;align-items:center;justify-content:center;gap:3cqi;padding:3cqi 4cqi}
+.brandbox .bb-logo{width:11cqi;height:11cqi;flex:0 0 auto;display:block}
+.brandbox span{font-family:'Bebas Neue',sans-serif;font-size:8.2cqi;line-height:1;white-space:nowrap;letter-spacing:.09em;color:var(--quartz);min-width:0;padding-top:.08em}
+.showcase + .punch{margin-top:6px}
+body{padding-bottom:84px}
+@media(max-width:420px){.bb-half .bb-main{font-size:1.15rem}.bb-half .bb-sub{font-size:.72rem}}
+
+/* Bright surroundings: sunny Hill Country sky fading to warm limestone */
+html{background:#f3e4c4}
+body{background:linear-gradient(180deg,#a9d4ec 0%,#d3e9ef 18%,#f4ead3 45%,#f1dcb6 75%,#e9c99c 100%) fixed}
+main>.wrap{background:var(--stone);isolation:isolate}
+@media(max-width:819px){main{padding:0}main>.wrap{padding-top:30px;padding-bottom:44px}footer{background:var(--stone)}}
+@media(min-width:820px){
+ header,footer{background:transparent;border:0}
+ header .wrap,footer .wrap{background:rgba(26,22,18,.97);border-radius:10px}
+ header{padding-top:18px}
+ header .wrap{box-shadow:0 6px 22px rgba(60,40,20,.28)}
+ main{padding:16px 0 20px}
+ main>.wrap{border-radius:10px;padding-top:30px;padding-bottom:44px;box-shadow:0 10px 40px rgba(60,40,20,.35);overflow:hidden}
+ footer{padding:0 0 110px}
+ footer .wrap{padding-top:22px;padding-bottom:22px;box-shadow:0 6px 22px rgba(60,40,20,.22)}
+}
+.bigquote::after{content:none}
+.bq-close{font-family:Georgia,'Times New Roman',serif;font-style:normal;color:#ffffff;font-size:1.5em;line-height:0;vertical-align:-0.3em;margin-left:4px}
+.bq-sig{margin:-30px 0 22px;padding:0 14px;text-align:right;font-style:italic;font-weight:600;font-size:clamp(1rem,3.4vw,1.3rem);color:#ffffff;text-shadow:0 2px 3px #000,0 0 14px rgba(0,0,0,.9)}
+
+/* ---- TEST PAGE additions (Nov 10) ---- */
+.testbar{background:#b3261e;color:#fff;text-align:center;font-family:'Barlow',sans-serif;font-weight:700;font-size:.85rem;letter-spacing:.12em;padding:6px 10px}
+.sub1{font-size:clamp(1.15rem,3.8vw,1.45rem);line-height:1.35;font-weight:600;color:#fff;margin:0 0 18px;text-shadow:0 2px 3px #000,0 0 14px rgba(0,0,0,.9)}
+.vidslot{border:2px dashed #f4c542;background:rgba(26,22,18,.85);border-radius:4px;padding:26px 18px;margin:0 0 20px;text-align:center;color:#f4c542;font-weight:600}
+.vidslot small{display:block;color:var(--feld);font-weight:400;margin-top:6px}
+.freebox.top{margin:0 0 26px;background:linear-gradient(rgba(244,197,66,.10),rgba(244,197,66,.10)),rgba(26,22,18,.92)}
+.onescan{margin:0 0 8px}
+.onescan .big-card{display:block;width:100%;max-width:560px;margin:14px auto 6px;border-radius:6px;border:1px solid rgba(196,98,45,.6);box-shadow:0 8px 28px rgba(0,0,0,.6);cursor:zoom-in}
+.cap{text-align:center;font-size:.9rem;color:var(--cream);max-width:560px;margin:0 auto 18px;text-shadow:0 1px 3px #000}
+.showcase.two{grid-template-columns:1fr 1fr}
+.showcase.two a{display:block;width:100%}
+.tapnote{font-size:.82rem;font-weight:600;color:#f4c542;margin-top:6px;text-align:center}
+.free-style{border:1px solid rgba(91,191,168,.55);background:rgba(26,22,18,.86);border-radius:4px;padding:18px 20px;margin:26px 0 24px}
+.free-style h2{margin:0 0 8px;color:var(--glow)}
+.free-style p:last-child{margin-bottom:0}
+@media(max-width:600px){.showcase.two{grid-template-columns:1fr}}
+</style>
+<script data-goatcounter="https://rockhoundscout.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script></head>
+<body>
+<div class="testbar">TEST PAGE &middot; NOT THE LIVE SALES PAGE</div>
+<header><div class="wrap">
+<a class="brand" href="index.html"><img class="brand-logo" src="icon-192.png" alt="Rockhound Scout logo">ROCKHOUND SCOUT</a>
+<nav><a href="index.html" aria-current="page">Home</a><a href="index.html#pricing">Pricing</a><a href="scout-v2.html">Open App</a><a href="refund-policy.html">Refunds</a><a href="privacy-policy.html">Privacy</a><a href="terms.html">Terms</a></nav>
+</div></header>
+<main><div class="wrap">
+
+<div class="bg-fade">
+<h1>Other apps show you where people have already been.</h1>
+<p class="sub1">Rockhound Scout shows you where the rocks actually are &mdash; creek crossings in the right rock, anywhere in the U.S., including spots that aren&rsquo;t on anybody&rsquo;s list.</p>
+
+<!-- TEST ONLY: replace this box with the reel once JT picks the video -->
+<div class="vidslot">YOUR REEL GOES HERE<small>Test page only &mdash; this box is where the search-to-tailgate video will play.</small></div>
+
+<div class="card freebox top" id="free">
+<div class="fb-big">2 FREE SCANS</div>
+<p class="fb-sub">Enter the code sent to your email for 2 free scans. Try it on your own area &mdash; no card needed.</p>
+<form class="fb-form freeForm" novalidate>
+<input type="email" class="freeEmail" placeholder="Your email" autocomplete="email" required aria-label="Your email">
+<button type="submit" class="btn btn-sm">SEND MY CODE</button>
+</form>
+<div class="fb-err"></div>
+<p class="fb-fine">You&rsquo;ll also get our weekly Rockhound Scout email with new hotspot ideas. Unsubscribe anytime with one click. One free offer per email.</p>
+</div>
+
+<div class="onescan">
+<h2>This is what one scan gives you</h2>
+<p>A real Hotspot Card, exactly as the app produced it: a creek crossing north of Glendive, Montana. Tap it to enlarge.</p>
+<img class="big-card" src="hotspot-card-v8.png" alt="A real Rockhound Scout hotspot card for the Threemile Creek crossing on MT-16 north of Glendive, Montana: the rock at the crossing, the creek crossed, field directions, what to watch for, likely finds, and Navigation with an aerial picture." onclick="openLB(this.src,this.alt)">
+<p class="cap">The rock at the crossing, the creek, directions from town, what you may find, and a GPS point with an aerial map. A typical scan returns several of these.</p>
+</div>
+<div class="showcase two">
+<figure><h3>Type a place. That&rsquo;s it.</h3><a href="#free"><video class="appvid" src="app-typing.mp4" poster="app-typing-poster.jpg" autoplay muted loop playsinline aria-label="The Rockhound Scout app search screen: type any place in the U.S., tap an example, and press Find My Hotspots."></video></a><div class="tapnote">This is a preview &mdash; tap to get your 2 free scans</div></figure>
+<figure><h3>Map Navigation</h3><img src="map-nav-v1.png" alt="The Navigation box on a hotspot card: start and end GPS points for a road stretch, an aerial picture with the stretch drawn on it, and a Google Maps directions button." onclick="openLB(this.src,this.alt)"></figure>
+</div>
+
+<div class="free-style">
+<h2>Freestyle: the spots nobody has checked</h2>
+<p>I call myself a freestyle rockhound. I don&rsquo;t want the popular sites &mdash; I want the places no one has looked at in a very long time. On a typical hunt I stop at 10 to 15 drainages, and some of what I&rsquo;ve picked up made it plain nobody had been there in years.</p>
+<p>Turn on <strong>Freestyle</strong> and the app leaves the well-known sites out and works only from the geology: where a public road crosses a creek inside the rock that produces what you&rsquo;re after. Prefer the known sites and pay-to-dig mines? Those are in the Filters too.</p>
+</div>
+<div class="brandbox"><div class="brandbox-in"><svg class="bb-logo" viewBox="0 0 100 100" role="img" aria-label="Rockhound Scout logo"><polygon points="50.00,5.50 88.54,27.75 88.54,72.25 50.00,94.50 11.46,72.25 11.46,27.75" fill="none" stroke="#c4622d" stroke-width="3.6" stroke-linejoin="miter"/><polygon points="50.00,21.00 75.11,35.50 50.00,50.00 24.89,35.50" fill="#407e6e"/><polygon points="24.89,35.50 50.00,50.00 50.00,79.00 24.89,64.50" fill="#255c50"/><polygon points="50.00,50.00 75.11,35.50 75.11,64.50 50.00,79.00" fill="#2d6055"/><g stroke="#a5b28e" stroke-width=".7" stroke-opacity=".85"><line x1="50" y1="50" x2="50.00" y2="21.00"/><line x1="50" y1="50" x2="75.11" y2="35.50"/><line x1="50" y1="50" x2="75.11" y2="64.50"/><line x1="50" y1="50" x2="50.00" y2="79.00"/><line x1="50" y1="50" x2="24.89" y2="64.50"/><line x1="50" y1="50" x2="24.89" y2="35.50"/></g></svg><span>ROCKHOUND SCOUT</span></div></div>
+<p class="bigquote">I used to spend hours with geologic maps and road maps before every hunt. I built this to do that research for me, and I&rsquo;ve used it in the field for quite a while now. It does the job better than I could by hand, so I decided to share it.<span class="bq-close">&rdquo;</span></p>
+<p class="bq-sig">&mdash;&nbsp;JT</p>
+<ul class="perks">
+<li>No subscriptions or recurring charges &mdash; nothing to cancel</li>
+<li>Scans never expire</li>
+<li>Custom Scans (the secret sauce) included with purchase &mdash; no upgrade required</li>
+</ul>
+<p class="freelink"><a href="#free">🎁 Try it first &mdash; enter the code sent to your email for 2 free scans &uarr;</a></p>
+
+
+
+<h2>How it works</h2>
+<ol class="steps">
+<li><strong>Name a place anywhere in the U.S.</strong> A town, landmark, or your hotel&rsquo;s address works. Add what you&rsquo;re hunting if you know: &ldquo;agate near Quartzsite, AZ,&rdquo; &ldquo;creek crossings near Keokuk, IA,&rdquo; or &ldquo;anything on Hwy 101 south of Newport, OR.&rdquo; Not sure what&rsquo;s there? Just ask &ldquo;What can I find near Llano, TX?&rdquo;</li>
+<li><strong>The app reads the maps.</strong> It surveys which rocks lie in your area and what each one is known to produce, then checks the geologic map along every road and finds the creek crossings that sit in the best rock. Creeks cut down through the formation and wash the good stuff out &mdash; that&rsquo;s where minerals, fossils, and petrified wood concentrate.</li>
+<li><strong>You get Hotspot Cards with Map Navigation.</strong> Each card gives the rock at the spot, the creek or river crossed, driving directions from a nearby town, what to look for from the truck window, and likely finds. The Navigation box shows the spot on an aerial map: one pin for a creek crossing, or a green start pin and a red end pin for a road Stretch you drive slowly. Tap the map or the Google Maps button for turn-by-turn directions, or copy the GPS point into Waze. You can also print your Hotspot Cards or save them as a PDF.</li>
+</ol>
+
+<h2>What&rsquo;s in it</h2>
+<div class="grid">
+<div class="card"><h3>All 50 states</h3><p>From Texas petrified wood to Oregon agates, Iowa geodes, and New York&rsquo;s Herkimer diamonds &mdash; every state is covered. Find hotspots near you or anywhere in the country.</p></div>
+<div class="card"><h3>Custom search</h3><p>This is a powerful tool. Any spot in the U.S. Type a town, address, highway, or what gems/minerals you&rsquo;re hunting. Narrow it with &ldquo;within 10 miles,&rdquo; &ldquo;on Hwy 281,&rdquo; or &ldquo;west of town.&rdquo; Included at no extra charge.</p></div>
+<div class="card"><h3>Map-based locations</h3><p>Every spot comes from published geologic, road, and stream maps &mdash; creek and drainage crossings, and proprietary search criteria.</p></div>
+<div class="card"><h3>Informative &amp; helpful write-ups</h3><p>Top-shelf instructions, tips, and data for every hotspot &mdash; nothing generic or boilerplate.</p></div>
+</div>
+</div>
+
+<h2>Real finds</h2>
+<p>No stock photos here. These are the owner&rsquo;s found treasures, pulled straight out of the ground by chasing similar Hotspot cards all over the great state of Texas.</p>
+<div class="photo-grid">
+<figure><img src="gallery/pet-wood-group.jpg" alt="A group of assorted petrified wood pieces found at different locations." onclick="openLB(this.src,this.alt)"><figcaption><strong>Petrified wood, assorted finds</strong>Driftwood-pale to deep amber &mdash; I would not have found these without Rockhound Scout.</figcaption></figure>
+<figure><img src="gallery/pet-wood-opal.jpg" alt="A piece of petrified palm wood with a natural cavity, coin for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Petrified palm wood &mdash; with opal inside</strong>That dark cavity near the coin holds a genuine pocket of opal, confirmed under UV light. I love this specimen.</figcaption></figure>
+<figure><img src="gallery/chert-rudist.jpg" alt="Chert nodules and a fossilized rudist clam shell." onclick="openLB(this.src,this.alt)"><figcaption><strong>Chert &amp; a 100-million-year-old clam cluster</strong>The large ribbed fossil is a cluster of rudists &mdash; extinct reef-building bi-valves from the sea that once covered Texas. Far left: a river-tumbled rudist fossil. Chert fossils (bottom stones) in a variety of Hill Country colors.</figcaption></figure>
+<figure><img src="gallery/glen-rose-limestone.jpg" alt="Vuggy limestone from the Glen Rose Formation with a small ring-shaped piece in front." onclick="openLB(this.src,this.alt)"><figcaption><strong>Limestone, honeycombed by time</strong>Every hole here is where a softer streak of Glen Rose limestone simply dissolved away. The little ring in front formed the same way &mdash; a natural stone donut.</figcaption></figure>
+<figure><img src="gallery/granite-quartz-float.jpg" alt="A granite boulder with a quarter for scale, next to pieces of vein quartz." onclick="openLB(this.src,this.alt)"><figcaption><strong>Granite &amp; quartz specimens</strong>Vein quartz stained rust-red by iron bleeding through old fractures. Found in dry creek beds on the Llano Uplift.</figcaption></figure>
+<figure><img src="gallery/llanite-closeup-1.jpg" alt="Close-up of llanite showing salmon-pink and blue-grey quartz phenocrysts, with a quarter for scale." onclick="openLB(this.src,this.alt)"><figcaption><strong>Llanite, up close</strong>Salmon-pink and storm-blue quartz phenocrysts locked in dark rock. This exact combination exists nowhere else on Earth.</figcaption></figure>
+</div>
+
+<h2>Try it free</h2>
+<div class="card freebox">
+<div class="fb-big">2 FREE SCANS</div>
+<p class="fb-sub">Enter the code sent to your email for 2 free scans &mdash; no card needed.</p>
+<form class="fb-form freeForm" novalidate>
+<input type="email" class="freeEmail" placeholder="Your email" autocomplete="email" required aria-label="Your email">
+<button type="submit" class="btn btn-sm">SEND MY CODE</button>
+</form>
+<div class="fb-err"></div>
+<p class="fb-fine">You&rsquo;ll also get our weekly Rockhound Scout email with new hotspot ideas. Unsubscribe anytime with one click. One free offer per email.</p>
+</div>
+<script>
+(function(){
+  var forms=document.querySelectorAll('.freeForm');
+  for(var i=0;i<forms.length;i++){(function(f){
+    f.addEventListener('submit',function(e){
+      e.preventDefault();
+      var v=(f.querySelector('.freeEmail').value||'').trim();
+      var err=f.parentNode.querySelector('.fb-err');
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){ err.textContent='Please enter a valid email address.'; return; }
+      err.textContent='';
+      location.href='scout-v2.html?promo=WELCOME2&join=1&src=email2&email='+encodeURIComponent(v);
+    });
+  })(forms[i]);}
+})();
+</script>
+
+<div class="bg-llanite">
+<h2 id="pricing">Pricing</h2>
+<div class="card price">
+<div class="sub">ONE-TIME PURCHASE</div>
+<div class="amt">$25</div>
+<div class="sub">200 SCANS &middot; BEST VALUE</div>
+<ul>
+<li>200 scans, anywhere in the U.S.</li>
+<li>Custom area search included</li>
+<li>Scans never expire</li>
+<li>No subscription and no recurring charges</li>
+</ul>
+<a class="btn" href="https://buy.stripe.com/14AcN65Al90YfxkcGfcMM00">BUY 200 SCANS &mdash; $25</a>
+<div class="smallpack"><b>Just want to try it?</b> 25 scans for $10, same features, never expire.<br><a class="btn btn-sm" href="https://buy.stripe.com/00w8wQe6Ra524SG21BcMM01">BUY 25 SCANS &mdash; $10</a></div>
+<p class="note" style="margin-top:14px">Already bought scans? <a href="scout-v2.html">Open the app</a> and sign in with the email you used at checkout.</p>
+<p class="note" style="margin-top:14px">One &ldquo;scan&rdquo; is one tap of Find My Hotspots. A scan that ends in an error, or that finds no hotspots, isn&rsquo;t deducted. See the <a href="refund-policy.html">Refund &amp; Dispute Policy</a>.</p>
+</div>
+
+
+<h2>Disclaimer</h2>
+<div class="card">
+<p>This is a research tool, not a guarantee. Geologic maps can&rsquo;t show every small vein or outcrop, so a marked stretch is a starting point: check both sides of the road nearby. Much land &mdash; especially in Texas &mdash; is privately owned, so <strong>always get the landowner&rsquo;s permission</strong> before collecting, check the collecting rules on public land, park off the highway shoulder, and follow all traffic and land-use laws. Please read the <a href="terms.html">Terms of Service</a>.</p>
+</div>
+
+<h2>Questions</h2>
+<details><summary>Is this a subscription?</summary><p>No. It&rsquo;s a one-time purchase: $25 for 200 scans, or $10 for 25 scans. Nothing renews and there&rsquo;s nothing to cancel.</p></details>
+<details><summary>Do scans expire?</summary><p>No. Use them whenever you like.</p></details>
+<details><summary>What counts as a scan?</summary><p>One tap of Find My Hotspots. If the scan ends in an error or returns no hotspots, it isn&rsquo;t deducted.</p></details>
+<details><summary>Can I get a refund?</summary><p>We don&rsquo;t refund unused scans or change-of-mind purchases. If we charge you by mistake, a scan is wrongly deducted, or the app is broken for an extended period, we&rsquo;ll make it right. Details are in the <a href="refund-policy.html">Refund &amp; Dispute Policy</a>.</p></details>
+<details><summary>Does it cover places outside Texas?</summary><p>Yes &mdash; all 50 states. Rockhound Scout started in Texas as a tool I built for myself. It worked so well I expanded it to search anywhere in the U.S. Geologic maps are more detailed in some states than others, so results are strongest where the mapping is best.</p></details>
+<details><summary>Where does the data come from?</summary><p>Rock formation data comes from Macrostrat, a public database that compiles published geologic maps from sources including the U.S. Geological Survey and state geological surveys such as the Texas Bureau of Economic Geology. Roads, creeks, and lakes come from U.S. Census Bureau and USGS maps, public land from the USGS Protected Areas Database, and place lookups from OpenStreetMap. On top of those, Rockhound Scout keeps its own map library built from these sources, and its own field list &mdash; what each rock formation in all 50 states is known to produce, compiled from published geology and my own time in the field. The app generates remarkable results and interesting details about the Hotspots it identifies.</p></details>
+<details><summary>How do I contact you?</summary><p>Email <a href="mailto:RockhoundScoutApp@gmail.com">RockhoundScoutApp@gmail.com</a>.</p></details>
+</div>
+
+</div></main>
+<footer><div class="wrap">
+<p>Rockhound Scout is operated by John Thompson dba Rockhound Scout, Texas. Questions or support: <a href="mailto:RockhoundScoutApp@gmail.com">RockhoundScoutApp@gmail.com</a></p>
+<p>Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>. Geologic unit data via <a href="https://macrostrat.org">Macrostrat</a>. Road, water and place data from the U.S. Census Bureau; stream data from the USGS National Hydrography Dataset; public land from the USGS Protected Areas Database (PAD-US). Rockhound Scout is not affiliated with or endorsed by the U.S. Geological Survey, the U.S. Census Bureau, the Texas Bureau of Economic Geology, Macrostrat, or OpenStreetMap.</p>
+<p><a href="refund-policy.html">Refund &amp; Dispute Policy</a> &middot; <a href="privacy-policy.html">Privacy Policy</a> &middot; <a href="terms.html">Terms of Service</a></p>
+<p>&copy; 2026 John Thompson dba Rockhound Scout</p>
+</div></footer>
+<div id="lightbox" onclick="if(event.target===this)closeLB()">
+<span class="lb-close" onclick="closeLB()">&times;</span>
+<img id="lbImg" src="" alt="" onclick="this.classList.toggle('zoomed')">
+</div>
+<script>
+function openLB(src,alt){document.getElementById('lbImg').src=src;document.getElementById('lbImg').alt=alt;document.getElementById('lbImg').classList.remove('zoomed');document.getElementById('lightbox').classList.add('open');if(!(history.state&&history.state.lb)){history.pushState({lb:true},'');}}
+function hideLB(){document.getElementById('lightbox').classList.remove('open');}
+// Back button closes an open picture instead of leaving the page:
+// opening a picture adds a history step; Back (or X / Escape / tap outside) removes it.
+function closeLB(){if(history.state&&history.state.lb){history.back();}else{hideLB();}}
+window.addEventListener('popstate',function(){hideLB();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLB();});
+</script>
+<div class="buybar" id="buybar">
+<a class="bb-half bb-free" href="#free"><span class="bb-main">TRY IT NOW</span><span class="bb-sub">2 Free Scans!!!</span></a>
+<a class="bb-half bb-buy" href="https://buy.stripe.com/14AcN65Al90YfxkcGfcMM00"><span class="bb-main">BUY IT NOW</span><span class="bb-sub">200 scans &middot; $25</span></a>
+</div>
+<script>(function(){function tuck(){var q=document.querySelector('.bq-close'),g=document.querySelector('.bq-sig');if(!q||!g)return;g.style.textAlign='left';g.style.paddingLeft='0';var r=q.getBoundingClientRect(),p=g.getBoundingClientRect(),t=document.createRange();t.selectNodeContents(g);var w=t.getBoundingClientRect().width;var x=Math.max(0,Math.min(r.right-p.left-w*0.35,p.width-w));g.style.paddingLeft=x+'px';}window.addEventListener('load',tuck);window.addEventListener('resize',tuck);if(document.fonts)document.fonts.ready.then(tuck);tuck();})();</script>
+</body>
+</html>
